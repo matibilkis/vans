@@ -4,11 +4,8 @@ import pickle
 
 
 def projector(ket):
-    n = len(ket)
-    proj = np.zeros((n, n))
-    for ind1, i in enumerate(ket):
-        for ind2, j in enumerate(ket):
-            proj[ind1, ind2] = i*np.conjugate(j)
+    ket = np.expand_dims(ket, 1)
+    proj = ket.dot(ket.conjugate().T)
     return proj
 
 
@@ -17,7 +14,7 @@ def append_gate(alphabet, index):
     if "params" in list(alphabet[str(index)].keys()):
         if alphabet[str(index)]["gate"] == qml.Rot:
             params = alphabet[str(index)]["params"]
-            return alphabet[str(index)]["gate"](params[0], params[1],params[2], wires=alphabet[str(index)]["wires"])
+            return alphabet[str(index)]["gate"](params[0], params[1], params[2], wires=alphabet[str(index)]["wires"])
         else:
             return alphabet[str(index)]["gate"](alphabet[str(index)]["params"][0], wires=alphabet[str(index)]["wires"])
     else:

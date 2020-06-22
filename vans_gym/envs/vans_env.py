@@ -24,7 +24,7 @@ class VansEnv(gym.Env):
 
         self.reward_history = np.array([])
         self.quantum_state = np.array([0. for _ in range(2**self.n_qubits)])
-        self.energy = np.inf
+        self.fidelity = np.inf
 
         self.episode = -1
 
@@ -55,7 +55,7 @@ class VansEnv(gym.Env):
         self.state_indexed = np.append(self.state_indexed, action)
         done = self.check_if_finish()
 
-        self.energy, self.quantum_state = self.solver.run_circuit(self.state_indexed)
+        self.fidelity, self.quantum_state = self.solver.run_circuit(self.state_indexed)
         reward = self.reward()
 
         self.reward_history = np.append(self.reward_history, reward)
@@ -68,7 +68,7 @@ class VansEnv(gym.Env):
         return self.quantum_state, reward, done, info
 
     def reward(self):
-        return self.energy
+        return self.fidelity
 
     def render(self, mode="human"):
         fig, ax = plt.subplots(1, 1)
