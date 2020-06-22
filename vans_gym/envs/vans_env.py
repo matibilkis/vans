@@ -41,7 +41,9 @@ class VansEnv(gym.Env):
 
         self.n_actions = len(self.alphabet)
         self.action_space = spaces.Discrete(self.n_actions)
-        self.observation_space = spaces.
+        self.observation_space = spaces.Box(np.array([-1] * 2 * 2**n_qubits),
+                                            np.array([1] * 2 * 2**n_qubits),
+                                            dtype=np.float32)
 
         sq = 1 / np.sqrt(3)
         w_state = np.array([0, sq, sq, 0, sq, 0, 0, 0])
@@ -84,7 +86,7 @@ class VansEnv(gym.Env):
         return self.state_indexed.astype(np.float32), reward, done, info  # maybe instaed of
 
     def reward(self):
-        dev = qml.device("default.qubit", wires=3)
+        dev = qml.device("default.qubit", wires=self.n_qubits)
 
         @qml.qnode(dev)
         def circuit(state_indexed):
@@ -95,6 +97,6 @@ class VansEnv(gym.Env):
         return circuit(self.state_indexed)
 
     def render(self, mode="human"):
-        fig, ax = plt.subplots(1, 1, 1)
+        fig, ax = plt.subplots(1, 1)
 
         return fig
