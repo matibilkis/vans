@@ -44,22 +44,20 @@ class VansEnv(gym.Env):
 
         return self.quantum_state
 
-    def check_if_finish(self):
+    def check_if_finish(self, reward):
         # np.count_nonzero(self.state_indexed,self.alphabet.CNOTS_indexes)
-        if len(self.state_indexed) > self.maximum_number_of_gates:
-            return True
-        else:
-            return False
+        return len(self.state_indexed) > self.maximum_number_of_gates or reward == 1
 
     def step(self, action):
         self.state_indexed = np.append(self.state_indexed, action)
-        done = self.check_if_finish()
 
         self.fidelity, self.quantum_state = self.solver.run_circuit(self.state_indexed)
         reward = self.reward()
 
         self.reward_history = np.append(self.reward_history, reward)
         info = {}
+
+        done = self.check_if_finish(reward)
 
         if done:
             print("List gates", self.state_indexed)
