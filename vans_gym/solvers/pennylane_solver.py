@@ -95,6 +95,7 @@ class PennylaneSolver:
 
 
         def optimize_continuous(list_ops):
+            #
             pars = self.return_list_pars(list_ops)
 
             if len(pars)==0:
