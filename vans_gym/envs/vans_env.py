@@ -46,7 +46,7 @@ class VansEnv(gym.Env):
 
     def check_if_finish(self):
         # np.count_nonzero(self.state_indexed,self.alphabet.CNOTS_indexes)
-        if len(self.state_indexed) > self.maximum_number_of_gates:
+        if (len(self.state_indexed) > self.maximum_number_of_gates):
             return True
         else:
             return False
