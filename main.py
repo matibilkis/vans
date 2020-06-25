@@ -3,7 +3,7 @@ from stable_baselines3.common.env_checker import check_env
 
 from stable_baselines3 import PPO
 from vans_gym.envs import VansEnv
-from vans_gym.solvers import PennylaneSolver
+from vans_gym.solvers import PennylaneSolver #Notice that this could be replaced by Luckasz code (in principle)
 
 if __name__ == "__main__":
     n_qubits = 3

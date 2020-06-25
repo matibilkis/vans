@@ -19,7 +19,7 @@ class VansEnv(gym.Env):
         self.action_space = spaces.Discrete(self.n_actions)
         self.observation_space = spaces.Box(np.array([-1] * 2**self.n_qubits),
                                             np.array([1] * 2**self.n_qubits),
-                                            dtype=np.float32)
+                                            dtype=np.float32)#question: why is this necesary ? Matias.
 
 
         self.reward_history = np.array([])
@@ -29,12 +29,6 @@ class VansEnv(gym.Env):
         self.episode = -1
 
     def reset(self):
-        """
-        the observation must be a numpy array (??)
-
-        !!!** Not necessarily, notice that Luckasz selects at random, so in principle
-        it should be enough to give the sequence of gates done.
-        """
         self.episode += 1
         self.state_indexed = np.array([])
         self.reward_history = np.array([])
@@ -46,6 +40,7 @@ class VansEnv(gym.Env):
 
     def check_if_finish(self):
         # np.count_nonzero(self.state_indexed,self.alphabet.CNOTS_indexes)
+        #Things to consider: finish if there are too many CNOTS.
         if (len(self.state_indexed) > self.maximum_number_of_gates):
             return True
         else:
@@ -58,7 +53,7 @@ class VansEnv(gym.Env):
         self.fidelity, self.quantum_state = self.solver.run_circuit(self.state_indexed)
         reward = self.reward()
 
-        self.reward_history = np.append(self.reward_history, reward)
+        self.reward_history = np.append(self.reward_history, reward) #think if the cumulative reward is meaningful (maybe your good circuit is short)
         info = {}
 
         if done:
