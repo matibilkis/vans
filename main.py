@@ -10,7 +10,7 @@ from stable_baselines3.common.callbacks import EvalCallback
 
 if __name__ == "__main__":
     n_qubits = 3
-    maximum_number_of_gates = 8
+    maximum_number_of_gates = 9
 
     solver = PennylaneSolver(n_qubits)
     env = VansEnv(solver, maximum_number_of_gates, bandit=True)

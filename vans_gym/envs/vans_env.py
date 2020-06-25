@@ -15,14 +15,14 @@ class VansEnv(gym.Env):
         self.bandit=bandit
 
         if self.bandit:
-            self.state_indexed =  np.array( [0,1,2,3,4,5,4,6]) #to try "bandit"
+            self.state_indexed =  np.array( [0,1,2,3,4,5,4,6])
         else:
             self.state_indexed=np.array([])
         self.n_actions = len(solver.alphabet)
         self.action_space = spaces.Discrete(self.n_actions)
         self.observation_space = spaces.Box(np.array([0] * 2**self.n_qubits),
                                             np.array([1] * 2**self.n_qubits),
-                                            dtype=np.float32)#notice M. changed -1 to 0, given that we are using the probs.
+                                            dtype=np.float32) #notice M. changed -1 to 0, given that we are using the probs.
 
         self.reward_history = np.array([])
         self.quantum_state = np.array([0. for _ in range(2**self.n_qubits)])
@@ -55,7 +55,7 @@ class VansEnv(gym.Env):
         self.fidelity, self.quantum_state = self.solver.run_circuit(self.state_indexed)
         reward = self.reward()
 
-        self.reward_history = np.append(self.reward_history, reward) #think if the cumulative reward is meaningful (maybe your good circuit is short)
+        self.reward_history = np.append(self.reward_history, reward)
         info = {}
 
         done = self.check_if_finish(reward)
