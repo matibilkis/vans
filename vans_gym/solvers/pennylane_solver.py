@@ -108,8 +108,12 @@ class PennylaneSolver:
                 opt = qml.GradientDescentOptimizer(stepsize=0.1)
                 steps = 100
                 params = np.random.sample(len(pars))
+                old_loss = loss(params)
                 for i in range(steps):
                     params = opt.step(loss, params)
+                    if (np.abs(loss(params)-old_loss) < 10e-4):
+                        break
+                    old_loss = loss(params)
                 return circuit_obs(params,list_ops), circuit_probs(params,list_ops)
 
         energy, probs = optimize_continuous(list_ops)
