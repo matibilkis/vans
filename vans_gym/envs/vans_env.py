@@ -7,20 +7,22 @@ from gym import spaces
 
 
 class VansEnv(gym.Env):
-    def __init__(self, solver, maximum_number_of_gates=15):
+    def __init__(self, solver, maximum_number_of_gates=9, bandit=False):
         super(VansEnv, self).__init__()
         self.solver = solver
         self.n_qubits = solver.n_qubits
         self.maximum_number_of_gates = maximum_number_of_gates
+        self.bandit=bandit
 
-        self.state_indexed = np.array([])
-
+        if self.bandit:
+            self.state_indexed =  np.array( [0,1,2,3,4,5,4,6]) #to try "bandit"
+        else:
+            self.state_indexed=np.array([])
         self.n_actions = len(solver.alphabet)
         self.action_space = spaces.Discrete(self.n_actions)
-        self.observation_space = spaces.Box(np.array([-1] * 2**self.n_qubits),
+        self.observation_space = spaces.Box(np.array([0] * 2**self.n_qubits),
                                             np.array([1] * 2**self.n_qubits),
-                                            dtype=np.float32)#question: why is this necesary ? Matias.
-
+                                            dtype=np.float32)#notice M. changed -1 to 0, given that we are using the probs.
 
         self.reward_history = np.array([])
         self.quantum_state = np.array([0. for _ in range(2**self.n_qubits)])
@@ -30,7 +32,11 @@ class VansEnv(gym.Env):
 
     def reset(self):
         self.episode += 1
-        self.state_indexed = np.array([])
+
+        if self.bandit:
+            self.state_indexed = np.array( [0,1,2,3,4,5,4,6]) # np.array( [0,1,2,3,4,5,4,6,7]) is the optimal
+        else:
+            self.state_indexed=np.array([])
         self.reward_history = np.array([])
         self.quantum_state = np.array([0. for _ in range(2 ** self.n_qubits)])
 
