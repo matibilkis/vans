@@ -7,20 +7,22 @@ from gym import spaces
 
 
 class VansEnv(gym.Env):
-    def __init__(self, solver, maximum_number_of_gates=15):
+    def __init__(self, solver, maximum_number_of_gates=9, bandit=False):
         super(VansEnv, self).__init__()
         self.solver = solver
         self.n_qubits = solver.n_qubits
         self.maximum_number_of_gates = maximum_number_of_gates
+        self.bandit=bandit
 
-        self.state_indexed = np.array([])
-
+        if self.bandit:
+            self.state_indexed =  np.array([0, 1, 2, 3, 4, 5, 4, 6])
+        else:
+            self.state_indexed=np.array([])
         self.n_actions = len(solver.alphabet)
         self.action_space = spaces.Discrete(self.n_actions)
-        self.observation_space = spaces.Box(np.array([-1] * 2**self.n_qubits),
+        self.observation_space = spaces.Box(np.array([0] * 2**self.n_qubits),
                                             np.array([1] * 2**self.n_qubits),
                                             dtype=np.float32)
-
 
         self.reward_history = np.array([])
         self.history_final_reward = np.array([])
@@ -31,15 +33,14 @@ class VansEnv(gym.Env):
         self.i_step = 0
 
     def reset(self):
-        """
-        the observation must be a numpy array (??)
-
-        !!!** Not necessarily, notice that Luckasz selects at random, so in principle
-        it should be enough to give the sequence of gates done.
-        """
         self.episode += 1
         self.i_step = 0
-        self.state_indexed = np.array([])
+
+        if self.bandit:
+            self.state_indexed = np.array([0, 1, 2, 3, 4, 5, 4, 6])  # np.array( [0,1,2,3,4,5,4,6,7]) is the optimal
+        else:
+            self.state_indexed=np.array([])
+
         self.reward_history = np.array([])
         self.quantum_state = np.array([0. for _ in range(2 ** self.n_qubits)])
 
@@ -47,9 +48,7 @@ class VansEnv(gym.Env):
 
     def check_if_finish(self, reward):
         # np.count_nonzero(self.state_indexed,self.alphabet.CNOTS_indexes)
-        return len(self.state_indexed) > self.maximum_number_of_gates \
-               or reward == 1 \
-               or (len(self.state_indexed) > 1 and self.state_indexed[-2] == self.state_indexed[-1])
+        return len(self.state_indexed) > self.maximum_number_of_gates or reward == 1
 
     def step(self, action):
         self.i_step += 1
