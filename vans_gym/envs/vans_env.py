@@ -7,15 +7,19 @@ from gym import spaces
 
 
 class VansEnv(gym.Env):
-    def __init__(self, solver, maximum_number_of_gates=9, bandit=False):
+    def __init__(self, solver, maximum_number_of_gates=9, bandit=None):
         super(VansEnv, self).__init__()
         self.solver = solver
         self.n_qubits = solver.n_qubits
         self.maximum_number_of_gates = maximum_number_of_gates
         self.bandit=bandit
 
-        if self.bandit:
+        if self.bandit == "PennyBandit":
             self.state_indexed =  np.array( [0,1,2,3,4,5,4,6])
+            self.maximum_number_of_gates = 9
+        elif self.bandit == "CirqBandit":
+            self.state_indexed = np.array([0,1,2,3,4,5,4,6,5,6])
+            self.maximum_number_of_gates = 10
         else:
             self.state_indexed=np.array([])
         self.n_actions = len(solver.alphabet)
@@ -32,9 +36,10 @@ class VansEnv(gym.Env):
 
     def reset(self):
         self.episode += 1
-
-        if self.bandit:
+        if self.bandit == "PennyBandit":
             self.state_indexed = np.array( [0,1,2,3,4,5,4,6]) # np.array( [0,1,2,3,4,5,4,6,7]) is the optimal
+        elif self.bandit == "CirqBandit":
+            self.state_indexed = np.array([0,1,2,3,4,5,4,6,5,6])
         else:
             self.state_indexed=np.array([])
         self.reward_history = np.array([])
