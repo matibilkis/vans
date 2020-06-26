@@ -8,6 +8,7 @@ import tensorflow_quantum as tfq
 
 class CirqSolver:
     def __init__(self, n_qubits=3, observable=None):
+        self.name = "CirqSolver"
         self.n_qubits = n_qubits
         self.observable=observable #careful here!
         self.qubits = cirq.GridQubit.rect(1, n_qubits)

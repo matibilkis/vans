@@ -11,6 +11,7 @@ def projector(ket):
 
 class PennylaneSolver:
     def __init__(self, n_qubits=3, observable=None):
+        self.name = "PennylaneSolver"
         self.n_qubits = n_qubits
         self.observable = observable
         self.circuit = None
@@ -19,100 +20,58 @@ class PennylaneSolver:
 
         # with open('alphabet_w.pickle', 'rb') as alphabet:ju
         #     self.alphabet = pickle.load(alphabet)
-        self.alphabet = {"0":{"gate": qml.PauliX, "wires": [2]},
-                    "1":{"gate": qml.RZ, "wires": [0]},
-                    "2":{"gate": qml.RY, "wires": [1]},
-                    "3":{"gate": qml.CNOT, "wires": [1,2]},#, "params":[np.pi]},
-                    "4":{"gate": qml.CNOT, "wires": [1,0]},#, "params":[np.pi]},
-                    "5":{"gate": qml.RY, "wires": [0]},
-                    "6":{"gate":qml.Rot, "wires":[0]}, #borrowed from other optimization
-                    "7":{"gate": qml.CNOT, "wires": [0,1]},#, "params":[np.pi]},
+        self.alphabet = {"0": {"gate": qml.PauliX, "wires": [2]},
+                         "1": {"gate": qml.RZ, "wires": [0]},
+                         "2": {"gate": qml.RY, "wires": [1]},
+                         "3": {"gate": qml.CNOT, "wires": [1, 2]},  #, "params":[np.pi]},
+                         "4": {"gate": qml.CNOT, "wires": [1, 0]},  #, "params":[np.pi]},
+                         "5": {"gate": qml.RY, "wires": [0]},
+                         "6": {"gate":qml.Rot, "wires": [0]},  # borrowed from other optimization
+                         "7": {"gate": qml.CNOT, "wires": [0, 1]}  #, "params":[np.pi]},
                    }
-
 
         if observable is None:  # then take projector on W state
             sq = 1 / np.sqrt(3)
             w_state = np.array([0, sq, sq, 0, sq, 0, 0, 0])
             self.observable = qml.Hermitian(projector(w_state), wires=[0, 1, 2])
 
-    def return_list_pars(self,list_ops):
-        #list_ops specifies the gates to append. The reason for this function is because qml.circuit accepts only params.
-        #The gates we use are qml.Rot (3 free parameters), or RX, RY, RZ (only one free param).
-        #optimal_route for W-state = [0,1,2,3,4,5,4,6,7]
-        ind_par=0
-        p=[]
-        for k in list_ops:
-            operation = self.alphabet[str(int(k))]
-            num_params = operation["gate"].num_params
-            for ind1 in range(num_params):
-                p.append(qml.variable.Variable(idx=ind_par))
-                ind_par+=1
-        return p
-
-
+    def build_circuit(self, params, list_ops):
+        for i, op in enumerate(list_ops):
+            operation = self.alphabet[str(int(op))]
+            operation["gate"](*params[i], wires=operation["wires"])
 
     def run_circuit(self, list_ops):
         @qml.qnode(device=self.dev)
-        def circuit_obs(params, list_ops):
-            ind_par=0
-            for k in list_ops:
-                operation = self.alphabet[str(int(k.val))]
-                num_params = operation["gate"].num_params
-                #any way to do this in one-shot ?
-                #(assuming there's not QubitUnitary in the alphabet there're only 0, 1 or 3 free parameters in qml.operators)
-                if num_params == 1:
-                    operation["gate"](params[ind_par], wires = operation["wires"])
-                    ind_par+=1
-                elif num_params == 3:
-                    operation["gate"](params[ind_par],params[ind_par+1],params[ind_par+2], wires = operation["wires"])
-                    ind_par+=3
-                #any way to do this in one-shot ?
-                #any way to do this in one-shot ?
-                else:
-                    operation["gate"](wires = operation["wires"])
+        def circuit_obs(params):
+            self.build_circuit(params, list_ops)
             return qml.expval(self.observable)
 
         @qml.qnode(device=self.dev)
-        def circuit_probs(params, list_ops):
-            ind_par=0
-            for k in list_ops:
-                operation = self.alphabet[str(int(k.val))]
-                num_params = operation["gate"].num_params
-                if num_params == 1:
-                    operation["gate"](params[ind_par], wires = operation["wires"])
-                    ind_par+=1
-                elif num_params == 3:
-                    operation["gate"](params[ind_par],params[ind_par+1],params[ind_par+2], wires = operation["wires"])
-                    ind_par+=3
-                else:
-                    operation["gate"](wires = operation["wires"])
-
+        def circuit_probs(params):
+            self.build_circuit(params, list_ops)
             return qml.probs(wires=list(range(self.n_qubits)))
 
+        list_gates = [self.alphabet[str(int(op))]["gate"] for op in list_ops]
+        num_params = sum([gate.num_params for gate in list_gates])
+        params = [2*np.pi * np.random.sample(gate.num_params) for gate in list_gates]
 
-        def optimize_continuous(list_ops):
-            #
-            pars = self.return_list_pars(list_ops)
+        # Continuous optimization
+        if num_params > 0:
+            def loss(x):
+                return 1-circuit_obs(x)
 
-            if len(pars)==0:
-                return circuit_obs([],list_ops), circuit_probs([],list_ops)
-            else:
-
-                def loss(x):
-                    return 1-circuit_obs(x, list_ops)
-
-                opt = qml.GradientDescentOptimizer(stepsize=0.1)
-                steps = 100
-                params = np.random.sample(len(pars))
+            opt = qml.GradientDescentOptimizer(stepsize=0.1)
+            steps = 50
+            old_loss = loss(params)
+            for i in range(steps):
+                end = "\r" if i < steps else "\n"
+                print(f"Loss: {old_loss}", end=end)
+                params = opt.step(loss, params)
+                if np.abs(loss(params)-old_loss) < 1e-6:
+                    break
                 old_loss = loss(params)
-                for i in range(steps):
-                    params = opt.step(loss, params)
-                    if (np.abs(loss(params)-old_loss) < 1e-6):
-                        break
-                    old_loss = loss(params)
-                return circuit_obs(params,list_ops), circuit_probs(params,list_ops)
 
-        energy, probs = optimize_continuous(list_ops)
+        energy, probs = circuit_obs(params), circuit_probs(params)
 
         return energy, probs
 
