@@ -17,7 +17,7 @@ class PennylaneSolver:
 
         self.dev = qml.device("default.qubit", wires=n_qubits)
 
-        # with open('alphabet_w.pickle', 'rb') as alphabet:
+        # with open('alphabet_w.pickle', 'rb') as alphabet:ju
         #     self.alphabet = pickle.load(alphabet)
         self.alphabet = {"0":{"gate": qml.PauliX, "wires": [2]},
                     "1":{"gate": qml.RZ, "wires": [0]},
