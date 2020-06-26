@@ -5,7 +5,6 @@ import tensorflow as tf
 import tensorflow_quantum as tfq
 
 
-
 class CirqSolver:
     def __init__(self, n_qubits=3, observable=None):
         self.name = "CirqSolver"
@@ -23,11 +22,11 @@ class CirqSolver:
                            }
 
         self.parametrized = [cirq.rz, cirq.ry, cirq.rx]
-
         if observable is None:  # then take projector on W state
             sq = 1 / np.sqrt(3)
             w_state = np.array([0, sq, sq, 0, sq, 0, 0, 0])
             w_proj = cirq.density_matrix_from_state_vector(w_state)
+            self.observable_matrix = w_proj
             self.observable = self.cirq_friendly_observable(w_proj)
 
 
@@ -86,8 +85,16 @@ class CirqSolver:
         return model
 
     def run_circuit(self, list_ops):
-        trajectory = list_ops#
-        wst = VAnsatz(trajectory)
+        wst = VAnsatz(list_ops)
+
+        if (wst.symbols == [])|(wst.cnots<4):
+            simulator = cirq.Simulator()
+            result = simulator.simulate(wst.get_state(self.qubits, params=np.random.sample(len(wst.symbols))), qubit_order=self.qubits)
+            energy = np.trace(np.dot(wst.observable_matrix, cirq.density_matrix_from_state_vector(result.final_state))).real
+            probs = np.abs(result.final_state)**2
+            return energy, probs
+
+
         model = self.vansatz_keras_model(wst, self.observable)
         w_input = tfq.convert_to_tensor([wst.circuit])
         w_output = tf.ones((1,1)) #in case of W_state we want fidelity 1.
@@ -105,6 +112,7 @@ class CirqSolver:
 class VAnsatz(CirqSolver):
     def __init__(self, trajectory):
         super(VAnsatz, self).__init__()
+        self.cnots = 0
         param_ind=0
         gates=[]
         wires=[]
@@ -122,6 +130,8 @@ class VAnsatz(CirqSolver):
                 gates.append(g(params_cirquit[-1]))
                 parhere.append(True)
             else:
+                if g == cirq.CNOT:
+                    self.cnots+=1
                 gates.append(g)
                 parhere.append(False)
         self.wires = wires
@@ -144,8 +154,6 @@ class VAnsatz(CirqSolver):
             return circuit
         resolver = {k: v for k, v in zip(self.symbols, params)}
         return cirq.resolve_parameters(circuit, resolver)
-
-
 
 
 if __name__ == "__main__":

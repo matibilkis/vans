@@ -21,8 +21,8 @@ if __name__ == "__main__":
     solver = CirqSolver(n_qubits)
     # solver = PennylaneSolver(n_qubits)
 
-    env = VansEnv(solver, maximum_number_of_gates, bandit=True)
-    env = Monitor(env)  # Useful to display more information on Tensorboard
+    env = VansEnv(solver, maximum_number_of_gates)
+    # env = Monitor(env)  # Useful to display more information on Tensorboard
     # check_env(env) #Why does this run for 4 times ??
 
     ### Matias wanted to use this to draw the agent's evolution... dismissed for now
