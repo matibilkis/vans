@@ -36,6 +36,7 @@ class VansEnv(gym.Env):
 
         self.episode = -1
         self.i_step = 0
+        self.max_reward_so_far = 0
 
     def reset(self):
         self.episode += 1
@@ -57,7 +58,10 @@ class VansEnv(gym.Env):
 
     def check_if_finish(self, reward):
         # np.count_nonzero(self.state_indexed,self.alphabet.CNOTS_indexes)
-        return len(self.state_indexed) > self.maximum_number_of_gates or reward == 1
+        if self.max_reward_so_far < reward:
+            self.max_reward_so_far = reward
+            return True
+        return len(self.state_indexed) > self.maximum_number_of_gates
 
     def step(self, action):
         self.i_step += 1
@@ -86,7 +90,7 @@ class VansEnv(gym.Env):
 
     def reward(self):
         r = self.fidelity
-        if len(self.state_indexed) >= 2 and self.state_indexed[-1] == self.state_indexed[-2]:
+        if len(self.state_indexed) >= 2 and self.state_indexed[-1] == self.state_indexed[-2]: #we should figure out a way to include CNOTS here (minimum 3..)
             r = -1
         return r
 

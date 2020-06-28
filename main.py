@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore') #this is due to W projector construction in Ci
 if __name__ == "__main__":
     n_qubits = 3
 
-    maximum_number_of_gates = 11
+    maximum_number_of_gates = 8 #notice this will lead to final sequence of length maximum_number_of_gates+1
 
 
     tensorboard_folder = "./tensorboard/"
@@ -23,14 +23,13 @@ if __name__ == "__main__":
 
     env = VansEnv(solver, maximum_number_of_gates)
     # env = Monitor(env)  # Useful to display more information on Tensorboard
-    # check_env(env) #Why does this run for 4 times ??
+    # check_env(env) #Why does this run for 4 times ?? Is it because of the cores i have?
 
-    ### Matias wanted to use this to draw the agent's evolution... dismissed for now
     model = PPO('MlpPolicy', env, n_steps=50, tensorboard_log=tensorboard_folder)
 
     print("\n------------ Training ----------------\n")
 
-    model.learn(total_timesteps=100)
+    model.learn(total_timesteps=1000)
 
     print("\n------------- Testing ----------------\n")
 

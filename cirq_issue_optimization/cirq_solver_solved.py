@@ -5,6 +5,7 @@ import tensorflow as tf
 import tensorflow_quantum as tfq
 
 
+
 class CirqSolver:
     def __init__(self, n_qubits=3, observable=None):
         self.name = "CirqSolver"
@@ -75,7 +76,7 @@ class CirqSolver:
                 circuit_input,
                 symbol_names=vansatz.symbols,
                 operators=tfq.convert_to_tensor([observable]),
-                initializer=tf.keras.initializers.RandomNormal()) #notice this is not strictly necessary.
+                initializer=tf.keras.initializers.RandomNormal())
 
         output = tf.math.reduce_sum(output, axis=-1, keepdims=True)
 
@@ -86,14 +87,12 @@ class CirqSolver:
 
     def run_circuit(self, list_ops):
         wst = VAnsatz(list_ops)
-
         if (wst.symbols == []):
             simulator = cirq.Simulator()
             result = simulator.simulate(wst.get_state(self.qubits, params=np.random.sample(len(wst.symbols))), qubit_order=self.qubits)
             energy = np.trace(np.dot(wst.observable_matrix, cirq.density_matrix_from_state_vector(result.final_state))).real
             probs = np.abs(result.final_state)**2
             return energy, probs
-
 
         model = self.vansatz_keras_model(wst, self.observable)
         w_input = tfq.convert_to_tensor([wst.circuit])
@@ -129,6 +128,8 @@ class VAnsatz(CirqSolver):
                 gates.append(g(params_cirquit[-1]))
                 parhere.append(True)
             else:
+                if g == cirq.CNOT:
+                    self.cnots+=1
                 gates.append(g)
                 parhere.append(False)
         self.wires = wires
@@ -153,8 +154,3 @@ class VAnsatz(CirqSolver):
             return circuit
         resolver = {k: v for k, v in zip(self.symbols, params)}
         return cirq.resolve_parameters(circuit, resolver)
-
-
-if __name__ == "__main__":
-    solver = CirqSolver()
-    print(solver.run_circuit(np.array([0,1,2,3,4,5,4,6,5,6,7])))
