@@ -110,7 +110,7 @@ class VAnsatz(CirqSolver):
         wires = []
         params_cirquit = []
         parhere = []
-        self.symbols=[]
+        self.symbols = []
         for gate_ind in trajectory:
             g = self.alphabet[str(int(gate_ind))]["gate"]
             wires.append(self.alphabet[str(int(gate_ind))]["wires"])
@@ -118,7 +118,7 @@ class VAnsatz(CirqSolver):
                 symbol = "x_{}".format(param_ind)
                 self.symbols.append(symbol)
                 params_cirquit.append(sympy.Symbol(self.symbols[-1]))
-                param_ind+=1
+                param_ind += 1
                 gates.append(g(params_cirquit[-1]))
                 parhere.append(True)
             else:
@@ -131,7 +131,7 @@ class VAnsatz(CirqSolver):
 
     def get_state(self, qubits, params=None):
         circuit = cirq.Circuit()
-        cc=[]
+        cc = []
         for q in qubits:
             cc.append(cirq.I.on(q))
         for ind, g in enumerate(self._gates):
