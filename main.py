@@ -8,13 +8,11 @@ from stable_baselines3.common.monitor import Monitor
 
 from stable_baselines3.common.callbacks import EvalCallback
 import warnings
-warnings.filterwarnings('ignore') #this is due to W projector construction in CirqSolver: search for ot=float(coeff) in vans_gym/solvers/cirq_solver
+warnings.filterwarnings('ignore')
 
 if __name__ == "__main__":
     n_qubits = 3
-
-    maximum_number_of_gates = 8 #notice this will lead to final sequence of length maximum_number_of_gates+1
-
+    maximum_number_of_gates = 8  # notice this will lead to final sequence of length maximum_number_of_gates+1
 
     tensorboard_folder = "./tensorboard/"
 
@@ -25,7 +23,7 @@ if __name__ == "__main__":
     # env = Monitor(env)  # Useful to display more information on Tensorboard
     # check_env(env) #Why does this run for 4 times ?? Is it because of the cores i have?
 
-    model = PPO('MlpPolicy', env, n_steps=50, tensorboard_log=tensorboard_folder)
+    model = PPO('MlpPolicy', env, n_steps=50, tensorboard_log=None)
 
     print("\n------------ Training ----------------\n")
 

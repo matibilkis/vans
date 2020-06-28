@@ -9,17 +9,17 @@ class CirqSolver:
     def __init__(self, n_qubits=3, observable=None):
         self.name = "CirqSolver"
         self.n_qubits = n_qubits
-        self.observable=observable #careful here!
+        self.observable = observable  # careful here!
         self.qubits = cirq.GridQubit.rect(1, n_qubits)
-        self.alphabet = {"0":{"gate": cirq.X, "wires": [2]},
-                            "1":{"gate": cirq.rz, "wires": [0]},
-                            "2":{"gate": cirq.ry, "wires": [1]},
-                            "3":{"gate": cirq.CNOT, "wires": [1,2]},#, "params":[np.pi]},
-                            "4":{"gate": cirq.CNOT, "wires": [1,0]},#, "params":[np.pi]},
-                            "5":{"gate": cirq.ry, "wires": [0]},
-                            "6":{"gate":cirq.rz, "wires":[0]},#optimal sequence will be larger..
-                            "7":{"gate": cirq.CNOT, "wires": [0,1]},#, "params":[np.pi]},
-                           }
+        self.alphabet = {"0": {"gate": cirq.X, "wires": [2]},
+                         "1": {"gate": cirq.rz, "wires": [0]},
+                         "2": {"gate": cirq.ry, "wires": [1]},
+                         "3": {"gate": cirq.CNOT, "wires": [1, 2]},
+                         "4": {"gate": cirq.CNOT, "wires": [1, 0]},
+                         "5": {"gate": cirq.ry, "wires": [0]},
+                         "6": {"gate": cirq.rz, "wires": [0]},
+                         "7": {"gate": cirq.CNOT, "wires": [0, 1]},
+                         }
 
         self.parametrized = [cirq.rz, cirq.ry, cirq.rx]
         if observable is None:  # then take projector on W state
@@ -28,8 +28,6 @@ class CirqSolver:
             w_proj = cirq.density_matrix_from_state_vector(w_state)
             self.observable_matrix = w_proj
             self.observable = self.cirq_friendly_observable(w_proj)
-
-
 
     def cirq_friendly_observable(self, obs):
         PAULI_BASIS = {
@@ -40,7 +38,7 @@ class CirqSolver:
         }
 
         pauli3 = cirq.linalg.operator_spaces.kron_bases(PAULI_BASIS, repeat=3)
-        decomp = cirq.linalg.operator_spaces.expand_matrix_in_orthogonal_basis(obs, pauli3) #notice it's not required to be orthonormal!
+        decomp = cirq.linalg.operator_spaces.expand_matrix_in_orthogonal_basis(obs, pauli3)
 
         PAULI_BASIS_CIRQ = {
             'I': cirq.X,
@@ -53,23 +51,21 @@ class CirqSolver:
         for term in decomp.items():
             gate_name = term[0]
             coeff = term[1]
-            s=0
-            ot=float(coeff)
+            s = 0
+            ot = float(coeff)
             for qpos, single_gate in enumerate(gate_name):
                 if single_gate == "I":
-                    ot*=PAULI_BASIS_CIRQ[single_gate](self.qubits[qpos])*PAULI_BASIS_CIRQ[single_gate](self.qubits[qpos])
+                    ot *= PAULI_BASIS_CIRQ[single_gate](self.qubits[qpos])*PAULI_BASIS_CIRQ[single_gate](self.qubits[qpos])
                 else:
-                    ot*=PAULI_BASIS_CIRQ[single_gate](self.qubits[qpos])
-            if s<3:
+                    ot *= PAULI_BASIS_CIRQ[single_gate](self.qubits[qpos])
+            if s < 3:
                 unt.append(ot)
         return unt
-    #
-    #
 
     def vansatz_keras_model(self, vansatz, observable):
-        #notice observable may in general be expressed as linear combination
-        #of different elements  on orthonormal basis obtained from tensor product
-        #of SU(2) generators. tf.math.reduce_sum is in charge of taking this linear combination.
+        # notice observable may in general be expressed as linear combination
+        # of different elements  on orthonormal basis obtained from tensor product
+        # of SU(2) generators. tf.math.reduce_sum is in charge of taking this linear combination.
         circuit_input = tf.keras.Input(shape=(), dtype=tf.string)
         output = tfq.layers.Expectation()(
                 circuit_input,
@@ -87,19 +83,17 @@ class CirqSolver:
     def run_circuit(self, list_ops):
         wst = VAnsatz(list_ops)
 
-        if (wst.symbols == []):
+        if wst.symbols == []:
             simulator = cirq.Simulator()
             result = simulator.simulate(wst.get_state(self.qubits, params=np.random.sample(len(wst.symbols))), qubit_order=self.qubits)
             energy = np.trace(np.dot(wst.observable_matrix, cirq.density_matrix_from_state_vector(result.final_state))).real
             probs = np.abs(result.final_state)**2
             return energy, probs
 
-
         model = self.vansatz_keras_model(wst, self.observable)
         w_input = tfq.convert_to_tensor([wst.circuit])
-        w_output = tf.ones((1,1)) #in case of W_state we want fidelity 1.
-        model.fit(x=w_input, y=w_output, batch_size=1, epochs=50,
-                    verbose=0)
+        w_output = tf.ones((1, 1))  # in case of W_state we want fidelity 1.
+        model.fit(x=w_input, y=w_output, batch_size=1, epochs=50, verbose=0)
         energy = float(np.squeeze(model.predict(w_input)))
 
         simulator = cirq.Simulator()
@@ -108,20 +102,19 @@ class CirqSolver:
         return energy, probs
 
 
-
 class VAnsatz(CirqSolver):
     def __init__(self, trajectory):
         super(VAnsatz, self).__init__()
         param_ind=0
-        gates=[]
-        wires=[]
-        params_cirquit=[]
-        parhere=[]
+        gates = []
+        wires = []
+        params_cirquit = []
+        parhere = []
         self.symbols=[]
         for gate_ind in trajectory:
             g = self.alphabet[str(int(gate_ind))]["gate"]
             wires.append(self.alphabet[str(int(gate_ind))]["wires"])
-            if g in self.parametrized: #assuming is one qubit unitary
+            if g in self.parametrized:  # assuming is one qubit unitary
                 symbol = "x_{}".format(param_ind)
                 self.symbols.append(symbol)
                 params_cirquit.append(sympy.Symbol(self.symbols[-1]))
@@ -132,9 +125,9 @@ class VAnsatz(CirqSolver):
                 gates.append(g)
                 parhere.append(False)
         self.wires = wires
-        self._gates=gates
-        self.parhere =parhere
-        self.circuit=self.get_state(self.qubits)
+        self._gates = gates
+        self.parhere = parhere
+        self.circuit = self.get_state(self.qubits)
 
     def get_state(self, qubits, params=None):
         circuit = cirq.Circuit()
@@ -142,7 +135,7 @@ class VAnsatz(CirqSolver):
         for q in qubits:
             cc.append(cirq.I.on(q))
         for ind, g in enumerate(self._gates):
-            if len(self.wires[ind])==1:
+            if len(self.wires[ind]) == 1:
                 indqub = self.wires[ind][0]
                 cc.append(g(qubits[indqub]))
             else:
@@ -157,4 +150,4 @@ class VAnsatz(CirqSolver):
 
 if __name__ == "__main__":
     solver = CirqSolver()
-    print(solver.run_circuit(np.array([0,1,2,3,4,5,4,6,5,6,7])))
+    print(solver.run_circuit(np.array([0, 1, 2, 3, 4, 5, 4, 6, 5, 6, 7])))
