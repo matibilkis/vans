@@ -7,12 +7,13 @@ from gym import spaces
 
 
 class VansEnv(gym.Env):
-    def __init__(self, solver, maximum_number_of_gates=9, bandit=None):
+    def __init__(self, solver, maximum_number_of_gates=9, bandit=None, training_env=True):
         super(VansEnv, self).__init__()
         self.solver = solver
         self.n_qubits = solver.n_qubits
         self.maximum_number_of_gates = maximum_number_of_gates
         self.bandit=bandit
+        self.training_env = training_env
 
         if self.bandit:
             if self.solver.name == "PennylaneSolver":
@@ -53,15 +54,15 @@ class VansEnv(gym.Env):
 
         self.reward_history = np.array([])
         self.quantum_state = np.array([0. for _ in range(2 ** self.n_qubits)])
-
+        self.done=False
         return self.quantum_state
 
     def check_if_finish(self, reward):
         # np.count_nonzero(self.state_indexed,self.alphabet.CNOTS_indexes)
         if self.max_reward_so_far < reward:
             self.max_reward_so_far = reward
-            return True
-        return len(self.state_indexed) > self.maximum_number_of_gates
+            return True and self.training_env
+        return len(self.state_indexed) >= self.maximum_number_of_gates
 
     def step(self, action):
         self.i_step += 1
@@ -80,6 +81,7 @@ class VansEnv(gym.Env):
 
         if done:
             self.history_final_reward = np.append(self.history_final_reward, reward)
+            self.done=True #used in GreedyCallback
             if self.episode % 1 == 0:
                 print("\n==================== Episode {} ====================\n".format(self.episode))
                 print("List gates", self.state_indexed)
