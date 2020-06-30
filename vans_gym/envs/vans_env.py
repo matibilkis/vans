@@ -83,7 +83,7 @@ class VansEnv(gym.Env):
         if done:
             self.history_final_reward = np.append(self.history_final_reward, reward)
             if self.episode % 1 == 0 and not self.in_callback:
-                print("\n==================== Episode {} ====================\n".format(self.episode))
+                print("\n============ Episode {} ============\n".format(self.episode))
                 print("List gates", self.state_indexed)
                 print("Reward", reward)
                 print("Mean reward last 100 episodes", np.mean(self.history_final_reward[-100:]))

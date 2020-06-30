@@ -15,17 +15,16 @@ class GreedyCallback(BaseCallback):
         pass
 
     def _on_rollout_end(self):
-        print("\n\n************** Updating policy **************\n\n")
-
         done = False
         list_gates = []
         self.training_env.set_attr("in_callback", True)
         while not done:
             new_gate = self.model.policy.predict(self.training_env.get_attr("quantum_state"), deterministic=True)[0]
             list_gates.append(new_gate[0])
-            _, _, done, _ = self.training_env.step(new_gate)
+            _, reward, done, _ = self.training_env.step(new_gate)
         self.training_env.set_attr("in_callback", False)
 
         print("Deterministic policy gives: ", list_gates)
+        print("With reward : ", reward[0])
 
         return True
