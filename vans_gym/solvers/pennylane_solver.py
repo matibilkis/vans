@@ -40,7 +40,7 @@ class PennylaneSolver:
             operation = self.alphabet[str(int(op))]
             operation["gate"](*params[i], wires=operation["wires"])
 
-    def run_circuit(self, list_ops):
+    def run_circuit(self, list_ops, continuous_optim=False):
         @qml.qnode(device=self.dev)
         def circuit_obs(params):
             self.build_circuit(params, list_ops)
@@ -56,7 +56,7 @@ class PennylaneSolver:
         params = [2*np.pi * np.random.sample(gate.num_params) for gate in list_gates]
 
         # Continuous optimization
-        if num_params > 0:
+        if num_params > 0 and continuous_optim:
             def loss(x):
                 return 1-circuit_obs(x)
 
