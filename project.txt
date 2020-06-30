@@ -1,0 +1,9 @@
+Hi all, here is an update on the RL & Variational Ansatz project.
+
+Regarding the circuit, we've spent some time moving from PennyLane to Cirq+TensorFlowQuantum, which is much faster in doing the continuous optimization.
+
+Regarding RL algos, we are still struggling to make them work with the W-state preparation problem; this will take us more than two weeks.
+
+Both Arthur and I have been working particularly hard for this project (you can check out the github repository, if you want :slightly_smiling_face: ), but we don't think that something very meaningful can come from here in the following two weeks.
+
+Personally, since it's not clear that RL will work in the short-term, and given that - in terms of learning outcome - I am more interested in working on the CV-no-free-lunch theorem, I'd really like to begin to split my time between the two projects.

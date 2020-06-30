@@ -19,7 +19,7 @@ class GreedyCallback(BaseCallback):
         list_gates = []
         self.training_env.set_attr("in_callback", True)
         while not done:
-            new_gate = self.model.policy.predict(self.training_env.get_attr("quantum_state"), deterministic=True)[0]
+            new_gate = self.model.policy.predict(self.training_env.get_attr("state"), deterministic=True)[0]
             list_gates.append(new_gate[0])
             _, reward, done, _ = self.training_env.step(new_gate)
         self.training_env.set_attr("in_callback", False)

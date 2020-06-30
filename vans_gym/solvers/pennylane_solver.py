@@ -10,25 +10,31 @@ def projector(ket):
 
 
 class PennylaneSolver:
-    def __init__(self, n_qubits=3, observable=None):
+    def __init__(self, n_qubits=3, observable=None, combinatorial_only=False):
         self.name = "PennylaneSolver"
         self.n_qubits = n_qubits
         self.observable = observable
         self.circuit = None
+        self.combinatorial_only = combinatorial_only
 
         self.dev = qml.device("default.qubit", wires=n_qubits)
 
         # with open('alphabet_w.pickle', 'rb') as alphabet:ju
         #     self.alphabet = pickle.load(alphabet)
-        self.alphabet = {"0": {"gate": qml.PauliX, "wires": [2]},
-                         "1": {"gate": qml.RZ, "wires": [0]},
-                         "2": {"gate": qml.RY, "wires": [1]},
-                         "3": {"gate": qml.CNOT, "wires": [1, 2]},  #, "params":[np.pi]},
-                         "4": {"gate": qml.CNOT, "wires": [1, 0]},  #, "params":[np.pi]},
-                         "5": {"gate": qml.RY, "wires": [0]},
-                         "6": {"gate":qml.Rot, "wires": [0]},  # borrowed from other optimization
-                         "7": {"gate": qml.CNOT, "wires": [0, 1]}  #, "params":[np.pi]},
-                   }
+        if not self.combinatorial_only:
+            self.alphabet = {"0": {"gate": qml.PauliX, "wires": [2]},
+                             "1": {"gate": qml.RZ, "wires": [0]},
+                             "2": {"gate": qml.RY, "wires": [1]},
+                             "3": {"gate": qml.CNOT, "wires": [1, 2]},  #, "params":[np.pi]},
+                             "4": {"gate": qml.CNOT, "wires": [1, 0]},  #, "params":[np.pi]},
+                             "5": {"gate": qml.RY, "wires": [0]},
+                             "6": {"gate":qml.Rot, "wires": [0]},  # borrowed from other optimization
+                             "7": {"gate": qml.CNOT, "wires": [0, 1]}  #, "params":[np.pi]},
+                       }
+        else:
+            with open('vans_gym/solvers/alphabet_w_discrete_optimized.pickle', 'rb') as alphabet:
+                self.alphabet = pickle.load(alphabet)
+
 
         if observable is None:  # then take projector on W state
             sq = 1 / np.sqrt(3)
@@ -55,8 +61,14 @@ class PennylaneSolver:
         num_params = sum([gate.num_params for gate in list_gates])
         params = [2*np.pi * np.random.sample(gate.num_params) for gate in list_gates]
 
+        c=0
+        for ind, op in zip(list_ops, list_gates):
+            if op.num_params >0:
+                params[c] = self.alphabet[str(int(ind))]["params"]
+            c+=1
+
         # Continuous optimization
-        if num_params > 0 and continuous_optim:
+        if (num_params > 0) and (not self.combinatorial_only):
             def loss(x):
                 return 1-circuit_obs(x)
 
@@ -77,8 +89,9 @@ class PennylaneSolver:
 
 
 if __name__ == "__main__":
-    solver = PennylaneSolver()
-
+    solver = PennylaneSolver(combinatorial_only = True)
+    energy2, _ = solver.run_circuit( [0,1,2,3,4,5,4,6,7])
+    print(energy2,_)
 
     ###### example grid search to show intermediate rewards is not a good idea #####
     # for k,j in zip([6,7],[7,5]):
