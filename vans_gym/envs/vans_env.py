@@ -7,7 +7,7 @@ from gym import spaces
 
 
 class VansEnv(gym.Env):
-    def __init__(self, solver, maximum_number_of_gates=9, training_env=True, state_as_sequence=False ,mdp_length=None):
+    def __init__(self, solver, maximum_number_of_gates=9, training_env=True, state_as_sequence=False ,mdp_length=None, printing=True):
         """mdp_length: how many steps you want the episode to last. If set to 1, you have a bandit problem."""
 
         super(VansEnv, self).__init__()
@@ -17,6 +17,7 @@ class VansEnv(gym.Env):
         self.mdp_length = mdp_length
         self.training_env = training_env
         self.state_as_sequence = state_as_sequence
+        self.printing = printing
 
 
         if self.mdp_length != None:
@@ -106,7 +107,7 @@ class VansEnv(gym.Env):
         if not done:
             reward = 0
 
-        if done:
+        if done and self.printing:
             self.history_final_reward = np.append(self.history_final_reward, reward)
             if self.episode % 1 == 0 and not self.in_callback:
                 print("\n============ Episode {} ============\n".format(self.episode))
