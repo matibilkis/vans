@@ -105,7 +105,7 @@ class VansEnv(gym.Env):
         else:
             self.state = self.quantum_state
         if not done:
-            reward = 0
+            reward = 0#
 
         if done and self.printing:
             self.history_final_reward = np.append(self.history_final_reward, reward)
