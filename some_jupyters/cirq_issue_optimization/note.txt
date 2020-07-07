@@ -1,2 +1,0 @@
-You can see the error obtained in solving_error.ypynb
-It was due to the fact cirq was not calling all qubits. It's solved by implementing identty on each qubit.

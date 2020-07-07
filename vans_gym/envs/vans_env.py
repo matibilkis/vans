@@ -7,7 +7,7 @@ from gym import spaces
 
 
 class VansEnv(gym.Env):
-    def __init__(self, solver, maximum_number_of_gates=9, training_env=True, state_as_sequence=False ,mdp_length=None, printing=True):
+    def __init__(self, solver, maximum_number_of_gates=9, training_env=True, state_as_sequence=False ,mdp_length=None, printing=True, penalty_repeated=False):
         """mdp_length: how many steps you want the episode to last. If set to 1, you have a bandit problem."""
 
         super(VansEnv, self).__init__()
@@ -18,7 +18,7 @@ class VansEnv(gym.Env):
         self.training_env = training_env
         self.state_as_sequence = state_as_sequence
         self.printing = printing
-
+        self.penalty_repeated = penalty_repeated #notice this is strongly dependent on how we choose the alphabet..
 
         if self.mdp_length != None:
             if self.solver.name == "PennylaneSolver":
@@ -50,7 +50,7 @@ class VansEnv(gym.Env):
         self.quantum_state = np.array([0. for _ in range(2**self.n_qubits)])
         self.quantum_state[0] = 1.
 
-        self.fidelity = np.inf
+        self.target_function = np.inf
 
         self.episode = -1
         self.i_step = 0
@@ -89,7 +89,7 @@ class VansEnv(gym.Env):
 
     def step(self, action):
         self.state_indexed = np.append(self.state_indexed, action)
-        self.fidelity, self.quantum_state = self.solver.run_circuit(self.state_indexed)
+        self.target_function, self.quantum_state = self.solver.run_circuit(self.state_indexed)
         reward = self.reward()
 
         if not self.in_callback:
@@ -105,7 +105,7 @@ class VansEnv(gym.Env):
         else:
             self.state = self.quantum_state
         if not done:
-            reward = 0#
+            reward = 0.#
 
         if done and self.printing:
             self.history_final_reward = np.append(self.history_final_reward, reward)
@@ -121,8 +121,8 @@ class VansEnv(gym.Env):
         return self.state, reward, done, {}
 
     def reward(self):
-        r = self.fidelity
-        if len(self.state_indexed) >= 2 and self.state_indexed[-1] == self.state_indexed[-2]: #we should figure out a way to include CNOTS here (minimum 3..)
+        r = self.target_function
+        if len(self.state_indexed) >= 2 and self.state_indexed[-1] == self.state_indexed[-2] and self.penalty_repeated: #we should figure out a way to include CNOTS here (minimum 3..)
             r = -1
         return r
 

@@ -1,1 +1,0 @@
-@tf.function does not add too much performance (30 it/s) since the bottleneck is the PennyLane simulator (40 it/s without step)

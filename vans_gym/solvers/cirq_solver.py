@@ -4,22 +4,33 @@ import cirq
 import tensorflow as tf
 import tensorflow_quantum as tfq
 
+        #
+        # self.alphabet = {"0": {"gate": cirq.X, "wires": [2]},
+        #                  "1": {"gate": cirq.rz, "wires": [0]},
+        #                  "2": {"gate": cirq.ry, "wires": [1]},
+        #                  "3": {"gate": cirq.CNOT, "wires": [1, 2]},
+        #                  "4": {"gate": cirq.CNOT, "wires": [1, 0]},
+        #                  "5": {"gate": cirq.ry, "wires": [0]},
+        #                  "6": {"gate": cirq.rz, "wires": [0]},
+        #                  "7": {"gate": cirq.CNOT, "wires": [0, 1]},
+        #                  }
+        # with open('alphabet_w.pickle', 'rb') as alphabet:ju
+        #     self.alphabet = pickle.load(alphabet)
+
 
 class CirqSolver:
-    def __init__(self, n_qubits=3, observable=None):
+    def __init__(self, n_qubits=3, observable=None, target_cost=None):
         self.name = "CirqSolver"
         self.n_qubits = n_qubits
-        self.observable = observable  # careful here!
         self.qubits = cirq.GridQubit.rect(1, n_qubits)
-        self.alphabet = {"0": {"gate": cirq.X, "wires": [2]},
-                         "1": {"gate": cirq.rz, "wires": [0]},
-                         "2": {"gate": cirq.ry, "wires": [1]},
-                         "3": {"gate": cirq.CNOT, "wires": [1, 2]},
-                         "4": {"gate": cirq.CNOT, "wires": [1, 0]},
-                         "5": {"gate": cirq.ry, "wires": [0]},
-                         "6": {"gate": cirq.rz, "wires": [0]},
-                         "7": {"gate": cirq.CNOT, "wires": [0, 1]},
-                         }
+        self.observable_name = observable
+        self.alphabet = {"0": {"gate": cirq.X, "wires": [0]},
+                         "1": {"gate": cirq.X, "wires": [1]},
+                         "2": {"gate": cirq.X, "wires": [2]},
+                         "3": {"gate": cirq.H, "wires": [0]},
+                         "4": {"gate": cirq.H, "wires": [1]},
+                         "5": {"gate": cirq.H, "wires": [2]},
+                        }
 
         self.parametrized = [cirq.rz, cirq.ry, cirq.rx]
         if observable is None:  # then take projector on W state
@@ -28,6 +39,35 @@ class CirqSolver:
             w_proj = cirq.density_matrix_from_state_vector(w_state)
             self.observable_matrix = w_proj
             self.observable = self.cirq_friendly_observable(w_proj)
+            self.taget_cost = 1
+            self.max_or_min = 1
+        elif observable == "Ising_High_TFields":
+            qubits = cirq.GridQubit.rect(1,self.n_qubits)
+            self.observable = [cirq.X.on(qubits[k]) for k in range(len(qubits))]
+            self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
+            self.max_or_min=-1
+            if target_cost is None:
+                self.target_cost = -1*n_qubits #ising with very high transverse field
+
+        elif observable == "Ising_High_TFields2":
+            self.n_qubits = 2
+            self.qubits = cirq.GridQubit.rect(1, 2)
+            self.alphabet = {"0": {"gate": cirq.X, "wires": [0]},
+                             "1": {"gate": cirq.H, "wires": [0]},
+                             "2": {"gate": cirq.H, "wires": [1]},
+                            }
+            self.observable = [cirq.X.on(self.qubits[k]) for k in range(len(self.qubits))]
+            self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
+            if target_cost is None:
+                self.target_cost = -1.*self.n_qubits #ising with very high transverse field
+
+        else:
+            self.observable = observable
+            self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
+            self.max_or_min=-1.
+            if target_cost is None:
+                self.target_cost = -1.*n_qubits #ising with very high transverse field
+
 
     def cirq_friendly_observable(self, obs):
         PAULI_BASIS = {
@@ -81,7 +121,10 @@ class CirqSolver:
         return model
 
     def run_circuit(self, list_ops):
-        wst = VAnsatz(list_ops)
+        wst = VAnsatz(self.n_qubits,
+                      self.observable_name,
+                      self.target_cost,
+                      list_ops)
 
         if wst.symbols == []:
             simulator = cirq.Simulator()
@@ -92,7 +135,7 @@ class CirqSolver:
 
         model = self.vansatz_keras_model(wst, self.observable)
         w_input = tfq.convert_to_tensor([wst.circuit])
-        w_output = tf.ones((1, 1))  # in case of W_state we want fidelity 1.
+        w_output = tf.ones((1, 1))*self.target_cost
         model.fit(x=w_input, y=w_output, batch_size=1, epochs=50, verbose=0)
         energy = float(np.squeeze(model.predict(w_input)))
 
@@ -102,9 +145,10 @@ class CirqSolver:
         return energy, probs
 
 
+
 class VAnsatz(CirqSolver):
-    def __init__(self, trajectory):
-        super(VAnsatz, self).__init__()
+    def __init__(self, n_qubits, observable_name, target_cost, trajectory):
+        super(VAnsatz, self).__init__(n_qubits, observable_name, target_cost)
         param_ind=0
         gates = []
         wires = []
@@ -124,7 +168,7 @@ class VAnsatz(CirqSolver):
             else:
                 gates.append(g)
                 parhere.append(False)
-        self.wires = wires
+        self._wires = wires
         self._gates = gates
         self.parhere = parhere
         self.circuit = self.get_state(self.qubits)
@@ -135,17 +179,21 @@ class VAnsatz(CirqSolver):
         for q in qubits:
             cc.append(cirq.I.on(q))
         for ind, g in enumerate(self._gates):
-            if len(self.wires[ind]) == 1:
-                indqub = self.wires[ind][0]
+            if len(self._wires[ind]) == 1:
+                indqub = self._wires[ind][0]
                 cc.append(g(qubits[indqub]))
             else:
-                control, target = self.wires[ind]
+                control, target = self._wires[ind]
                 cc.append(g(qubits[control], qubits[target]))
         circuit.append(cc)
         if params is None:
             return circuit
         resolver = {k: v for k, v in zip(self.symbols, params)}
         return cirq.resolve_parameters(circuit, resolver)
+
+
+
+
 
 
 if __name__ == "__main__":
