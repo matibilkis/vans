@@ -4,7 +4,9 @@ import cirq
 import tensorflow as tf
 import tensorflow_quantum as tfq
 
-        #
+#### it would be nice to re-use the model, if it's not necessary to build it again... since it takes a lot of time to build it.
+
+        # W- state alphabet (3 qubits)
         # self.alphabet = {"0": {"gate": cirq.X, "wires": [2]},
         #                  "1": {"gate": cirq.rz, "wires": [0]},
         #                  "2": {"gate": cirq.ry, "wires": [1]},
@@ -19,11 +21,12 @@ import tensorflow_quantum as tfq
 
 
 class CirqSolver:
-    def __init__(self, n_qubits=3, observable=None, target_cost=None):
+    def __init__(self, n_qubits=3, observable_name=None, *observable_from_matrix):
         self.name = "CirqSolver"
         self.n_qubits = n_qubits
         self.qubits = cirq.GridQubit.rect(1, n_qubits)
-        self.observable_name = observable
+        self.observable_name = observable_name
+
         self.alphabet = {"0": {"gate": cirq.X, "wires": [0]},
                          "1": {"gate": cirq.X, "wires": [1]},
                          "2": {"gate": cirq.X, "wires": [2]},
@@ -33,41 +36,55 @@ class CirqSolver:
                         }
 
         self.parametrized = [cirq.rz, cirq.ry, cirq.rx]
-        if observable is None:  # then take projector on W state
+        self.target_reward = self.n_qubits #mostly for the ising high transv fields.
+
+        if self.observable_name is "W-state":  # then take projector on W state
             sq = 1 / np.sqrt(3)
             w_state = np.array([0, sq, sq, 0, sq, 0, 0, 0])
             w_proj = cirq.density_matrix_from_state_vector(w_state)
-            self.observable_matrix = w_proj
             self.observable = self.cirq_friendly_observable(w_proj)
-            self.taget_cost = 1
-            self.max_or_min = 1
-        elif observable == "Ising_High_TFields":
-            qubits = cirq.GridQubit.rect(1,self.n_qubits)
-            self.observable = [cirq.X.on(qubits[k]) for k in range(len(qubits))]
-            self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
-            self.max_or_min=-1
-            if target_cost is None:
-                self.target_cost = -1*n_qubits #ising with very high transverse field
+            self.observable_matrix = w_proj
+            self.target_reward = 1
 
-        elif observable == "Ising_High_TFields2":
-            self.n_qubits = 2
-            self.qubits = cirq.GridQubit.rect(1, 2)
-            self.alphabet = {"0": {"gate": cirq.X, "wires": [0]},
-                             "1": {"gate": cirq.H, "wires": [0]},
-                             "2": {"gate": cirq.H, "wires": [1]},
+        elif self.observable_name == "Ising_High_TFields_HX":
+            self.observable = [cirq.X.on(q) for q in self.qubits] # -J \sum_{i} Z_i Z_{i+1} - g \sum_i X_i    when g>>J
+            self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
+            self.alphabet = {}
+            for k in range(self.n_qubits):
+                self.alphabet[str(k)] = {"gate": cirq.X, "wires":[k]}
+                self.alphabet[str(k+self.n_qubits)] = {"gate": cirq.H, "wires":[k]}
+
+        elif self.observable_name == "Ising_High_TFields_rots":
+            self.observable = [cirq.X.on(q) for q in self.qubits] # \sum X_i
+            self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
+            self.alphabet = {}
+            for k in range(self.n_qubits):
+                self.alphabet[str(k)] = {"gate": cirq.ry, "wires":[k]}
+
+        elif self.observable_name == "Ising_High_TFields_hybrid_2":
+            self.observable = [cirq.X.on(q) for q in self.qubits] # \sum X_i
+            self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
+            self.alphabet = {"0": {"gate": cirq.Z, "wires": [0]},
+                             "1": {"gate": cirq.Z, "wires": [1]},
+                             "2": {"gate": cirq.H, "wires": [0]},
+                             "4": {"gate": cirq.ry, "wires": [1]},
                             }
-            self.observable = [cirq.X.on(self.qubits[k]) for k in range(len(self.qubits))]
-            self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
-            if target_cost is None:
-                self.target_cost = -1.*self.n_qubits #ising with very high transverse field
 
+        elif self.observable_name == "Ising_High_TFields_hybrid_3":
+            self.observable = [cirq.X.on(q) for q in self.qubits] # \sum X_i
+            self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
+            self.alphabet = {"0": {"gate": cirq.Z, "wires": [0]},
+                             "1": {"gate": cirq.Z, "wires": [1]},
+                             "2": {"gate": cirq.Z, "wires": [2]},
+                             "3": {"gate": cirq.H, "wires": [0]},
+                             "4": {"gate": cirq.rx, "wires": [1]},
+                             "5": {"gate": cirq.ry, "wires": [2]},
+                            }
         else:
-            self.observable = observable
+            print("check which observable you are voptimizing!")
+            self.observable = observable_from_matrix
             self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
-            self.max_or_min=-1.
-            if target_cost is None:
-                self.target_cost = -1.*n_qubits #ising with very high transverse field
-
+            self.target_reward = 100 #just to say smthg
 
     def cirq_friendly_observable(self, obs):
         PAULI_BASIS = {
@@ -114,7 +131,6 @@ class CirqSolver:
                 initializer=tf.keras.initializers.RandomNormal()) #notice this is not strictly necessary.
 
         output = tf.math.reduce_sum(output, axis=-1, keepdims=True)
-
         model = tf.keras.Model(inputs=circuit_input, outputs=output)
         adam = tf.keras.optimizers.Adam(learning_rate=0.1)
         model.compile(optimizer=adam, loss='mse')
@@ -123,19 +139,30 @@ class CirqSolver:
     def run_circuit(self, list_ops):
         wst = VAnsatz(self.n_qubits,
                       self.observable_name,
-                      self.target_cost,
+                      self.target_reward,
                       list_ops)
 
-        if wst.symbols == []:
-            simulator = cirq.Simulator()
-            result = simulator.simulate(wst.get_state(self.qubits, params=np.random.sample(len(wst.symbols))), qubit_order=self.qubits)
-            energy = np.trace(np.dot(wst.observable_matrix, cirq.density_matrix_from_state_vector(result.final_state))).real
-            probs = np.abs(result.final_state)**2
-            return energy, probs
+        if len(wst.symbols) == 0:
+            if self.observable_name == "W-state" or self.observable_name is None:
+                simulator = cirq.Simulator()
+                result = simulator.simulate(wst.get_state(self.qubits, params=np.random.sample(len(wst.symbols))), qubit_order=self.qubits)
+                energy = np.trace(np.dot(wst.observable_matrix, cirq.density_matrix_from_state_vector(result.final_state))).real
+                probs = np.abs(result.final_state)**2
+                return energy, probs
+            else:
+                ci = tfq.convert_to_tensor([wst.circuit])
+                expval = tfq.layers.Expectation()(
+                                                ci,
+                                                operators=tfq.convert_to_tensor([self.observable]))
+                energy = np.squeeze(tf.math.reduce_sum(expval, axis=-1, keepdims=True))
+                simulator = cirq.Simulator()
+                result = simulator.simulate(wst.get_state(self.qubits), qubit_order=self.qubits)
+                probs = np.abs(result.final_state)**2
+                return energy, probs
 
         model = self.vansatz_keras_model(wst, self.observable)
         w_input = tfq.convert_to_tensor([wst.circuit])
-        w_output = tf.ones((1, 1))*self.target_cost
+        w_output = tf.ones((1, 1))*self.target_reward
         model.fit(x=w_input, y=w_output, batch_size=1, epochs=50, verbose=0)
         energy = float(np.squeeze(model.predict(w_input)))
 
@@ -147,14 +174,15 @@ class CirqSolver:
 
 
 class VAnsatz(CirqSolver):
-    def __init__(self, n_qubits, observable_name, target_cost, trajectory):
-        super(VAnsatz, self).__init__(n_qubits, observable_name, target_cost)
+    def __init__(self, n_qubits, observable_name, target_reward, trajectory):
+        super(VAnsatz, self).__init__(n_qubits, observable_name)
         param_ind=0
         gates = []
         wires = []
         params_cirquit = []
         parhere = []
         self.symbols = []
+        self.target_reward = target_reward
         for gate_ind in trajectory:
             g = self.alphabet[str(int(gate_ind))]["gate"]
             wires.append(self.alphabet[str(int(gate_ind))]["wires"])
