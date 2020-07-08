@@ -119,9 +119,9 @@ def learning_step(critic, critic_target, buffer, optimizer, batch_size=30):
 # qubs = [3, 3, 2 ]
 # tot_eps = [10**4, 1000, 1000]
 
-names=["Ising_High_TFields_hybrid_2"]
-qubs=[2]
-tot_eps = [400]
+names=["Ising_High_TFields_HX"]
+qubs=[3]
+tot_eps = [3*10**3]
 
 ind=0
 for observable_name, nqubits in zip(names, qubs):
@@ -162,7 +162,7 @@ for observable_name, nqubits in zip(names, qubs):
             state = next_state
         cumre+=reward
         r.append(cumre)
-        lhist.append(learning_step(critic, critic_target, buffer, optimizer, batch_size=32))
+        lhist.append(learning_step(critic, critic_target, buffer, optimizer, batch_size=256))
 
     #     ####greedy prob#####
         state = env.reset()
@@ -186,4 +186,4 @@ for observable_name, nqubits in zip(names, qubs):
     ax2.set_ylabel("Loss", size=50)
     ax2.plot(range(len(lhist)), lhist, alpha=0.6, linewidth=1,c="blue",label="critic loss")
     ax1.legend(prop={"size":20})
-    plt.savefig(observable_name + "q_" + str(nqubits)+"_400")
+    plt.savefig(observable_name + "q_" + str(nqubits)+"_10000")
