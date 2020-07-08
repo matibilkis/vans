@@ -67,7 +67,7 @@ class CirqSolver:
             self.alphabet = {"0": {"gate": cirq.Z, "wires": [0]},
                              "1": {"gate": cirq.Z, "wires": [1]},
                              "2": {"gate": cirq.H, "wires": [0]},
-                             "4": {"gate": cirq.ry, "wires": [1]},
+                             "3": {"gate": cirq.ry, "wires": [1]},
                             }
 
         elif self.observable_name == "Ising_High_TFields_hybrid_3":

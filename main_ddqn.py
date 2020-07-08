@@ -113,8 +113,17 @@ def learning_step(critic, critic_target, buffer, optimizer, batch_size=30):
 
 
 
-names = ["Ising_High_TFields_HX","Ising_High_TFields_HX",  "Ising_High_TFields_hybrid_3"]
-qubs = [2, 3, 3]
+# names = ["Ising_High_TFields_HX",  "Ising_High_TFields_hybrid_3",
+
+
+# qubs = [3, 3, 2 ]
+# tot_eps = [10**4, 1000, 1000]
+
+names=["Ising_High_TFields_hybrid_2"]
+qubs=[2]
+tot_eps = [400]
+
+ind=0
 for observable_name, nqubits in zip(names, qubs):
     buffer = ReplayBuffer()
     solver = CirqSolver(n_qubits = nqubits ,observable_name=observable_name)
@@ -132,7 +141,8 @@ for observable_name, nqubits in zip(names, qubs):
     pt=[]
     lhist=[]
     cumre=0
-    episodes = np.arange(1,5,1)
+    episodes = np.arange(1,tot_eps[ind],1)
+    ind+=1
 
     rhist=[]
     action_hist=[]
@@ -152,7 +162,7 @@ for observable_name, nqubits in zip(names, qubs):
             state = next_state
         cumre+=reward
         r.append(cumre)
-        lhist.append(learning_step(critic, critic_target, buffer, optimizer, batch_size=8))
+        lhist.append(learning_step(critic, critic_target, buffer, optimizer, batch_size=32))
 
     #     ####greedy prob#####
         state = env.reset()
@@ -176,4 +186,4 @@ for observable_name, nqubits in zip(names, qubs):
     ax2.set_ylabel("Loss", size=50)
     ax2.plot(range(len(lhist)), lhist, alpha=0.6, linewidth=1,c="blue",label="critic loss")
     ax1.legend(prop={"size":20})
-    plt.savefig(observable_name + "q_" + str(nqubits))
+    plt.savefig(observable_name + "q_" + str(nqubits)+"_400")
