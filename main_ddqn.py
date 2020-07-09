@@ -88,28 +88,30 @@ class ReplayBuffer():
 
 
 def learning_step(critic, critic_target, buffer, optimizer, batch_size=30):
-    batch =buffer.sample(batch_size)
-    states, actions, next_states, rewards, dones = np.transpose(batch)
+    for k in range(25):
 
-    qpreds = critic(tf.stack(states))
-    labels = qpreds.numpy()
-    for inda, act in enumerate(actions):
-        if dones[inda] is False:
-            labels[inda,act] = np.max(np.squeeze(critic_target(tf.expand_dims(next_states[inda], axis=0))))
-        else:
-            labels[inda, act] = rewards[inda]
+        batch =buffer.sample(batch_size)
+        states, actions, next_states, rewards, dones = np.transpose(batch)
 
-
-    with tf.GradientTape() as tape:
-        tape.watch(critic.trainable_variables)
         qpreds = critic(tf.stack(states))
+        labels = qpreds.numpy()
+        for inda, act in enumerate(actions):
+            if dones[inda] is False:
+                labels[inda,act] = np.max(np.squeeze(critic_target(tf.expand_dims(next_states[inda], axis=0))))
+            else:
+                labels[inda, act] = rewards[inda]
 
-        loss = tf.keras.losses.MSE(labels, qpreds)
-        loss = tf.reduce_mean(loss)
-        grads = tape.gradient(loss, critic.trainable_variables)
-    optimizer.apply_gradients(zip(grads, critic.trainable_variables))
-    critic_target.update_target_parameters(critic)
-    return loss.numpy()
+
+        with tf.GradientTape() as tape:
+            tape.watch(critic.trainable_variables)
+            qpreds = critic(tf.stack(states))
+
+            loss = tf.keras.losses.MSE(labels, qpreds)
+            loss = tf.reduce_mean(loss)
+            grads = tape.gradient(loss, critic.trainable_variables)
+        optimizer.apply_gradients(zip(grads, critic.trainable_variables))
+        critic_target.update_target_parameters(critic)
+        return loss.numpy()
 
 
 
@@ -119,9 +121,9 @@ def learning_step(critic, critic_target, buffer, optimizer, batch_size=30):
 # qubs = [3, 3, 2 ]
 # tot_eps = [10**4, 1000, 1000]
 
-names=["Ising_High_TFields_HX"]
+names=["Ising_High_TFields_hybrid_3"]
 qubs=[3]
-tot_eps = [3*10**3]
+tot_eps = [500]
 
 ind=0
 for observable_name, nqubits in zip(names, qubs):
@@ -162,7 +164,7 @@ for observable_name, nqubits in zip(names, qubs):
             state = next_state
         cumre+=reward
         r.append(cumre)
-        lhist.append(learning_step(critic, critic_target, buffer, optimizer, batch_size=256))
+        lhist.append(learning_step(critic, critic_target, buffer, optimizer, batch_size=8))
 
     #     ####greedy prob#####
         state = env.reset()
@@ -186,4 +188,4 @@ for observable_name, nqubits in zip(names, qubs):
     ax2.set_ylabel("Loss", size=50)
     ax2.plot(range(len(lhist)), lhist, alpha=0.6, linewidth=1,c="blue",label="critic loss")
     ax1.legend(prop={"size":20})
-    plt.savefig(observable_name + "q_" + str(nqubits)+"_10000")
+    plt.savefig(observable_name + "q_" + str(nqubits)+"410_4")
