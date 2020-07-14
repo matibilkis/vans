@@ -14,20 +14,20 @@ warnings.filterwarnings('ignore')
 if __name__ == "__main__":
     n_qubits = 3
 
-    maximum_number_of_gates = 9
+    depth_circuit = 9
     tensorboard_folder = "./tensorboard/"
 
     # solver = CirqSolver(n_qubits)
     solver = PennylaneSolver(n_qubits, combinatorial_only=True)
 
-    env = VansEnv(solver, maximum_number_of_gates, mdp_length=1, state_as_sequence=True)
+    env = VansEnv(solver, depth_circuit, state_as_sequence=True)
     env = Monitor(env)  # Useful to display more information on Tensorboard
     # check_env(env) #Why does this run for 4 times ?? Is it because of the cores i have?
 
     # model = PPO('MlpPolicy', env, n_steps=10, tensorboard_log=tensorboard_folder)
     model = DQN('MlpPolicy', env)# tensorboard_log=tensorboard_folder)
 
-    # test_env = VansEnv(solver, maximum_number_of_gates, training_env=False)
+    # test_env = VansEnv(solver, depth_circuit, training_env=False)
     eval_callback = GreedyCallback()
 
     print("\n------------------------ Training ------------------------\n")
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     print("\n------------------------ Testing ------------------------\n")
 
     obs = env.reset()
-    # for i in range(maximum_number_of_gates+1):
+    # for i in range(depth_circuit+1):
     done = False
     while not done:
         action, _states = model.predict(obs, deterministic=True)

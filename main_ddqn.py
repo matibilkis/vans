@@ -133,7 +133,7 @@ for observable_name, nqubits in zip(names, qubs):
 
     critic = Critic(output_dim=len(solver.alphabet))
     critic_target = Critic(output_dim=len(solver.alphabet), tau=0.01)
-    env = VansEnv(solver,maximum_number_of_gates=solver.n_qubits, state_as_sequence=True, printing=False)
+    env = VansEnv(solver,depth_circuit=solver.n_qubits, state_as_sequence=True, printing=False)
     env.reset()
     critic(tf.expand_dims(env.state, axis=0))
     critic_target(tf.expand_dims(env.state, axis=0))
