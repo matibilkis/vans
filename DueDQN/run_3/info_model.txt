@@ -1,5 +1,5 @@
 observable_name: Ising_High_TFields
-depth_circuit: 2
+depth_circuit: 3
 n_qubits: 2
 name: DueDQN
 lr: 0.01
@@ -8,10 +8,10 @@ policy: exp-decay
 ep0: 0.01
 exp_decay_effective_explotation: 0.5
 
-state_shape: 2
+state_shape: 3
 buffer_size: 100000batch_size: 32
-total_timesteps: 10
+total_timesteps: 100
 episodes_before_learn: 2
 tau (target update): 0.1
 
-TOTAL_TIME: 0:00:19.806208
+TOTAL_TIME: 0:05:57.511524

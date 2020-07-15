@@ -56,7 +56,7 @@ class Duel_DQN:
         Notice we normalize the input with this Lambda layer.
         '''
 
-        model_input = Input(shape=(self.env.solver.n_qubits))
+        model_input = Input(shape=(self.env.depth_circuit))
         x = Lambda(lambda layer: layer / self.n_actions)(model_input)
 
         x = Dense(64, kernel_initializer=VarianceScaling(scale=2.), activation='relu', use_bias=False)(model_input)
@@ -230,14 +230,21 @@ class ReplayBuffer:
         self.terminal_flags = np.empty(self.size, dtype=np.bool)
         self.priorities = np.zeros(self.size, dtype=np.float32)
         self.use_per = use_per
+        self.max_reward = -1
 
     def add_experience(self, action, states, reward, terminal):
 
+        self.max_reward = max(self.max_reward, reward)
         self.actions[self.current] = action
         self.states[self.current] = states
         self.rewards[self.current] = reward
         self.terminal_flags[self.current] = terminal
-        self.priorities[self.current] = max(self.priorities.max(), 1)  # make the most recent experience important
+
+        #### CHECK THIS !!!
+        if reward >= self.max_reward:
+            self.priorities[self.current] = max(self.priorities.max(), 1)
+            self.max_reward = reward
+
         self.count = max(self.count, self.current+1) #
         self.current = (self.current + 1) % self.size #
 

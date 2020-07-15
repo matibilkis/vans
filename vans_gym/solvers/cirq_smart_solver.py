@@ -49,7 +49,7 @@ class CirqSmartSolver:
 
         self.observable, self.observable_matrix = self.load_observable(observable_name)
 
-        ###index cnots
+        ###indexed cnots total number n!/(n-2)! = n*(n-1) (if all connections are allowed)
         self.indexed_cnots = {}
         count=0
         for control in range(self.n_qubits):
@@ -57,9 +57,13 @@ class CirqSmartSolver:
                 if control != target:
                     self.indexed_cnots[str(count)] = [control, target]
                     count+=1
+        self.number_of_cnots = len(self.indexed_cnots)
+        #int(np.math.factorial(self.n_qubits)/np.math.factorial(self.n_qubits -2))
 
     def load_observable(self, obs):
-        """obs can either be a string, a list with cirq's gates or a matrix (array) """
+        """
+
+        obs can either be a string, a list with cirq's gates or a matrix (array) """
         if obs is "W-state":  # then take projector on W state
             sq = 1 / np.sqrt(3)
             w_state = np.array([0, sq, sq, 0, sq, 0, 0, 0])
@@ -71,6 +75,10 @@ class CirqSmartSolver:
             observable = [cirq.X.on(q) for q in self.qubits] # -J \sum_{i} Z_i Z_{i+1} - g \sum_i X_i    when g>>J
             observable_matrix = cirq.unitary(cirq.Circuit(observable))
 
+        elif obs is None:
+            print("Define an observable please! Using identity meanwhile")
+            observable = [cirq.I.on(q) for q in self.qubits] # -J \sum_{i} Z_i Z_{i+1} - g \sum_i X_i    when g>>J
+            observable_matrix = cirq.unitary(cirq.Circuit(observable))
         else:
             print("loading observable, check estimation of ground state energy")
             if isinstance(obs, list):
@@ -89,11 +97,11 @@ class CirqSmartSolver:
 
         for ind,inst in enumerate(one_hot_gate):
             if inst == 1: #this is faster than numpy.where
-                if ind < 2*self.n_qubits:
+                if ind < self.number_of_cnots:
                     control, target = self.indexed_cnots[str(ind)]
                     circuit.append(self.alphabet_gates[0].on(self.qubits[control], self.qubits[target]))
                     return circuit, params
-                elif 2*self.n_qubits <= ind < 3*self.n_qubits:
+                elif self.number_of_cnots <= ind < 3*self.n_qubits:
                     new_param = "th_"+str(len(params))
                     params.append(new_param)
                     circuit.append(self.alphabet_gates[1](sympy.Symbol(new_param)).on(self.qubits[int(ind%self.n_qubits)]))
@@ -157,7 +165,7 @@ class CirqSmartSolver:
         model = self.vansatz_keras_model(wst, self.observable)
         w_input = tfq.convert_to_tensor([wst.circuit])
         w_output = tf.ones((1, 1))*self.target_reward
-        model.fit(x=w_input, y=w_output, batch_size=1, epochs=50, verbose=0)
+        model.fit(x=w_input, y=w_output, batch_size=1, epochs=20, verbose=0)
         energy = float(np.squeeze(model.predict(w_input)))
 
         simulator = cirq.Simulator()
@@ -252,13 +260,13 @@ class VAnsatzSmart(CirqSmartSolver):
         ind2 = np.where(np.array(w2) == 1)[0][0]
 
         ## (i) both CNOTS, a) same CNOT, b) same targets, keep control on less index qubit first.
-        if (ind1 < 2*self.n_qubits) and (ind2 < 2*self.n_qubits):
+        if (ind1 < self.number_of_cnots) and (ind2 < self.number_of_cnots):
             if ind1 == ind2:
                 w1[ind1] = -1
                 w2[ind2] = -1
                 control, target = self.indexed_cnots[str(ind1)]
-                w1[4*self.n_qubits + control] = 1 #this is arbitrary
-                w2[4*self.n_qubits + target] = 1 #this is arbitrary
+                w1[self.number_of_cnots+2*self.n_qubits + control] = 1 #this is arbitrary
+                w2[self.number_of_cnots+2*self.n_qubits + target] = 1 #this is arbitrary
                 return w1, w2, c+1
             else:
                 control1, target1 = self.indexed_cnots[str(ind1)]
@@ -270,36 +278,36 @@ class VAnsatzSmart(CirqSmartSolver):
                         return w1,w2, c+1
 
         ## (ii) #both rz, replace second rotation by I
-        if (2*self.n_qubits <= ind1 < 3*self.n_qubits) and (2*self.n_qubits <= ind2 < 3*self.n_qubits):
+        if (self.number_of_cnots <= ind1 < self.number_of_cnots + self.n_qubits) and (self.number_of_cnots  <= ind2 < self.number_of_cnots + self.n_qubits):
             if ind1 == ind2:
                 w2[ind1] = -1
-                w2[4*self.n_qubits + ind2%self.n_qubits] = 1
+                w2[self.number_of_cnots + 2*self.n_qubits + (ind2-self.number_of_cnots)%self.n_qubits] = 1
                 return w1, w2, c+1
             elif ind1 > ind2: #put all gates on onequbit first
                 return w2, w1, c+1
 
         ## (iii) P after CNOT (convention: put P before)
-        if (ind1 < 2*self.n_qubits) and (3*self.n_qubits <= ind2 < 4*self.n_qubits):
+        if (ind1 < self.number_of_cnots) and (self.number_of_cnots + self.n_qubits <= ind2 < self.number_of_cnots + 2*self.n_qubits):
             control, target = self.indexed_cnots[str(ind1)]
-            if target == ind2%self.n_qubits:
+            if target == (ind2- self.number_of_cnots)%self.n_qubits:
                 return w2, w1, c+1
 
         ## (iv) rz after CNOT (convention: put rz before)
-        if (ind1 < 2*self.n_qubits) and (2*self.n_qubits <= ind2 < 3*self.n_qubits):
+        if (ind1 < self.number_of_cnots) and (self.number_of_cnots <= ind2 < self.number_of_cnots + self.n_qubits):
             control, target = self.indexed_cnots[str(ind1)]
-            if control == ind2%self.n_qubits:
+            if control == (ind2-self.number_of_cnots)%self.n_qubits:
                 return w2, w1, c+1
 
         ##(v) move CNOTS as much to the right as possible
-        if (ind1 < 2*self.n_qubits) and (2*self.n_qubits <= ind2 < 5*self.n_qubits): #
-            if ind2%self.n_qubits not in self.indexed_cnots[str(ind1)]:
+        if (ind1 < self.number_of_cnots) and (self.number_of_cnots <= ind2 < len(self.alphabet)): #
+            if (ind2-self.number_of_cnots)%self.n_qubits not in self.indexed_cnots[str(ind1)]: #check if ind2 has something to do with control and targets of ind1..
                 return w2, w1, c+1
             else:
                 return w1, w2, c+1
 
         ## (vi) try to impose an order on single qubit gates
-        if (2*self.n_qubits <= ind1 < 5*self.n_qubits) and (2*self.n_qubits <= ind2 < 5*self.n_qubits): #
-            if ind1%self.n_qubits > ind2%self.n_qubits:
+        if (self.number_of_cnots <= ind1 < len(self.alphabet)) and (self.number_of_cnots <= ind2 < len(self.alphabet)): #
+            if (ind1-self.number_of_cnots)%self.n_qubits > (ind2-self.number_of_cnots)%self.n_qubits:
                 return w2, w1, c+1
             else:
                 return w1, w2, c+1
@@ -379,18 +387,19 @@ class VAnsatzSmart(CirqSmartSolver):
         iss, jss = np.where(np.array(ws) == 1) #all indices with information of gate
         c=0
         internal_count_wire=0
-        u3_seq = np.array([2,3,2,3,2])
+        # u3_seq = np.array([2,3,2,3,2])
+        u3_seq = np.array([0,1,0,1,0])#,2,1,2,1])
 
         for i,j in zip(iss, jss):
-            if j>=2*self.n_qubits: #I don't want CNOTs
+            if j>=self.number_of_cnots: #I don't want CNOTs
                 while internal_count_wire == 0:
                     internal_count_wire +=1
-                    qindfav = j%self.n_qubits
+                    qindfav = (j-self.number_of_cnots)%self.n_qubits #after the CNOTS, we have cycles of self.n_qubits one-qubit gates. qindfav then tells which is the qubit we are watching.
                     string_to_eval=[]
                     indexes_saving = []
 
-                if (j%self.n_qubits == qindfav):
-                    string_to_eval.append(int(np.trunc(j/self.n_qubits)))
+                if ((j-self.number_of_cnots)%self.n_qubits == qindfav):
+                    string_to_eval.append(int(np.trunc((j-self.number_of_cnots)/self.n_qubits)))
                     indexes_saving.append(i)
                     internal_count_wire+=1
 
@@ -401,10 +410,10 @@ class VAnsatzSmart(CirqSmartSolver):
                                 for gind in indexes_saving: #erase everyone
                                     cropped_circuit[gind] = -1 #erase everyone
                                     if ind <5:
-                                        cropped_circuit[gind][u3_seq[ind]*self.n_qubits + qindfav] = 1 #add each element of u3_seq
+                                        cropped_circuit[gind][self.number_of_cnots +(u3_seq[ind]*self.n_qubits) + qindfav] = 1 #add each element of u3_seq in the corresponding position
                                         ind+=1
                                     else:
-                                        cropped_circuit[gind][4*self.n_qubits + qindfav] = 1 #add identity
+                                        cropped_circuit[gind][self.number_of_cnots + 2*self.n_qubits + qindfav] = 1 #add identity
 
                         internal_count_wire=0
                         string_to_eval=[]
@@ -419,7 +428,7 @@ class VAnsatzSmart(CirqSmartSolver):
                                     cropped_circuit[gind][u3_seq[ind]*self.n_qubits + qindfav] = 1 #add each element of u3_seq
                                     ind+=1
                                 else:
-                                    cropped_circuit[gind][4*self.n_qubits + qindfav] = 1 #add identity
+                                    cropped_circuit[gind][self.number_of_cnots + 2*self.n_qubits + qindfav] = 1 #add identity
 
                     internal_count_wire=0
                     string_to_eval=[]
@@ -431,8 +440,8 @@ class VAnsatzSmart(CirqSmartSolver):
         return cropped_circuit
 
 if __name__ == "__main__":
-    solver = CirqSmartSolver(observable_name="Ising_High_TFields")
+    solver = CirqSmartSolver(n_qubits=3,observable_name="Ising_High_TFields")
     # solver.run_circuit([0])
 
-    # solver.run_circuit(list(np.random.choice(range(15),30)))
+    solver.run_circuit(list(np.random.choice(range(15),30)))
     # print(solver.run_circuit(np.array([0, 1, 2, 3, 4, 5, 4, 6, 5, 6, 7])))
