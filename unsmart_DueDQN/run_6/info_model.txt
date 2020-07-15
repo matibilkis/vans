@@ -1,0 +1,17 @@
+observable_name: Ising_High_TFields_HX
+depth_circuit: 4
+n_qubits: 4
+name: DueDQN
+lr: 0.01
+
+policy: exp-decay
+ep0: 0.01
+exp_decay_effective_explotation: 0.5
+
+state_shape: 4
+buffer_size: 100000batch_size: 32
+total_timesteps: 1000
+episodes_before_learn: 500
+tau (target update): 0.1
+
+TOTAL_TIME: 0:04:36.755625

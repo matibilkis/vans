@@ -71,6 +71,8 @@ class CirqSolver:
             self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
             self.target_reward = 100 #just to say smthg
 
+
+
     def cirq_friendly_observable(self, obs):
         PAULI_BASIS = {
             'I': np.eye(2),

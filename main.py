@@ -31,13 +31,10 @@ if __name__ == "__main__":
     eval_callback = GreedyCallback()
 
     print("\n------------------------ Training ------------------------\n")
-
     model.learn(total_timesteps=1000, callback=eval_callback)
-
     print("\n------------------------ Testing ------------------------\n")
 
     obs = env.reset()
-    # for i in range(depth_circuit+1):
     done = False
     while not done:
         action, _states = model.predict(obs, deterministic=True)
