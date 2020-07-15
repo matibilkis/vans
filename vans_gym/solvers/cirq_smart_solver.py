@@ -34,7 +34,7 @@ class CirqSmartSolver:
 
 
         ### create one_hot alphabet ####
-        self.alphabet_gates = [cirq.CNOT, cirq.rz,cirq.rx(-np.pi/2), cirq.I]
+        self.alphabet_gates = [cirq.CNOT, cirq.ry,cirq.rx(-np.pi/2), cirq.I]
         self.alphabet = []
         for ind, k in enumerate(range(5*self.n_qubits)): #5 accounts for 2 CNOTS and 3 other ops
             one_hot_gate = [-1]*5*self.n_qubits
@@ -222,12 +222,12 @@ class VAnsatzSmart(CirqSmartSolver):
 
         ws = [self.alphabet[int(g)] for g in trajectory]
 
-        checked_trajectory = self.check_and_recheck(ws)
-        checked_trajectory = self.detect_u3_and_reduce(checked_trajectory)
+        ws = self.check_and_recheck(ws)
+        ws = self.detect_u3_and_reduce(ws)
 
         circuit = []
         params = []
-        for g in checked_trajectory:
+        for g in ws:
             circuit, params = self.append_to_circuit(g,circuit, params)
 
         self.circuit = cirq.Circuit(circuit)
@@ -438,6 +438,13 @@ class VAnsatzSmart(CirqSmartSolver):
                 internal_count_wire=0
                 c=0
         return cropped_circuit
+
+def rolling(a, window):
+    shape = (a.size - window + 1, window)
+    strides = (a.itemsize, a.itemsize)
+    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+
+
 
 if __name__ == "__main__":
     solver = CirqSmartSolver(n_qubits=3,observable_name="Ising_High_TFields")

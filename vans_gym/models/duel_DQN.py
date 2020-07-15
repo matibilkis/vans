@@ -42,7 +42,7 @@ class Duel_DQN:
         self.replay_buffer = ReplayBuffer(state_shape, size=size_rp, use_per=True)
 
         ### some info to save ###
-        self.info = "observable_name: {}\ndepth_circuit: {}\nn_qubits: {}\nname: {}\nlr: {}\n\npolicy: {}\nep0: {}\nexp_decay_effective_explotation: {}\n\nstate_shape: {}\nbuffer_size: {}".format(
+        self.info = "len(alphabet): {}\nalphabet_gates: {}, \nobservable_name: {}\ndepth_circuit: {}\nn_qubits: {}\nname: {}\nlr: {}\n\npolicy: {}\nep0: {}\nexp_decay_effective_explotation: {}\n\nstate_shape: {}\nbuffer_size: {}".format(len(self.env.solver.alphabet),self.env.solver.alphabet_gates,
         self.env.solver.observable_name, self.env.depth_circuit, self.env.n_qubits,
         self.name, learning_rate, self.policy, self.ep0, self.exp_decay_effective_explotation,
         state_shape, self.replay_buffer.size )
@@ -56,7 +56,7 @@ class Duel_DQN:
         Notice we normalize the input with this Lambda layer.
         '''
 
-        model_input = Input(shape=(self.env.depth_circuit))
+        model_input = Input(shape=(self.env.state_shape))
         x = Lambda(lambda layer: layer / self.n_actions)(model_input)
 
         x = Dense(64, kernel_initializer=VarianceScaling(scale=2.), activation='relu', use_bias=False)(model_input)
@@ -107,7 +107,7 @@ class Duel_DQN:
             error = target_q - Q #this is for importance sample
             loss = tf.keras.losses.Huber()(target_q, Q)
             if self.replay_buffer.use_per:
-                loss = tf.reduce_mean(loss)#*importance)
+                loss = tf.reduce_mean(loss*importance) #not entirely sure if this works or not (?)
 
         grads = tape.gradient(loss, self.prim_qnet.trainable_variables)
         self.prim_qnet.optimizer.apply_gradients(zip(grads, self.prim_qnet.trainable_variables))
@@ -218,7 +218,7 @@ class Duel_DQN:
         return
 
 class ReplayBuffer:
-    def __init__(self, state_shape, size=10**2, use_per=True):
+    def __init__(self, state_shape, size=10**5, use_per=True):
         self.size = size
         self.count = 0  # total index of memory written to, always less than self.size
         self.current = 0  # index to write to
@@ -234,16 +234,12 @@ class ReplayBuffer:
 
     def add_experience(self, action, states, reward, terminal):
 
-        self.max_reward = max(self.max_reward, reward)
+        # self.max_reward = max(self.max_reward, reward)
         self.actions[self.current] = action
         self.states[self.current] = states
         self.rewards[self.current] = reward
         self.terminal_flags[self.current] = terminal
-
-        #### CHECK THIS !!!
-        if reward >= self.max_reward:
-            self.priorities[self.current] = max(self.priorities.max(), 1)
-            self.max_reward = reward
+        self.priorities[self.current] = max(self.priorities.max(), 1)
 
         self.count = max(self.count, self.current+1) #
         self.current = (self.current + 1) % self.size #

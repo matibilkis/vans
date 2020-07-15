@@ -9,7 +9,7 @@ from gym import spaces
 class VansEnv(gym.Env):
     def __init__(self, solver, depth_circuit=9, training_env=True,
      state_as_sequence=True, printing=True):
-     
+
         """If state as sequence False, state is taken as the quantum state."""
 
         super(VansEnv, self).__init__()
@@ -31,11 +31,12 @@ class VansEnv(gym.Env):
             self.observation_space = spaces.Box(np.array([-self.n_actions] * self.depth_circuit),
                                                 np.array([self.n_actions] *self.depth_circuit ),
                                                 dtype=np.float32)
+            self.state_shape = int(self.depth_circuit)
         else:
             self.observation_space = spaces.Box(np.array([0] * 2**self.n_qubits),
                                                 np.array([1] * 2**self.n_qubits),
                                                 dtype=np.float32)
-
+            self.state_shape = int(2**self.n_qubits)
         #### for callbacks and printing ####
 
         self.reward_history = np.array([])
