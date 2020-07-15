@@ -1,0 +1,19 @@
+len(alphabet): 8
+alphabet_gates: [cirq.CNOT, <function ry at 0x7fe45b992510>, cirq.rx(np.pi*-0.5), cirq.I], 
+observable_name: Ising_High_TFields
+depth_circuit: 2
+n_qubits: 2
+name: DueDQN
+lr: 0.01
+
+policy: exp-decay
+ep0: 0.01
+exp_decay_effective_explotation: 0.5
+
+state_shape: 2
+buffer_size: 100000batch_size: 32
+total_timesteps: 100
+episodes_before_learn: 20
+tau (target update): 0.1
+
+TOTAL_TIME: 0:02:15.984654

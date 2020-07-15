@@ -33,14 +33,6 @@ class CirqSmartSolver:
         self.observable_name = observable_name
 
 
-        ### create one_hot alphabet ####
-        self.alphabet_gates = [cirq.CNOT, cirq.ry,cirq.rx(-np.pi/2), cirq.I]
-        self.alphabet = []
-        for ind, k in enumerate(range(5*self.n_qubits)): #5 accounts for 2 CNOTS and 3 other ops
-            one_hot_gate = [-1]*5*self.n_qubits
-            one_hot_gate[ind] = 1
-            self.alphabet.append(one_hot_gate)
-
         ##### value to use as label for continuous optimization; this appears in variational model ####
         if target_reward is None:
             self.target_reward = self.n_qubits #mostly for the ising high transv fields.
@@ -59,6 +51,18 @@ class CirqSmartSolver:
                     count+=1
         self.number_of_cnots = len(self.indexed_cnots)
         #int(np.math.factorial(self.n_qubits)/np.math.factorial(self.n_qubits -2))
+
+        ### create one_hot alphabet ####
+        self.alphabet_gates = [cirq.CNOT, cirq.ry,cirq.rx(-np.pi/2), cirq.I]
+        self.alphabet = []
+
+        alphabet_length = self.number_of_cnots + (len(self.alphabet_gates)-1)*self.n_qubits
+        for ind, k in enumerate(range(self.number_of_cnots + (len(self.alphabet_gates)-1)*self.n_qubits)): #5 accounts for 2 CNOTS and 3 other ops
+            one_hot_gate = [-1]*alphabet_length
+            one_hot_gate[ind] = 1
+            self.alphabet.append(one_hot_gate)
+
+
 
     def load_observable(self, obs):
         """
@@ -225,6 +229,13 @@ class VAnsatzSmart(CirqSmartSolver):
         ws = self.check_and_recheck(ws)
         ws = self.detect_u3_and_reduce(ws)
 
+        #### this is as a checker, to be removed later on! ###
+        val = np.sum(np.diag(np.array(self.alphabet)))
+        if val != len(self.alphabet) :
+            print(val)
+            print(len(self.alphabet))
+            print("WARNING!!!!")
+
         circuit = []
         params = []
         for g in ws:
@@ -248,7 +259,7 @@ class VAnsatzSmart(CirqSmartSolver):
         return cirq.resolve_parameters(self.circuit, resolver)
 
 
-    def check_two(self,w1,w2, c):
+    def check_two(self,ww1,ww2, c):
 
         """
         input::   w_1, w_2 one_hot_gate
@@ -256,9 +267,11 @@ class VAnsatzSmart(CirqSmartSolver):
         output::  w_1, w_2 one_hot_gate in a "corrected form"
         """
 
-        ind1 = np.where(np.array(w1) == 1)[0][0]
-        ind2 = np.where(np.array(w2) == 1)[0][0]
+        ind1 = np.where(np.array(ww1) == 1)[0][0]
+        ind2 = np.where(np.array(ww2) == 1)[0][0]
 
+        w1 = ww1.copy()
+        w2 = ww2.copy()
         ## (i) both CNOTS, a) same CNOT, b) same targets, keep control on less index qubit first.
         if (ind1 < self.number_of_cnots) and (ind2 < self.number_of_cnots):
             if ind1 == ind2:

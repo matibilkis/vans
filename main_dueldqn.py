@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     observable_name = "Ising_High_TFields"
 
-    solver = CirqSmartSolver(n_qubits = 2, observable_name=observable_name)
+    solver = CirqSmartSolver(n_qubits = 3, observable_name=observable_name)
     env = VansEnv(solver, depth_circuit=2, state_as_sequence=True, printing=False)
 
     model = Duel_DQN(env, policy="exp-decay")
