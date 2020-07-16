@@ -19,12 +19,12 @@ from datetime import datetime
 
 
 class Duel_DQN:
-    def __init__(self, env, learning_rate = 0.01,
+    def __init__(self, env, use_tqdm=False, learning_rate = 0.01,
         size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01, tau=0.1):
 
         self.env = env
         self.n_actions = len(self.env.solver.alphabet)
-
+        self.use_tqdm=use_tqdm
         ### define qnets ###
         self.prim_qnet = self.build_q_network(learning_rate = learning_rate)
         self.target_qnet = self.build_q_network()
@@ -141,7 +141,7 @@ class Duel_DQN:
         start = datetime.now()
 
         self.env.reset()
-        for k in tqdm(episodes):
+        for k in tqdm(episodes, disable=self.use_tqdm):
             done = False
             state=self.env.reset()
             while not done:

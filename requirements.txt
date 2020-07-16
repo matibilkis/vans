@@ -1,0 +1,8 @@
+gym
+matplotlib
+pennylane
+sympy
+cirq
+tensorflow==2.1.0
+tensorflow_quantum
+tqdm
