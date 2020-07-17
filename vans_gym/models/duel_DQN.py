@@ -22,6 +22,35 @@ class DuelDQN:
     def __init__(self, env, use_tqdm=False, learning_rate = 0.01,
         size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01, tau=0.1, plotter=False):
 
+
+        self.name = name
+        self.use_tqdm = use_tqdm
+
+        if not os.path.exists(self.name):
+            os.makedirs(self.name)
+            with open(self.name+"/number_run.txt", "w+") as f:
+                f.write("0")
+                f.close()
+            number_run = 0
+        else:
+            with open(self.name+"/number_run.txt", "r") as f:
+                a = f.readlines()[0]
+                f.close()
+            with open(self.name+"/number_run.txt", "w") as f:
+                f.truncate(0)
+                number_run = int(a)+1
+                f.write(str(int(a)+1))
+                f.close()
+
+        dir_to_save = self.name+"/run_"+str(number_run)
+        os.makedirs(dir_to_save)
+        os.makedirs(dir_to_save+"/data_collected")
+        self.dir_to_save = dir_to_save
+
+
+
+
+
         self.env = env
         self.n_actions = len(self.env.solver.alphabet)
 
@@ -40,8 +69,9 @@ class DuelDQN:
         self.ep0 = ep
         self.exp_decay_effective_exploitation = 0.5  # percentage of time at which ep(t0) = \ep0 with #ep(t) = \ep0 exp[- t / t0]
 
-        self.name = name
-        self.use_tqdm = use_tqdm
+
+
+
 
         # Define Buffer
         state_shape = self.env.depth_circuit  # We will modify this.
@@ -60,6 +90,10 @@ class DuelDQN:
                     f"exp_decay_effective_exploitation: {self.exp_decay_effective_exploitation}\n\n" \
                     f"state_shape: {state_shape}\n" \
                     f"buffer_size: {self.replay_buffer}"
+
+
+
+
 
     def build_q_network(self, learning_rate=0.01):
         """
@@ -186,35 +220,16 @@ class DuelDQN:
         self.save_learning_curves(cumulative_reward_history/np.array(episodes), reward_history, pt, loss_history)
 
     def save_learning_curves(self, cum_reward_per_e, reward_history, pt, loss_history):
-        if not os.path.exists(self.name):
-            os.makedirs(self.name)
-            with open(self.name+"/number_run.txt", "w+") as f:
-                f.write("0")
-                f.close()
-            number_run = 0
-        else:
-            with open(self.name+"/number_run.txt", "r") as f:
-                a = f.readlines()[0]
-                f.close()
-            with open(self.name+"/number_run.txt", "w") as f:
-                f.truncate(0)
-                number_run = int(a)+1
-                f.write(str(int(a)+1))
-                f.close()
-
-        dir_to_save = self.name+"/run_"+str(number_run)
-        os.makedirs(dir_to_save)
-        os.makedirs(dir_to_save+"/data_collected")
 
         # Save learning curves
-        np.save(dir_to_save +"/data_collected/cumulative_reward_per_episode", cum_reward_per_e, allow_pickle=True)
-        np.save(dir_to_save + "/data_collected/loss", loss_history, allow_pickle=True)
-        np.save(dir_to_save +"/data_collected/reward_history", reward_history, allow_pickle=True)
-        np.save(dir_to_save+"/data_collected/pgreedy", pt, allow_pickle=True)
-        self.replay_buffer.save(dir_to_save+"/data_collected")  # save buffer experiences (which are actually what we are interested in.
+        np.save(self.dir_to_save +"/data_collected/cumulative_reward_per_episode", cum_reward_per_e, allow_pickle=True)
+        np.save(self.dir_to_save + "/data_collected/loss", loss_history, allow_pickle=True)
+        np.save(self.dir_to_save +"/data_collected/reward_history", reward_history, allow_pickle=True)
+        np.save(self.dir_to_save+"/data_collected/pgreedy", pt, allow_pickle=True)
+        self.replay_buffer.save(self.dir_to_save+"/data_collected")  # save buffer experiences (which are actually what we are interested in.
 
         # Save some info of the model
-        with open(dir_to_save+"/info_model.txt", "w") as f:
+        with open(self.dir_to_save+"/info_model.txt", "w") as f:
             f.write(self.info)
             f.close()
 
@@ -230,7 +245,7 @@ class DuelDQN:
             ax2.plot(range(len(loss_history)), loss_history, alpha=0.6, linewidth=1, c="blue", label="critic loss")
             ax1.legend(prop={"size": 20})
             ax2.legend(prop={"size": 20})
-            plt.savefig(dir_to_save + "/learning_curves.png")
+            plt.savefig(self.dir_to_save + "/learning_curves.png")
 
 
 class ReplayBuffer:
