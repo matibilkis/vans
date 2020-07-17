@@ -32,28 +32,27 @@ class CirqSmartSolver:
         self.qubits = cirq.GridQubit.rect(1, n_qubits)
         self.observable_name = observable_name
 
-
-        ##### value to use as label for continuous optimization; this appears in variational model ####
+        # Value to use as label for continuous optimization; this appears in variational model
         if target_reward is None:
-            self.target_reward = self.n_qubits #mostly for the ising high transv fields.
+            self.target_reward = self.n_qubits  # mostly for the ising high transv fields.
         else:
             self.target_reward = target_reward
 
         self.observable, self.observable_matrix = self.load_observable(observable_name)
 
-        ###indexed cnots total number n!/(n-2)! = n*(n-1) (if all connections are allowed)
+        # Indexed cnots total number n!/(n-2)! = n*(n-1) (if all connections are allowed)
         self.indexed_cnots = {}
-        count=0
+        count = 0
         for control in range(self.n_qubits):
             for target in range(self.n_qubits):
                 if control != target:
                     self.indexed_cnots[str(count)] = [control, target]
-                    count+=1
+                    count += 1
         self.number_of_cnots = len(self.indexed_cnots)
         #int(np.math.factorial(self.n_qubits)/np.math.factorial(self.n_qubits -2))
 
-        ### create one_hot alphabet ####
-        self.alphabet_gates = [cirq.CNOT, cirq.ry,cirq.rx(-np.pi/2), cirq.I]
+        # Create one_hot alphabet
+        self.alphabet_gates = [cirq.CNOT, cirq.ry, cirq.rx(-np.pi/2), cirq.I]
         self.alphabet = []
 
         alphabet_length = self.number_of_cnots + (len(self.alphabet_gates)-1)*self.n_qubits
@@ -62,12 +61,10 @@ class CirqSmartSolver:
             one_hot_gate[ind] = 1
             self.alphabet.append(one_hot_gate)
 
-
-
     def load_observable(self, obs):
         """
-
-        obs can either be a string, a list with cirq's gates or a matrix (array) """
+        obs can either be a string, a list with cirq's gates or a matrix (array)
+        """
         if obs is "W-state":  # then take projector on W state
             sq = 1 / np.sqrt(3)
             w_state = np.array([0, sq, sq, 0, sq, 0, 0, 0])
@@ -92,7 +89,6 @@ class CirqSmartSolver:
                 observable_matrix = w_proj
         return observable, observable_matrix
 
-
     def append_to_circuit(self, one_hot_gate, circuit, params):
         """
         appends to circuit the one_hot_gate;
@@ -100,7 +96,7 @@ class CirqSmartSolver:
         appends to params a symbol"""
 
         for ind,inst in enumerate(one_hot_gate):
-            if inst == 1: #this is faster than numpy.where
+            if inst == 1:  # this is faster than numpy.where
                 if ind < self.number_of_cnots:
                     control, target = self.indexed_cnots[str(ind)]
                     circuit.append(self.alphabet_gates[0].on(self.qubits[control], self.qubits[target]))
@@ -116,8 +112,6 @@ class CirqSmartSolver:
                 else:
                     print("doing nothing! even not identity! careful")
                     return circuit, params
-
-
 
     def vansatz_keras_model(self, vansatz, observable):
         # notice observable may in general be expressed as linear combination
@@ -139,9 +133,7 @@ class CirqSmartSolver:
 
     def run_circuit(self, list_ops):
         """
-
         takes as input vector with actions described as integer (given by RL agent)
-
         """
         wst = VAnsatzSmart(self.n_qubits,
                       self.observable_name,
@@ -212,15 +204,10 @@ class CirqSmartSolver:
         return unt
 
 
-
-
 class VAnsatzSmart(CirqSmartSolver):
     def __init__(self, n_qubits, observable_name, target_reward, trajectory):
         """
-
         takes as input a list with actions, each action being an integer between 0 and len(self.alphabet).
-
-        .
         """
         super(VAnsatzSmart, self).__init__(n_qubits, observable_name)
 
@@ -258,9 +245,7 @@ class VAnsatzSmart(CirqSmartSolver):
         resolver = {k: v for k, v in zip(self.symbols, params)}
         return cirq.resolve_parameters(self.circuit, resolver)
 
-
     def check_two(self,ww1,ww2, c):
-
         """
         input::   w_1, w_2 one_hot_gate
                   c is an internal count used to interrupt the check_and_recheck if no more changes are done.
@@ -325,8 +310,7 @@ class VAnsatzSmart(CirqSmartSolver):
             else:
                 return w1, w2, c+1
         else:
-            return w1,w2, c
-
+            return w1, w2, c
 
     def check_and_recheck(self, instructions, its=100, printing=False):
         """
@@ -345,7 +329,7 @@ class VAnsatzSmart(CirqSmartSolver):
                 circuit = []
                 params = []
                 for g in ws_previous:
-                    circuit, params = append_to_circuit(g,circuit, params)
+                    circuit, params = self.append_to_circuit(g, circuit, params)
                 print(cirq.Circuit(circuit))
                 print("************************************************************************************************************\n\n")
 
@@ -361,11 +345,10 @@ class VAnsatzSmart(CirqSmartSolver):
                     w1 = ws_previous[d]
                     ws_odd.append(w1)
             if printing:
-
                 circuit = []
                 params = []
                 for g in ws_odd:
-                    circuit, params = append_to_circuit(g,circuit, params)
+                    circuit, params = self.append_to_circuit(g, circuit, params)
                 print(cirq.Circuit(circuit))
                 print("************************************************************************************************************\n\n")
 
@@ -387,70 +370,69 @@ class VAnsatzSmart(CirqSmartSolver):
                 break
         return ws_previous
 
-
     def detect_u3_and_reduce(self,ws):
         """
-
             this function scans the circuit (represented as collection of one_hot_gates)
             and check if a pulse rz P rz P rz is found acting on a given qubit. If so
             kills previous consecutive 1-qubit gates.
-
         """
+
         cropped_circuit = np.array(ws)
-        iss, jss = np.where(np.array(ws) == 1) #all indices with information of gate
+        iss, jss = np.where(np.array(ws) == 1)  # all indices with information of gate
         c=0
         internal_count_wire=0
         # u3_seq = np.array([2,3,2,3,2])
-        u3_seq = np.array([0,1,0,1,0])#,2,1,2,1])
+        u3_seq = np.array([0, 1, 0, 1, 0])#,2,1,2,1])
 
         for i,j in zip(iss, jss):
             if j>=self.number_of_cnots: #I don't want CNOTs
                 while internal_count_wire == 0:
                     internal_count_wire +=1
-                    qindfav = (j-self.number_of_cnots)%self.n_qubits #after the CNOTS, we have cycles of self.n_qubits one-qubit gates. qindfav then tells which is the qubit we are watching.
+                    qindfav = (j-self.number_of_cnots)%self.n_qubits  # after the CNOTS, we have cycles of self.n_qubits one-qubit gates. qindfav then tells which is the qubit we are watching.
                     string_to_eval=[]
                     indexes_saving = []
 
-                if ((j-self.number_of_cnots)%self.n_qubits == qindfav):
+                if (j-self.number_of_cnots) % self.n_qubits == qindfav:
                     string_to_eval.append(int(np.trunc((j-self.number_of_cnots)/self.n_qubits)))
                     indexes_saving.append(i)
                     internal_count_wire+=1
 
-                    if (i == iss[-1]): #it can happen that it's at one extreme
+                    if i == iss[-1]:  # it can happen that it's at one extreme
                         if internal_count_wire > 5:
-                            if u3_seq in rolling(np.array(string_to_eval), 5): #this is u3
+                            if u3_seq in rolling(np.array(string_to_eval), 5):  # this is u3
                                 ind=0
-                                for gind in indexes_saving: #erase everyone
-                                    cropped_circuit[gind] = -1 #erase everyone
-                                    if ind <5:
-                                        cropped_circuit[gind][self.number_of_cnots +(u3_seq[ind]*self.n_qubits) + qindfav] = 1 #add each element of u3_seq in the corresponding position
-                                        ind+=1
+                                for gind in indexes_saving:
+                                    cropped_circuit[gind] = -1  # erase everyone
+                                    if ind < 5:
+                                        cropped_circuit[gind][self.number_of_cnots +(u3_seq[ind]*self.n_qubits) + qindfav] = 1  # add each element of u3_seq in the corresponding position
+                                        ind += 1
                                     else:
-                                        cropped_circuit[gind][self.number_of_cnots + 2*self.n_qubits + qindfav] = 1 #add identity
+                                        cropped_circuit[gind][self.number_of_cnots + 2*self.n_qubits + qindfav] = 1  # add identity
 
                         internal_count_wire=0
                         string_to_eval=[]
                         indexes_saving = []
                 else:
                     if internal_count_wire > 5:
-                        if u3_seq in rolling(np.array(string_to_eval), 5): #this is u3
-                            ind=0
-                            for gind in indexes_saving: #erase everyone
-                                cropped_circuit[gind] = -1 #erase everyone
-                                if ind <5:
-                                    cropped_circuit[gind][u3_seq[ind]*self.n_qubits + qindfav] = 1 #add each element of u3_seq
-                                    ind+=1
+                        if u3_seq in rolling(np.array(string_to_eval), 5):  # this is u3
+                            ind = 0
+                            for gind in indexes_saving:  # erase everyone
+                                cropped_circuit[gind] = -1  # erase everyone
+                                if ind < 5:
+                                    cropped_circuit[gind][u3_seq[ind]*self.n_qubits + qindfav] = 1  # add each element of u3_seq
+                                    ind += 1
                                 else:
-                                    cropped_circuit[gind][self.number_of_cnots + 2*self.n_qubits + qindfav] = 1 #add identity
+                                    cropped_circuit[gind][self.number_of_cnots + 2*self.n_qubits + qindfav] = 1  # add identity
 
                     internal_count_wire=0
                     string_to_eval=[]
                     indexes_saving = []
-                c+=1
+                c += 1
             else:
                 internal_count_wire=0
-                c=0
+                c = 0
         return cropped_circuit
+
 
 def rolling(a, window):
     shape = (a.size - window + 1, window)
@@ -458,10 +440,9 @@ def rolling(a, window):
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
 
 
-
 if __name__ == "__main__":
-    solver = CirqSmartSolver(n_qubits=3,observable_name="Ising_High_TFields")
+    solver = CirqSmartSolver(n_qubits=3, observable_name="Ising_High_TFields")
     # solver.run_circuit([0])
 
-    solver.run_circuit(list(np.random.choice(range(15),30)))
+    solver.run_circuit(list(np.random.choice(range(15), 30)))
     # print(solver.run_circuit(np.array([0, 1, 2, 3, 4, 5, 4, 6, 5, 6, 7])))

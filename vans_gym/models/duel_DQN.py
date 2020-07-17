@@ -18,45 +18,51 @@ from datetime import datetime
 #     return max(0.05, np.exp(-k/tt))
 
 
-class Duel_DQN:
-    def __init__(self, env, learning_rate = 0.01,
-        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01, tau=0.1):
-
+class DuelDQN:
+    def __init__(self, env, learning_rate=0.01, size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01, tau=0.1,
+                 use_tqdm=False):
         self.env = env
         self.n_actions = len(self.env.solver.alphabet)
 
-        ### define qnets ###
-        self.prim_qnet = self.build_q_network(learning_rate = learning_rate)
+        # Define Q Network
+        self.prim_qnet = self.build_q_network(learning_rate=learning_rate)
         self.target_qnet = self.build_q_network()
-        self.tau = tau #how soft the update is
+        self.tau = tau  # how soft the update is
 
-        ### policy ##
+        # Define Policy
         self.policy = policy
         self.ep0 = ep
-        self.exp_decay_effective_explotation = 0.5 #percentage of time at which ep(t0) = \ep0 with #ep(t) = \ep0 exp[- t / t0]
+        self.exp_decay_effective_exploitation = 0.5  # percentage of time at which ep(t0) = \ep0 with #ep(t) = \ep0 exp[- t / t0]
 
         self.name = name
+        self.use_tqdm = use_tqdm
 
-        ### define buffer ####
-        state_shape = self.env.depth_circuit #we will modify this.
+        # Define Buffer
+        state_shape = self.env.depth_circuit  # We will modify this.
         self.replay_buffer = ReplayBuffer(state_shape, size=size_rp, use_per=True)
 
-        ### some info to save ###
-        self.info = "len(alphabet): {}\nalphabet_gates: {}, \nobservable_name: {}\ndepth_circuit: {}\nn_qubits: {}\nname: {}\nlr: {}\n\npolicy: {}\nep0: {}\nexp_decay_effective_explotation: {}\n\nstate_shape: {}\nbuffer_size: {}".format(len(self.env.solver.alphabet),self.env.solver.alphabet_gates,
-        self.env.solver.observable_name, self.env.depth_circuit, self.env.n_qubits,
-        self.name, learning_rate, self.policy, self.ep0, self.exp_decay_effective_explotation,
-        state_shape, self.replay_buffer.size )
-
+        # Some info to save
+        self.info = f"len(alphabet): {len(self.env.solver.alphabet)}\n" \
+                    f"alphabet_gates: {self.env.solver.alphabet_gates}, \n" \
+                    f"observable_name: {self.env.solver.observable_name}\n" \
+                    f"depth_circuit: {self.env.depth_circuit}\n" \
+                    f"n_qubits: {self.env.n_qubits}\n" \
+                    f"name: {self.name}\n" \
+                    f"lr: {learning_rate}\n\n" \
+                    f"policy: {self.policy}\n" \
+                    f"ep0: {self.ep0}\n" \
+                    f"exp_decay_effective_exploitation: {self.exp_decay_effective_exploitation}\n\n" \
+                    f"state_shape: {state_shape}\n" \
+                    f"buffer_size: {self.replay_buffer}"
 
     def build_q_network(self, learning_rate=0.01):
-        '''this function creates the q network
-        using architecture of https://arxiv.org/pdf/1511.06581.pdf
-
-        In particular takes as input a sequence of gates borrowed from the alphabet (-1 means no gate yet)
+        """
+        This function creates the Q network using architecture of https://arxiv.org/pdf/1511.06581.pdf
+        In particular, it takes as input a sequence of gates borrowed from the alphabet (-1 means no gate yet)
         Notice we normalize the input with this Lambda layer.
-        '''
+        """
 
-        model_input = Input(shape=(self.env.state_shape))
+        model_input = Input(shape=self.env.state_shape)
         x = Lambda(lambda layer: layer / self.n_actions)(model_input)
 
         x = Dense(64, kernel_initializer=VarianceScaling(scale=2.), activation='relu', use_bias=False)(model_input)
@@ -78,7 +84,6 @@ class Duel_DQN:
         model.compile(Adam(learning_rate), loss=tf.keras.losses.Huber())
         return model
 
-
     def update_target_parameters(self, tau=0.01):
         prim_weights = self.prim_qnet.get_weights()
         targ_weights = self.target_qnet.get_weights()
@@ -89,25 +94,26 @@ class Duel_DQN:
         return
 
     def learn_step(self, batch_size=32):
-        ## sample from buffer ##
+        # Sample from buffer
         if self.replay_buffer.use_per:
-            (states, actions, rewards, nstates ,dones), importance, indices  = self.replay_buffer.get_minibatch(batch_size=batch_size)
+            (states, actions, rewards, nstates, dones), importance, indices = self.replay_buffer.get_minibatch(batch_size=batch_size)
         else:
-            states, actions, rewards, nstates ,dones  = self.replay_buffer.get_minibatch(batch_size=batch_size)
+            states, actions, rewards, nstates, dones = self.replay_buffer.get_minibatch(batch_size=batch_size)
 
-        #### prepare labels ###
+        # Prepare labels
         arg_q_max = self.prim_qnet.predict(tf.stack(states)).argmax(axis=1)
         future_q_vals = self.target_qnet.predict(tf.stack(nstates))
         nextq = future_q_vals[range(batch_size), arg_q_max]
         target_q = rewards + (1-dones)*nextq
+
         with tf.GradientTape() as tape:
             tape.watch(self.prim_qnet.trainable_variables)
             qvalues = self.prim_qnet(tf.stack(states))
             Q = tf.reduce_sum(tf.multiply(qvalues, tf.keras.utils.to_categorical(actions, self.n_actions)), axis=1)
-            error = target_q - Q #this is for importance sample
+            error = target_q - Q  # this is for importance sample
             loss = tf.keras.losses.Huber()(target_q, Q)
             if self.replay_buffer.use_per:
-                loss = tf.reduce_mean(loss*importance) #not entirely sure if this works or not (?)
+                loss = tf.reduce_mean(loss*importance)  # not entirely sure if this works or not (?)
 
         grads = tape.gradient(loss, self.prim_qnet.trainable_variables)
         self.prim_qnet.optimizer.apply_gradients(zip(grads, self.prim_qnet.trainable_variables))
@@ -123,39 +129,39 @@ class Duel_DQN:
         else:
             return self.prim_qnet.predict(tf.expand_dims(state,axis=0)).argmax(axis=1)[0]
 
-
     def schedule(self, k, total_timesteps):
         if self.policy == "exp-decay":
-            tt = self.exp_decay_effective_explotation*total_timesteps/np.log(1/self.ep0) #not best idea to calculate each time...
+            tt = self.exp_decay_effective_exploitation * total_timesteps / np.log(1 / self.ep0)  # not best idea to calculate each time...
             return max(self.ep0, np.exp(-k/tt))
         else:
             return self.ep0
 
     def learn(self, total_timesteps, episodes_before_learn=100, batch_size=32):
-        lhist=[]
-        pt=[]
-        rcum=[]
-        rehist = []
-        cumre=0
-        episodes = np.arange(1,total_timesteps+1,1)
+        loss_history = []
+        pt = []
+        cumulative_reward_history = []
+        reward_history = []
+        cumulative_reward = 0
+        episodes = np.arange(1, total_timesteps+1, 1)
         start = datetime.now()
 
         self.env.reset()
-        for k in tqdm(episodes):
+        tqdm_episodes = tqdm(episodes) if self.use_tqdm else episodes
+        for k in tqdm_episodes:
             done = False
-            state=self.env.reset()
+
+            state = self.env.reset()
             while not done:
                 action = self.give_action(state, ep=self.schedule(k, total_timesteps))
                 next_state, reward, done, info = self.env.step(action)
                 self.replay_buffer.add_experience(action, [state, next_state], reward, done)
                 state = next_state
-            cumre+=reward
-            rehist.append(reward)
-            rcum.append(cumre)
-            if k>episodes_before_learn:
-                lhist.append(self.learn_step(batch_size=batch_size))
+            cumulative_reward += reward
+            reward_history.append(reward)
+            cumulative_reward_history.append(cumulative_reward)
+            if k > episodes_before_learn:
+                loss_history.append(self.learn_step(batch_size=batch_size))
 
-            #####greedy prob#####
             state = self.env.reset()
             done = False
             while not done:
@@ -163,13 +169,17 @@ class Duel_DQN:
                 next_state, reward, done, info = self.env.step(action)
                 state = next_state
             pt.append(reward)
+
         end = datetime.now()
-        self.info += "batch_size: {}\ntotal_timesteps: {}\nepisodes_before_learn: {}\ntau (target update): {}\n\nTOTAL_TIME: {}".format(batch_size, total_timesteps, episodes_before_learn, self.tau, end-start)
-        self.save_learning_curves(rcum/np.array(episodes), rehist, pt, lhist)
-        return
+        self.info += f"batch_size: {batch_size}\n" \
+                     f"total_timesteps: {total_timesteps}\n" \
+                     f"episodes_before_learn: {episodes_before_learn}\n" \
+                     f"tau (target update): {self.tau}\n\n" \
+                     f"TOTAL_TIME: {end - start}"
 
+        self.save_learning_curves(cumulative_reward_history/np.array(episodes), reward_history, pt, loss_history)
 
-    def save_learning_curves(self,rcum_per_e, rehist, pt, lhist):
+    def save_learning_curves(self, cum_reward_per_e, reward_history, pt, loss_history):
         if not os.path.exists(self.name):
             os.makedirs(self.name)
             with open(self.name+"/number_run.txt", "w+") as f:
@@ -190,32 +200,29 @@ class Duel_DQN:
         os.makedirs(dir_to_save)
         os.makedirs(dir_to_save+"/data_collected")
 
-        #### save learning_curves ####
-        np.save(dir_to_save+"/data_collected/cumulative_reward_per_episode", rcum_per_e, allow_pickle=True )
-        np.save(dir_to_save+"/data_collected/reward_history", rehist, allow_pickle=True )
-        np.save(dir_to_save+"/data_collected/pgreedy", pt, allow_pickle=True )
-        self.replay_buffer.save(dir_to_save+"/data_collected") #save buffer experiences (which are actually what we are interested in.
+        # Save learning curves
+        np.save(dir_to_save +"/data_collected/cumulative_reward_per_episode", cum_reward_per_e, allow_pickle=True)
+        np.save(dir_to_save +"/data_collected/reward_history", reward_history, allow_pickle=True)
+        np.save(dir_to_save+"/data_collected/pgreedy", pt, allow_pickle=True)
+        self.replay_buffer.save(dir_to_save+"/data_collected")  # save buffer experiences (which are actually what we are interested in.
 
-
-
-        ### save some info of the model ###
+        # Save some info of the model
         with open(dir_to_save+"/info_model.txt", "w") as f:
-            a = f.write(self.info)
+            f.write(self.info)
             f.close()
 
-        #### make the plot ####
-        plt.figure(figsize=(20,20))
-        ax1 = plt.subplot2grid((1,2), (0,0))
-        ax2 = plt.subplot2grid((1,2), (0,1))
-        ax1.plot(pt, alpha=0.6,c="blue", linewidth=1,label="greedy policy")
-        ax1.scatter(np.arange(1,len(rehist)+1), rehist, alpha=0.5, s=50, c="black", label="reward")
-        ax1.plot(rcum_per_e, alpha=0.6, linewidth=9,c="red",label="cumulative reward")
-        ax2.plot(range(len(lhist)), lhist, alpha=0.6, linewidth=1,c="blue",label="critic loss")
-        ax1.legend(prop={"size":20})
-        ax2.legend(prop={"size":20})
-        plt.savefig(dir_to_save+"/learning_curves.png")
+        # Make the plot
+        plt.figure(figsize=(20, 20))
+        ax1 = plt.subplot2grid((1, 2), (0, 0))
+        ax2 = plt.subplot2grid((1, 2), (0, 1))
+        ax1.plot(pt, alpha=0.6, c="blue", linewidth=1, label="greedy policy")
+        ax1.scatter(np.arange(1, len(reward_history) + 1), reward_history, alpha=0.5, s=50, c="black", label="reward")
+        ax1.plot(cum_reward_per_e, alpha=0.6, linewidth=9, c="red", label="cumulative reward")
+        ax2.plot(range(len(loss_history)), loss_history, alpha=0.6, linewidth=1, c="blue", label="critic loss")
+        ax1.legend(prop={"size": 20})
+        ax2.legend(prop={"size": 20})
+        plt.savefig(dir_to_save + "/learning_curves.png")
 
-        return
 
 class ReplayBuffer:
     def __init__(self, state_shape, size=10**5, use_per=True):
@@ -233,7 +240,6 @@ class ReplayBuffer:
         self.max_reward = -1
 
     def add_experience(self, action, states, reward, terminal):
-
         # self.max_reward = max(self.max_reward, reward)
         self.actions[self.current] = action
         self.states[self.current] = states
@@ -241,8 +247,8 @@ class ReplayBuffer:
         self.terminal_flags[self.current] = terminal
         self.priorities[self.current] = max(self.priorities.max(), 1)
 
-        self.count = max(self.count, self.current+1) #
-        self.current = (self.current + 1) % self.size #
+        self.count = max(self.count, self.current+1)
+        self.current = (self.current + 1) % self.size
 
     def get_minibatch(self, batch_size=32, priority_scale=0.7):
         """Returns a minibatch of self.batch_size = 32 transitions

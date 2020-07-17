@@ -7,10 +7,8 @@ from gym import spaces
 
 
 class VansEnv(gym.Env):
-    def __init__(self, solver, depth_circuit=9, training_env=True,
-     state_as_sequence=True, printing=True):
-
-        """If state as sequence False, state is taken as the quantum state."""
+    def __init__(self, solver, depth_circuit=9, training_env=True, state_as_sequence=True, printing=True):
+        """If state_as_sequence False, state is taken as the quantum state."""
 
         super(VansEnv, self).__init__()
         self.solver = solver
@@ -21,7 +19,7 @@ class VansEnv(gym.Env):
         self.state_as_sequence = state_as_sequence
         self.printing = printing
 
-        self.state_indexed=np.array([])
+        self.state_indexed = np.array([])
 
         self.n_actions = len(solver.alphabet)
         self.action_space = spaces.Discrete(self.n_actions)
@@ -29,7 +27,7 @@ class VansEnv(gym.Env):
 
         if self.state_as_sequence is True:
             self.observation_space = spaces.Box(np.array([-self.n_actions] * self.depth_circuit),
-                                                np.array([self.n_actions] *self.depth_circuit ),
+                                                np.array([self.n_actions] * self.depth_circuit),
                                                 dtype=np.float32)
             self.state_shape = int(self.depth_circuit)
         else:
@@ -37,11 +35,10 @@ class VansEnv(gym.Env):
                                                 np.array([1] * 2**self.n_qubits),
                                                 dtype=np.float32)
             self.state_shape = int(2**self.n_qubits)
-        #### for callbacks and printing ####
 
+        # For callbacks and printing
         self.reward_history = np.array([])
         self.history_final_reward = np.array([])
-
 
         self.quantum_state = np.array([0. for _ in range(2**self.n_qubits)])
         self.quantum_state[0] = 1.
@@ -85,14 +82,14 @@ class VansEnv(gym.Env):
         self.state_indexed = np.append(self.state_indexed, action)
 
         if self.state_as_sequence:
-            self.state_sequence[:(len(self.state_indexed))] = self.state_indexed #fill the -1s with actions...
+            self.state_sequence[:(len(self.state_indexed))] = self.state_indexed  # fill the -1s with actions...
             state = self.state_sequence.astype(np.float32)
             done = self.check_if_finish()
             if done:
                 reward, quantum_state = self.solver.run_circuit(self.state_indexed)
             else:
                 reward = 0.
-        else: #state as quantum state.
+        else:  # state as quantum state.
             self.current_reward, state = self.solver.run_circuit(self.state_indexed)
             done = self.check_if_finish()
             if done:
@@ -107,7 +104,7 @@ class VansEnv(gym.Env):
         if done and self.printing:
             self.history_final_reward = np.append(self.history_final_reward, reward)
             if self.episode % 1 == 0 and not self.in_callback:
-                print("\n============ Episode {} ============\n".format(self.episode))
+                print(f"\n================= Episodes {self.episode} =================\n")
                 print("List gates", self.state_indexed)
                 if self.state_as_sequence is False:
                     print("state: ", self.state)

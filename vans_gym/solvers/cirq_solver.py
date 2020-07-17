@@ -71,8 +71,6 @@ class CirqSolver:
             self.observable_matrix = cirq.unitary(cirq.Circuit(self.observable))
             self.target_reward = 100 #just to say smthg
 
-
-
     def cirq_friendly_observable(self, obs):
         PAULI_BASIS = {
             'I': np.eye(2),
@@ -159,7 +157,6 @@ class CirqSolver:
         return energy, probs
 
 
-
 class VAnsatz(CirqSolver):
     def __init__(self, n_qubits, observable_name, target_reward, trajectory):
         super(VAnsatz, self).__init__(n_qubits, observable_name)
@@ -205,10 +202,6 @@ class VAnsatz(CirqSolver):
             return circuit
         resolver = {k: v for k, v in zip(self.symbols, params)}
         return cirq.resolve_parameters(circuit, resolver)
-
-
-
-
 
 
 if __name__ == "__main__":
