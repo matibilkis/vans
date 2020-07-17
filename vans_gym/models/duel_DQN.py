@@ -20,11 +20,16 @@ from datetime import datetime
 
 class Duel_DQN:
     def __init__(self, env, use_tqdm=False, learning_rate = 0.01,
-        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01, tau=0.1):
+        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01, tau=0.1, plotter=False):
 
         self.env = env
         self.n_actions = len(self.env.solver.alphabet)
+
+        ## this is for HPC
         self.use_tqdm=use_tqdm
+        self.plotter = plotter #toplot or not to plot
+
+
         ### define qnets ###
         self.prim_qnet = self.build_q_network(learning_rate = learning_rate)
         self.target_qnet = self.build_q_network()
@@ -203,17 +208,18 @@ class Duel_DQN:
             a = f.write(self.info)
             f.close()
 
-        #### make the plot ####
-        plt.figure(figsize=(20,20))
-        ax1 = plt.subplot2grid((1,2), (0,0))
-        ax2 = plt.subplot2grid((1,2), (0,1))
-        ax1.plot(pt, alpha=0.6,c="blue", linewidth=1,label="greedy policy")
-        ax1.scatter(np.arange(1,len(rehist)+1), rehist, alpha=0.5, s=50, c="black", label="reward")
-        ax1.plot(rcum_per_e, alpha=0.6, linewidth=9,c="red",label="cumulative reward")
-        ax2.plot(range(len(lhist)), lhist, alpha=0.6, linewidth=1,c="blue",label="critic loss")
-        ax1.legend(prop={"size":20})
-        ax2.legend(prop={"size":20})
-        plt.savefig(dir_to_save+"/learning_curves.png")
+        if self.plotter:
+            #### make the plot ####
+            plt.figure(figsize=(20,20))
+            ax1 = plt.subplot2grid((1,2), (0,0))
+            ax2 = plt.subplot2grid((1,2), (0,1))
+            ax1.plot(pt, alpha=0.6,c="blue", linewidth=1,label="greedy policy")
+            ax1.scatter(np.arange(1,len(rehist)+1), rehist, alpha=0.5, s=50, c="black", label="reward")
+            ax1.plot(rcum_per_e, alpha=0.6, linewidth=9,c="red",label="cumulative reward")
+            ax2.plot(range(len(lhist)), lhist, alpha=0.6, linewidth=1,c="blue",label="critic loss")
+            ax1.legend(prop={"size":20})
+            ax2.legend(prop={"size":20})
+            plt.savefig(dir_to_save+"/learning_curves.png")
 
         return
 
