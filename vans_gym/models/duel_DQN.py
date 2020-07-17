@@ -19,13 +19,19 @@ from datetime import datetime
 
 
 class DuelDQN:
-    def __init__(self, env, learning_rate=0.01, size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01, tau=0.1,
-                 use_tqdm=False):
+    def __init__(self, env, use_tqdm=False, learning_rate = 0.01,
+        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01, tau=0.1, plotter=False):
+
         self.env = env
         self.n_actions = len(self.env.solver.alphabet)
 
-        # Define Q Network
-        self.prim_qnet = self.build_q_network(learning_rate=learning_rate)
+        ## this is for HPC
+        self.use_tqdm=use_tqdm
+        self.plotter = plotter #toplot or not to plot
+
+
+        ### define qnets ###
+        self.prim_qnet = self.build_q_network(learning_rate = learning_rate)
         self.target_qnet = self.build_q_network()
         self.tau = tau  # how soft the update is
 
@@ -146,8 +152,8 @@ class DuelDQN:
         start = datetime.now()
 
         self.env.reset()
-        tqdm_episodes = tqdm(episodes) if self.use_tqdm else episodes
-        for k in tqdm_episodes:
+
+        for k in tqdm(episodes, disable=self.use_tqdm):
             done = False
 
             state = self.env.reset()
@@ -211,17 +217,19 @@ class DuelDQN:
             f.write(self.info)
             f.close()
 
-        # Make the plot
-        plt.figure(figsize=(20, 20))
-        ax1 = plt.subplot2grid((1, 2), (0, 0))
-        ax2 = plt.subplot2grid((1, 2), (0, 1))
-        ax1.plot(pt, alpha=0.6, c="blue", linewidth=1, label="greedy policy")
-        ax1.scatter(np.arange(1, len(reward_history) + 1), reward_history, alpha=0.5, s=50, c="black", label="reward")
-        ax1.plot(cum_reward_per_e, alpha=0.6, linewidth=9, c="red", label="cumulative reward")
-        ax2.plot(range(len(loss_history)), loss_history, alpha=0.6, linewidth=1, c="blue", label="critic loss")
-        ax1.legend(prop={"size": 20})
-        ax2.legend(prop={"size": 20})
-        plt.savefig(dir_to_save + "/learning_curves.png")
+        if self.plotter:
+            # Make the plot
+            plt.figure(figsize=(20, 20))
+            ax1 = plt.subplot2grid((1, 2), (0, 0))
+            ax2 = plt.subplot2grid((1, 2), (0, 1))
+            ax1.plot(pt, alpha=0.6, c="blue", linewidth=1, label="greedy policy")
+            ax1.scatter(np.arange(1, len(reward_history) + 1), reward_history, alpha=0.5, s=50, c="black",
+                        label="reward")
+            ax1.plot(cum_reward_per_e, alpha=0.6, linewidth=9, c="red", label="cumulative reward")
+            ax2.plot(range(len(loss_history)), loss_history, alpha=0.6, linewidth=1, c="blue", label="critic loss")
+            ax1.legend(prop={"size": 20})
+            ax2.legend(prop={"size": 20})
+            plt.savefig(dir_to_save + "/learning_curves.png")
 
 
 class ReplayBuffer:
