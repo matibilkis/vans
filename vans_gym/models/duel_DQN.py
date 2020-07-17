@@ -208,6 +208,7 @@ class DuelDQN:
 
         # Save learning curves
         np.save(dir_to_save +"/data_collected/cumulative_reward_per_episode", cum_reward_per_e, allow_pickle=True)
+        np.save(dir_to_save + "/data_collected/loss", loss_history, allow_pickle=True)
         np.save(dir_to_save +"/data_collected/reward_history", reward_history, allow_pickle=True)
         np.save(dir_to_save+"/data_collected/pgreedy", pt, allow_pickle=True)
         self.replay_buffer.save(dir_to_save+"/data_collected")  # save buffer experiences (which are actually what we are interested in.
