@@ -4,8 +4,8 @@
 #SBATCH --exclusive
 #SBATCH --time=0-15:59:00
 #SBATCH --no-requeue
-#SBATCH --output=hpc_files/out
-#SBATCH --error=hpc_files/err
+#SBATCH --output=out
+#SBATCH --error=err
 #SBATCH --qos=standard
 # #SBATCH --ntasks=1
 # #SBATCH -p shared
@@ -19,7 +19,7 @@ date
 env | sort > ENVIRONMENT
 echo "Starting: code vans"
 
-python3 main_dueldqn.py --n_qubits 3 --total_timesteps 1000 --episodes_before_learn 100 --depth_circuit 3
+python3 main_dueldqn.py --n_qubits 2 --total_timesteps 1000 --episodes_before_learn 100 --depth_circuit 3
 
 # put your command here!
 echo "Stopping:"

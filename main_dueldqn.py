@@ -16,7 +16,7 @@ if __name__ == "__main__":
     parser.add_argument("--depth_circuit", type=int, default=2)
     parser.add_argument("--total_timesteps", type=int, default=100)
     parser.add_argument("--episodes_before_learn", type=int, default=10)
-    parser.add_argument("--use_tqdm", type=int, default=True)
+    parser.add_argument("--use_tqdm", type=int, default=False)
     parser.add_argument("--plotter", type=int)
 
     args = parser.parse_args()
