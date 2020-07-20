@@ -6,9 +6,3 @@ cirq
 tensorflow==2.1.0
 tensorflow_quantum
 tqdm
-
-
-## i got this 5677 Segmentation fault error when running on the cluster !!
-
-
-python3 main_dueldqn.py --n_qubits 2 --total_timesteps 10 --episodes_before_learn 3 --depth_circuit 3

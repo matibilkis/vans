@@ -19,7 +19,7 @@ date
 env | sort > ENVIRONMENT
 echo "Starting: code vans"
 
-python3 main_dueldqn.py --n_qubits 2 --total_timesteps 1000 --episodes_before_learn 100 --depth_circuit 3
+python3 main_dueldqn.py --n_qubits 3 --total_timesteps 1000 --episodes_before_learn 100 --depth_circuit 3
 
 # put your command here!
 echo "Stopping:"
