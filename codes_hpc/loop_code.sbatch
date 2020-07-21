@@ -1,11 +1,12 @@
 #!/bin/bash
 nrun=0
-for lr in 0.01 0.001 0.0001
+for lr in 0.01
 do
 
 NAME=run_${nrun}
-nrun$=(($nrun +1))
+nrun=$(($nrun +1))
 
+STR="
 #! /bin/bash
 #SBATCH --job-name=${NAME}\n\
 #SBATCH --nodes=1\n\
@@ -19,7 +20,6 @@ nrun$=(($nrun +1))
 #SBATCH --qos=standard\n\
 #SBATCH --mem 100000\n\
 #SBATCH --nodes=1\n\
-
 ​
 set -x\n\                          # Output commands
 set -e\n\                          # Abort on errors
@@ -29,9 +29,9 @@ date\n\
 env | sort > ENVIRONMENT\n\
 echo "Starting"\n\
 
-python3 main_dueldqn.py --n_qubits 2 --total_timesteps 10 --episodes_before_learn 2 --depth_circuit 4 --use_tqdm 1 --learning_rate $lr --tau $tau\n\
+python3 main_dueldqn.py --n_qubits 2 --total_timesteps 10 --episodes_before_learn 2 --depth_circuit 4 --use_tqdm 1 --learning_rate $lr --tau $tau \n\
+"
 
-echo "Stopping:"\n\
-date\n\
-echo "Done! :)"\n\
-done\n\
+echo -e ${STR} | sbatch
+sleep 1s
+done
