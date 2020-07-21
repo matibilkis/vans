@@ -20,10 +20,10 @@ from datetime import datetime
 
 class DuelDQN:
     def __init__(self, env, use_tqdm=False, learning_rate = 0.01,
-        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01,
+        size_rp=10**5, name="DuelDQN", policy="exp-decay", ep=0.01,
          tau=0.1, plotter=False, priority_scale=0.5):
 
-        self.name = name
+        self.name = str(name)
         self.use_tqdm = use_tqdm
 
         if not os.path.exists(self.name):
@@ -222,19 +222,19 @@ class DuelDQN:
             f.write(self.info)
             f.close()
 
-        if self.plotter:
-            # Make the plot
-            plt.figure(figsize=(20, 20))
-            ax1 = plt.subplot2grid((1, 2), (0, 0))
-            ax2 = plt.subplot2grid((1, 2), (0, 1))
-            ax1.plot(pt, alpha=0.6, c="blue", linewidth=1, label="greedy policy")
-            ax1.scatter(np.arange(1, len(reward_history) + 1), reward_history, alpha=0.5, s=50, c="black",
-                        label="reward")
-            ax1.plot(cum_reward_per_e, alpha=0.6, linewidth=9, c="red", label="cumulative reward")
-            ax2.plot(range(len(loss_history)), loss_history, alpha=0.6, linewidth=1, c="blue", label="critic loss")
-            ax1.legend(prop={"size": 20})
-            ax2.legend(prop={"size": 20})
-            plt.savefig(self.dir_to_save + "/learning_curves.png")
+        # if self.plotter:
+        #     # Make the plot
+        #     plt.figure(figsize=(20, 20))
+        #     ax1 = plt.subplot2grid((1, 2), (0, 0))
+        #     ax2 = plt.subplot2grid((1, 2), (0, 1))
+        #     ax1.plot(pt, alpha=0.6, c="blue", linewidth=1, label="greedy policy")
+        #     ax1.scatter(np.arange(1, len(reward_history) + 1), reward_history, alpha=0.5, s=50, c="black",
+        #                 label="reward")
+        #     ax1.plot(cum_reward_per_e, alpha=0.6, linewidth=9, c="red", label="cumulative reward")
+        #     ax2.plot(range(len(loss_history)), loss_history, alpha=0.6, linewidth=1, c="blue", label="critic loss")
+        #     ax1.legend(prop={"size": 20})
+        #     ax2.legend(prop={"size": 20})
+        #     plt.savefig(self.dir_to_save + "/learning_curves.png")
 
 
 class ReplayBuffer:

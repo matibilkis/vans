@@ -11,19 +11,18 @@ do
     nrun=$(($nrun +1))
 
     STR="
-    #! /bin/bash
-    #SBATCH --job-name=${NAME}\n\
+    #! /bin/bash\n\
+    #SBATCH --job-name=w1\n\
     #SBATCH --nodes=1\n\
     #SBATCH --exclusive\n\
-    #SBATCH --mail-user=bilkis@lanl.gov\n\
-    #SBATCH --mail-type=END\n\
     #SBATCH --time=0-15:59:00\n\
     #SBATCH --no-requeue\n\
-    #SBATCH --output=output/${nrun}.out\n\
-    #SBATCH --error=error/${nrun}.err\n\
+    #SBATCH --output=${nrun}.out\n\
+    #SBATCH --error=${nrun}.err\n\
     #SBATCH --qos=standard\n\
-    #SBATCH --mem 100000\n\
-    #SBATCH --nodes=1\n\
+    # #SBATCH --ntasks=1\n\
+    # #SBATCH -p shared\n\
+    # #SBATCH --nodelist=cn452\n\
     ​
     set -x\n\                          # Output commands
     set -e\n\                          # Abort on errors
@@ -33,8 +32,7 @@ do
     env | sort > ENVIRONMENT\n\
     echo "Starting"\n\
 
-
-    python3 main_dueldqn.py --learning_rate $lr --tau $tau --priority_scale $priosc\n\
+    python3 main_dueldqn.py --names $nrun --learning_rate $lr --tau $tau --priority_scale $priosc\n\
     "
 
     echo -e ${STR} | sbatch
