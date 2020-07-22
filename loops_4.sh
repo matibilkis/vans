@@ -23,7 +23,7 @@ do
     #SBATCH --error=errs/${NAME}\n\
     #SBATCH --signal=23@60\n\
     \n\
-    python3 main_dueldqn.py --n_qubits 3 --total_timesteps 2000 --episodes_before_learn 100 --depth_circuit 3 --learning_rate $lr --tau $tau --priority_scale $priosc
+    python3 main_dueldqn.py --n_qubits 4 --total_timesteps 3000 --episodes_before_learn 100 --depth_circuit 4 --learning_rate $lr --tau $tau --priority_scale $priosc
     \n\
     echo "Stopping:"\n\
     date\n\
