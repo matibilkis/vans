@@ -20,10 +20,10 @@ from datetime import datetime
 
 class DuelDQN:
     def __init__(self, env, use_tqdm=False, learning_rate = 0.01,
-        size_rp=10**5, name="DuelDQN", policy="exp-decay", ep=0.01,
-         tau=0.1, plotter=False, priority_scale=0.5):
+        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01, tau=0.1, priority_scale=0.5, plotter=False):
 
-        self.name = str(name)
+
+        self.name = name
         self.use_tqdm = use_tqdm
 
         if not os.path.exists(self.name):
@@ -47,6 +47,7 @@ class DuelDQN:
         os.makedirs(dir_to_save+"/data_collected")
         self.dir_to_save = dir_to_save
 
+
         self.env = env
         self.n_actions = len(self.env.solver.alphabet)
 
@@ -65,10 +66,14 @@ class DuelDQN:
         self.ep0 = ep
         self.exp_decay_effective_exploitation = 0.5  # percentage of time at which ep(t0) = \ep0 with #ep(t) = \ep0 exp[- t / t0]
 
+
+
+
+
         # Define Buffer
         state_shape = self.env.depth_circuit  # We will modify this.
-        self.replay_buffer = ReplayBuffer(state_shape, size=size_rp, use_per=True, priority_scale=priority_scale)
-
+        self.replay_buffer = ReplayBuffer(state_shape, size=size_rp, use_per=True)
+        self.priority_scale = priority_scale
         # Some info to save
         self.info = f"len(alphabet): {len(self.env.solver.alphabet)}\n" \
                     f"alphabet_gates: {self.env.solver.alphabet_gates}, \n" \
@@ -96,6 +101,7 @@ class DuelDQN:
         x = Lambda(lambda layer: layer / self.n_actions)(model_input)
 
         x = Dense(64, kernel_initializer=VarianceScaling(scale=2.), activation='relu', use_bias=False)(model_input)
+        x = Dense(64, kernel_initializer=VarianceScaling(scale=2.), activation='relu', use_bias=False)(x)
         x = Dense(64, kernel_initializer=VarianceScaling(scale=2.), activation='relu', use_bias=False)(x)
 
         val_stream, adv_stream = Lambda(lambda w: tf.split(w, 2, 1))(x)  # custom splitting layer
@@ -125,7 +131,7 @@ class DuelDQN:
     def learn_step(self, batch_size=32):
         # Sample from buffer
         if self.replay_buffer.use_per:
-            (states, actions, rewards, nstates, dones), importance, indices = self.replay_buffer.get_minibatch(batch_size=batch_size)
+            (states, actions, rewards, nstates, dones), importance, indices = self.replay_buffer.get_minibatch(batch_size=batch_size, priority_scale=self.priority_scale)
         else:
             states, actions, rewards, nstates, dones = self.replay_buffer.get_minibatch(batch_size=batch_size)
 
@@ -222,27 +228,26 @@ class DuelDQN:
             f.write(self.info)
             f.close()
 
-        # if self.plotter:
-        #     # Make the plot
-        #     plt.figure(figsize=(20, 20))
-        #     ax1 = plt.subplot2grid((1, 2), (0, 0))
-        #     ax2 = plt.subplot2grid((1, 2), (0, 1))
-        #     ax1.plot(pt, alpha=0.6, c="blue", linewidth=1, label="greedy policy")
-        #     ax1.scatter(np.arange(1, len(reward_history) + 1), reward_history, alpha=0.5, s=50, c="black",
-        #                 label="reward")
-        #     ax1.plot(cum_reward_per_e, alpha=0.6, linewidth=9, c="red", label="cumulative reward")
-        #     ax2.plot(range(len(loss_history)), loss_history, alpha=0.6, linewidth=1, c="blue", label="critic loss")
-        #     ax1.legend(prop={"size": 20})
-        #     ax2.legend(prop={"size": 20})
-        #     plt.savefig(self.dir_to_save + "/learning_curves.png")
+        if self.plotter:
+            # Make the plot
+            plt.figure(figsize=(20, 20))
+            ax1 = plt.subplot2grid((1, 2), (0, 0))
+            ax2 = plt.subplot2grid((1, 2), (0, 1))
+            ax1.plot(pt, alpha=0.6, c="blue", linewidth=1, label="greedy policy")
+            ax1.scatter(np.arange(1, len(reward_history) + 1), reward_history, alpha=0.5, s=50, c="black",
+                        label="reward")
+            ax1.plot(cum_reward_per_e, alpha=0.6, linewidth=9, c="red", label="cumulative reward")
+            ax2.plot(range(len(loss_history)), loss_history, alpha=0.6, linewidth=1, c="blue", label="critic loss")
+            ax1.legend(prop={"size": 20})
+            ax2.legend(prop={"size": 20})
+            plt.savefig(self.dir_to_save + "/learning_curves.png")
 
 
 class ReplayBuffer:
-    def __init__(self, state_shape, size=10**5, use_per=True, priority_scale=0.5):
+    def __init__(self, state_shape, size=10**5, use_per=True):
         self.size = size
         self.count = 0  # total index of memory written to, always less than self.size
         self.current = 0  # index to write to
-        self.priority_scale = priority_scale
 
         # Pre-allocate memory
         self.actions = np.empty(self.size, dtype=np.int32)
@@ -264,7 +269,7 @@ class ReplayBuffer:
         self.count = max(self.count, self.current+1)
         self.current = (self.current + 1) % self.size
 
-    def get_minibatch(self, batch_size=32):
+    def get_minibatch(self, batch_size=32, priority_scale=0.7):
         """Returns a minibatch of self.batch_size = 32 transitions
         Arguments:
             batch_size: How many samples to return
@@ -278,7 +283,7 @@ class ReplayBuffer:
 
         # Get sampling probabilities from priority list
         if self.use_per:
-            scaled_priorities = self.priorities[:self.count] ** self.priority_scale
+            scaled_priorities = self.priorities[:self.count] ** priority_scale
             sample_probabilities = scaled_priorities / sum(scaled_priorities)
 
         # Get a list of valid indices
