@@ -217,11 +217,11 @@ class VAnsatzSmart(CirqSmartSolver):
         ws = self.detect_u3_and_reduce(ws)
 
         #### this is as a checker, to be removed later on! ###
-        val = np.sum(np.diag(np.array(self.alphabet)))
-        if val != len(self.alphabet) :
-            print(val)
-            print(len(self.alphabet))
-            print("WARNING!!!!")
+        # val = np.sum(np.diag(np.array(self.alphabet)))
+        # if val != len(self.alphabet) :
+        #     print(val)
+        #     print(len(self.alphabet))
+        #     print("WARNING!!!!")
 
         circuit = []
         params = []
@@ -441,7 +441,7 @@ def rolling(a, window):
 
 
 if __name__ == "__main__":
-    solver = CirqSmartSolver(n_qubits=3, observable_name="Ising_High_TFields")
+    solver = CirqSmartSolver(n_qubits=4, observable_name="Ising_High_TFields")
     # solver.run_circuit([0])
 
     solver.run_circuit(list(np.random.choice(range(15), 30)))

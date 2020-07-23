@@ -1,10 +1,10 @@
 #!/bin/bash
 nrun=0
-for lr in 0.001
+for lr in 0.0001 0.00001
 do
-  for tau in 0.01
+  for tau in 0.1 0.01 0.001
   do
-    for priosc in 0.5
+    for priosc in 0.2 0.7 0.9
     do
     NAME=run_${nrun}
     nrun=$(($nrun +1))
@@ -23,7 +23,7 @@ do
     #SBATCH --error=errs/${NAME}\n\
     #SBATCH --signal=23@60\n\
     \n\
-    python3 main_dueldqn.py --n_qubits 2 --total_timesteps 10 --episodes_before_learn 100 --depth_circuit 2 --learning_rate $lr --tau $tau --priority_scale $priosc
+    python3 main_dueldqn.py --names "01GreedyPolicy" --n_qubits 3 --policy_agent "random" --ep 0.1 --total_timesteps 2000 --episodes_before_learn 100 --depth_circuit 3 --learning_rate $lr --tau $tau --priority_scale $priosc
     \n\
     echo "Stopping:"\n\
     date\n\
