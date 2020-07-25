@@ -18,8 +18,6 @@ if __name__ == "__main__":
     def objective(trial):
         n_steps = trial.suggest_int('n_steps', 16, 1024)
         batch_size = trial.suggest_int('batch_size', 4, 64)
-        gamma = trial.suggest_uniform('gamma', 0.9, 0.99)
-        ent_coef = trial.suggest_uniform('ent_coef', 0., 0.01)
 
         model = PPO('MlpPolicy', env, n_steps=n_steps, batch_size=batch_size, gamma=gamma, ent_coef=ent_coef)
 

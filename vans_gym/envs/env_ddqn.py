@@ -50,20 +50,19 @@ class VansEnvsSeq(gym.Env):
         return self.state.astype(np.float32)
 
     def check_if_finish(self):
-        return len(self.sequence) >= self.depth_circuit
+        return len(self.sequence) >= self.depth_circuit or self.i_step>(10*self.depth_circuit)
 
     def step(self, action, checking=True):
         """the action is an index of the alphabet"""
         self.sequence = np.append(self.sequence,action)
         self.i_step +=1
         if checking:
-
             try:
                 self.sequence = self.checker.correct_trajectory(self.sequence)
             except IndexError:
                 pass #this may be due to little number of gates
         self.state[:len(self.sequence)] = self.sequence
-        print(self.state,"ep", self.episode, action, np.random.random())
+        #print(self.state,"ep", self.episode, action, np.random.random())
         ### INSERT CHECKER HERE! ###
         done = self.check_if_finish()
         if done:

@@ -1,0 +1,20 @@
+len(alphabet): 15
+alphabet_gates: [cirq.CNOT, <function rz at 0x7fc412dfad08>, cirq.rx(np.pi*-0.5), cirq.I], 
+observable_name: EasyIsing_
+depth_circuit: 3
+n_qubits: 3
+name: DuelDQN
+lr: 0.01
+
+policy: random
+ep0: 1.0
+exp_decay_effective_exploitation: 0.5
+
+state_shape: 3
+priority_scale: 0.4
+buffer_size: <vans_gym.models.duel_DQN.ReplayBuffer object at 0x7fc40c659ef0>batch_size: 32
+total_timesteps: 50
+episodes_before_learn: 2
+tau (target update): 0.01
+
+TOTAL_TIME: 0:00:52.975554

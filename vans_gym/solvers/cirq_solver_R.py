@@ -59,6 +59,10 @@ class CirqSolverR:
             observable = [g*cirq.X.on(q) for q in self.qubits] # -J \sum_{i} Z_i Z_{i+1} - g \sum_i X_i    when g>>J
             for q in range(len(self.qubits)):
                 observable.append(J*cirq.Z.on(self.qubits[q])*cirq.Z.on(self.qubits[(q+1)%len(self.qubits)]))
+        elif obs == "EasyIsing_":
+            observable = [g*cirq.Z.on(q) for q in self.qubits] # -J \sum_{i} Z_i Z_{i+1} - g \sum_i X_i    when g>>J
+            for q in range(len(self.qubits)):
+                observable.append(J*cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
         else:
             print("check previous versions to load other observables.")
         return observable

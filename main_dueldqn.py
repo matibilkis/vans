@@ -10,12 +10,13 @@ warnings.filterwarnings('ignore')
 
 if __name__ == "__main__":
     observable_name = "Ising_"
+    # observable_name= "EasyIsing_"
 
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--names", type=str, default="hola")
+    parser.add_argument("--names", type=str, default="DuelDQN")
     parser.add_argument("--policy_agent", type=str, default="exp-decay")
-    parser.add_argument("--n_qubits", type=int, default=2)
-    parser.add_argument("--depth_circuit", type=int, default=6)
+    parser.add_argument("--n_qubits", type=int, default=4)
+    parser.add_argument("--depth_circuit", type=int, default=3)
     parser.add_argument("--total_timesteps", type=int, default=20)
     parser.add_argument("--episodes_before_learn", type=int, default=2)
     parser.add_argument("--use_tqdm", type=int, default=False)
