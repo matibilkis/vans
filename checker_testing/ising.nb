@@ -1,0 +1,175 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.1' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      5852,        167]
+NotebookOptionsPosition[      5282,        149]
+NotebookOutlinePosition[      5678,        165]
+CellTagsIndexPosition[      5635,        162]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"Clear", "[", 
+   RowBox[{"x", ",", "z", ",", "id", ",", "htrans", ",", "hdir", ",", "h"}], 
+   "]"}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"x", " ", "=", " ", 
+   RowBox[{"PauliMatrix", "[", "1", "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"z", " ", "=", " ", 
+   RowBox[{"PauliMatrix", "[", "3", "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"id", " ", "=", " ", 
+   RowBox[{"IdentityMatrix", "[", "2", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"htrans", " ", "=", " ", 
+   RowBox[{
+    RowBox[{"KroneckerProduct", "[", 
+     RowBox[{
+      RowBox[{"KroneckerProduct", "[", 
+       RowBox[{"x", ",", " ", "id"}], "]"}], ",", " ", "id"}], "]"}], " ", 
+    "+", " ", 
+    RowBox[{"KroneckerProduct", "[", 
+     RowBox[{
+      RowBox[{"KroneckerProduct", "[", 
+       RowBox[{"id", ",", " ", "id"}], "]"}], ",", " ", "x"}], "]"}], "+", 
+    " ", 
+    RowBox[{"KroneckerProduct", "[", " ", 
+     RowBox[{
+      RowBox[{"KroneckerProduct", "[", 
+       RowBox[{"id", ",", " ", "x"}], "]"}], ",", " ", "id"}], "]"}]}]}], " ",
+   ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"hdir", " ", "=", "  ", 
+   RowBox[{
+    RowBox[{"KroneckerProduct", "[", 
+     RowBox[{
+      RowBox[{"KroneckerProduct", "[", 
+       RowBox[{"z", ",", " ", "z"}], "]"}], ",", " ", "id"}], "]"}], " ", "+",
+     " ", 
+    RowBox[{"KroneckerProduct", "[", 
+     RowBox[{
+      RowBox[{"KroneckerProduct", "[", 
+       RowBox[{"id", ",", " ", "z"}], "]"}], ",", " ", "z"}], "]"}], "+", " ", 
+    RowBox[{"KroneckerProduct", "[", " ", 
+     RowBox[{
+      RowBox[{"KroneckerProduct", "[", 
+       RowBox[{"z", ",", " ", "x"}], "]"}], ",", " ", "z"}], "]"}]}]}], " ", 
+  ";", 
+  RowBox[{
+   RowBox[{"h", "[", 
+    RowBox[{"g_", ",", "J_"}], "]"}], ":=", " ", 
+   RowBox[{"-", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"g", "*", "hdir"}], "  ", "+", 
+      RowBox[{"J", "*", "htrans"}]}], ")"}]}]}], ";"}]}], "Input",
+ CellChangeTimes->{{3.803211071173766*^9, 3.803211094214439*^9}, {
+  3.803216985314836*^9, 3.803217099877652*^9}, {3.8045823531293583`*^9, 
+  3.8045825172672253`*^9}},
+ CellLabel->"In[28]:=",ExpressionUUID->"4e89324d-7351-498a-a9d7-64a1ebb83707"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"h", "[", 
+    RowBox[{"0", ",", "1"}], "]"}], "//", " ", "Eigensystem"}], "  ", "//", 
+  "N"}]], "Input",
+ CellChangeTimes->{{3.803217105433157*^9, 3.803217112739086*^9}, {
+  3.804582496341256*^9, 3.804582587240835*^9}, {3.804582693237338*^9, 
+  3.804582695447878*^9}},
+ CellLabel->"In[42]:=",ExpressionUUID->"3a122035-2f89-4764-a2c5-b95373a7395f"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"-", "3.`"}], ",", "3.`", ",", 
+     RowBox[{"-", "1.`"}], ",", 
+     RowBox[{"-", "1.`"}], ",", 
+     RowBox[{"-", "1.`"}], ",", "1.`", ",", "1.`", ",", "1.`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{
+      "1.`", ",", "1.`", ",", "1.`", ",", "1.`", ",", "1.`", ",", "1.`", ",", 
+       "1.`", ",", "1.`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "1.`"}], ",", "1.`", ",", "1.`", ",", 
+       RowBox[{"-", "1.`"}], ",", "1.`", ",", 
+       RowBox[{"-", "1.`"}], ",", 
+       RowBox[{"-", "1.`"}], ",", "1.`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "1.`"}], ",", "0.`", ",", "0.`", ",", "1.`", ",", 
+       RowBox[{"-", "1.`"}], ",", "0.`", ",", "0.`", ",", "1.`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0.`", ",", 
+       RowBox[{"-", "1.`"}], ",", "0.`", ",", 
+       RowBox[{"-", "1.`"}], ",", "1.`", ",", "0.`", ",", "1.`", ",", "0.`"}],
+       "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0.`", ",", "0.`", ",", 
+       RowBox[{"-", "1.`"}], ",", 
+       RowBox[{"-", "1.`"}], ",", "1.`", ",", "1.`", ",", "0.`", ",", "0.`"}],
+       "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"1.`", ",", "0.`", ",", "0.`", ",", 
+       RowBox[{"-", "1.`"}], ",", 
+       RowBox[{"-", "1.`"}], ",", "0.`", ",", "0.`", ",", "1.`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0.`", ",", "1.`", ",", "0.`", ",", 
+       RowBox[{"-", "1.`"}], ",", 
+       RowBox[{"-", "1.`"}], ",", "0.`", ",", "1.`", ",", "0.`"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0.`", ",", "0.`", ",", "1.`", ",", 
+       RowBox[{"-", "1.`"}], ",", 
+       RowBox[{"-", "1.`"}], ",", "1.`", ",", "0.`", ",", "0.`"}], "}"}]}], 
+    "}"}]}], "}"}]], "Output",
+ CellChangeTimes->{{3.8032171071003304`*^9, 3.803217113001903*^9}, {
+   3.804582501895278*^9, 3.804582587555212*^9}, 3.804582695995028*^9},
+ CellLabel->"Out[42]=",ExpressionUUID->"161ea3d4-baa7-4d5b-b64f-ce2d1805d58c"]
+}, Open  ]]
+},
+WindowSize->{1389.75, 768.75},
+WindowMargins->{{0, Automatic}, {0, Automatic}},
+FrontEndVersion->"12.1 for Linux x86 (64-bit) (March 18, 2020)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"6a834ca0-7c87-450c-93dd-107ab4968c58"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 2241, 61, 154, "Input",ExpressionUUID->"4e89324d-7351-498a-a9d7-64a1ebb83707"],
+Cell[CellGroupData[{
+Cell[2824, 85, 395, 9, 29, "Input",ExpressionUUID->"3a122035-2f89-4764-a2c5-b95373a7395f"],
+Cell[3222, 96, 2044, 50, 124, "Output",ExpressionUUID->"161ea3d4-baa7-4d5b-b64f-ce2d1805d58c"]
+}, Open  ]]
+}
+]
+*)
+

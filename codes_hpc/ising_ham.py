@@ -1,7 +1,7 @@
 import argparse
 import gym
-from vans_gym.envs import VansEnvsSeq
-from vans_gym.solvers import CirqSolverR, Checker
+from vans_gym.envs import VansEnv
+from vans_gym.solvers import CirqSolver, CirqSmartSolver
 from vans_gym.models import DuelDQN
 
 import warnings
@@ -15,8 +15,8 @@ if __name__ == "__main__":
     parser.add_argument("--names", type=str, default="hola")
     parser.add_argument("--policy_agent", type=str, default="exp-decay")
     parser.add_argument("--n_qubits", type=int, default=2)
-    parser.add_argument("--depth_circuit", type=int, default=6)
-    parser.add_argument("--total_timesteps", type=int, default=20)
+    parser.add_argument("--depth_circuit", type=int, default=2)
+    parser.add_argument("--total_timesteps", type=int, default=2)
     parser.add_argument("--episodes_before_learn", type=int, default=2)
     parser.add_argument("--use_tqdm", type=int, default=False)
     parser.add_argument("--plotter", type=int)
@@ -24,16 +24,12 @@ if __name__ == "__main__":
     parser.add_argument("--ep", type=float, default=0.05)
     parser.add_argument("--tau", type=float, default=0.01)
     parser.add_argument("--priority_scale", type=float, default=0.4)
-    parser.add_argument("--qlr", type=float, default=0.05)
-    parser.add_argument("--qepochs", type=int, default=50)
-
 
     args = parser.parse_args()
+    print(args)
 
-    solver = CirqSolverR(n_qubits = args.n_qubits, observable_name=observable_name,qlr=args.qlr,qepochs=args.qepochs)
-    checker = Checker(solver)
-
-    env = VansEnvsSeq(solver, checker, depth_circuit=args.depth_circuit)
+    solver = CirqSmartSolver(n_qubits = args.n_qubits or 2, observable_name=observable_name)
+    env = VansEnv(solver, depth_circuit=args.depth_circuit or 2, state_as_sequence=True, printing=False)
 
     model = DuelDQN(env, name=args.names, policy=args.policy_agent, ep=args.ep, use_tqdm=not args.use_tqdm, plotter=args.plotter, learning_rate=args.learning_rate, tau=args.tau, priority_scale=args.priority_scale) #0 not using, 1 using
 

@@ -76,6 +76,12 @@ class CirqSmartSolver:
             observable = [cirq.X.on(q) for q in self.qubits] # -J \sum_{i} Z_i Z_{i+1} - g \sum_i X_i    when g>>J
             observable_matrix = cirq.unitary(cirq.Circuit(observable))
 
+        elif obs == "Ising_":
+            observable = [cirq.X.on(q) for q in self.qubits] # -J \sum_{i} Z_i Z_{i+1} - g \sum_i X_i    when g>>J
+            for q in range(len(self.qubits)):
+                observable.append(0.1*cirq.Z.on(self.qubits[q])*cirq.Z.on(self.qubits[(q+1)%len(self.qubits)]))
+            observable_matrix = "not importnt"#cirq.unitary(cirq.Circuit(observable))
+
         elif obs is None:
             print("Define an observable please! Using identity meanwhile")
             observable = [cirq.I.on(q) for q in self.qubits] # -J \sum_{i} Z_i Z_{i+1} - g \sum_i X_i    when g>>J

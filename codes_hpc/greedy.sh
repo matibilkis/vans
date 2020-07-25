@@ -1,10 +1,10 @@
 #!/bin/bash
 nrun=0
-for lr in 0.0001 0.00001
+for lr in 0.1 0.01
 do
-  for tau in 0.1 0.01 0.001
+  for tau in 0.01 0.001
   do
-    for priosc in 0.2 0.7 0.9
+    for priosc in 0.1 0.7 0.9
     do
     NAME=run_${nrun}
     nrun=$(($nrun +1))

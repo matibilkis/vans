@@ -4,13 +4,13 @@ import argparse
 
 #program that plots the results obtained from HPC..
 
-parser = argparse.ArgumentParser()
-parser.add_argument("number_run", type=int)
+parser = argparse.ArgumentParser() #RandomPolicy   #01GreedyPolicy
+parser.add_argument("--names", type=str, default="exp-greedy")
+parser.add_argument("--run", type=int, default=0)
 args = parser.parse_args()
-number_run = args.number_run
+number_run = args.run
 
-
-run = "DueDQN/run_"+str(number_run)
+run = args.names+"/run_"+str(number_run)
 
 rcum_per_e = np.load(run+"/data_collected/cumulative_reward_per_episode.npy", allow_pickle=True)
 rehist = np.load(run+"/data_collected/reward_history.npy", allow_pickle=True)

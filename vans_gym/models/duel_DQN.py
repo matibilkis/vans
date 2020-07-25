@@ -49,7 +49,8 @@ class DuelDQN:
 
 
         self.env = env
-        self.n_actions = len(self.env.solver.alphabet)
+        self.n_actions = len(self.env.solver.alphabet) - self.env.solver.n_qubits #this is to avoid identity
+        #since last n_qubits gates are identity.
 
         ## this is for HPC
         self.use_tqdm=use_tqdm
@@ -201,7 +202,7 @@ class DuelDQN:
             done = False
             while not done:
                 action = self.give_action(state, ep=0)
-                next_state, reward, done, info = self.env.step(action)
+                next_state, reward, done, info = self.env.step(action, checking=False)
                 state = next_state
             pt.append(reward)
 
