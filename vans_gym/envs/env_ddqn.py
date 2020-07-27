@@ -7,7 +7,7 @@ from gym import spaces
 
 
 class VansEnvsSeq(gym.Env):
-    def __init__(self, solver, checker, depth_circuit=8, printing=False):
+    def __init__(self, solver, checker=None, depth_circuit=8, printing=False):
         """"
 
         Simple environment that takes the state as sequence.
@@ -26,7 +26,13 @@ class VansEnvsSeq(gym.Env):
         """
         super(VansEnvsSeq, self).__init__()
         self.solver = solver
-        self.checker = checker
+
+        if checker:
+            self.checker = checker
+            self.checking=True
+        else:
+            self.checing=False
+
         self.n_qubits = solver.n_qubits
         self.depth_circuit = depth_circuit
         self.state_shape = int(self.depth_circuit)
@@ -50,15 +56,19 @@ class VansEnvsSeq(gym.Env):
         return self.state.astype(np.float32)
 
     def check_if_finish(self):
-        return len(self.sequence) >= self.depth_circuit or self.i_step>(10*self.depth_circuit)
+        # if self.i_step>(10*self.depth_circuit):
+        #    print("10 i_steps!")
 
-    def step(self, action, checking=True):
+        return len(self.sequence) >= self.depth_circuit or self.i_step>(5*self.depth_circuit)
+
+    def step(self, action, evaluating=False):
         """the action is an index of the alphabet"""
         self.sequence = np.append(self.sequence,action)
         self.i_step +=1
-        if checking:
+        if self.checking and not evaluating:
             try:
                 self.sequence = self.checker.correct_trajectory(self.sequence)
+                #print("doing it!")
             except IndexError:
                 pass #this may be due to little number of gates
         self.state[:len(self.sequence)] = self.sequence

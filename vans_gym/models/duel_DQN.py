@@ -20,7 +20,7 @@ from datetime import datetime
 
 class DuelDQN:
     def __init__(self, env, use_tqdm=False, learning_rate = 0.01,
-        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01, tau=0.1, priority_scale=0.5, plotter=False):
+        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01,tau=0.1, priority_scale=0.5, plotter=False, use_per=True):
 
 
         self.name = name
@@ -73,7 +73,7 @@ class DuelDQN:
 
         # Define Buffer
         state_shape = self.env.depth_circuit  # We will modify this.
-        self.replay_buffer = ReplayBuffer(state_shape, size=size_rp, use_per=True)
+        self.replay_buffer = ReplayBuffer(state_shape, size=size_rp, use_per=use_per)
         self.priority_scale = priority_scale
         # Some info to save
         self.info = f"len(alphabet): {len(self.env.solver.alphabet)}\n" \
@@ -99,22 +99,21 @@ class DuelDQN:
         """
 
         model_input = Input(shape=self.env.state_shape)
-        x = Lambda(lambda layer: layer / self.n_actions)(model_input)
+        x = Dense(64, activation='relu', use_bias=False)(model_input)
+        x = Dense(64,activation='relu', use_bias=False)(x)
+        x = Dense(64, activation='relu', use_bias=False)(x)
 
-        x = Dense(64, kernel_initializer=VarianceScaling(scale=2.), activation='relu', use_bias=False)(model_input)
-        x = Dense(64, kernel_initializer=VarianceScaling(scale=2.), activation='relu', use_bias=False)(x)
-        x = Dense(64, kernel_initializer=VarianceScaling(scale=2.), activation='relu', use_bias=False)(x)
+        #val_stream, adv_stream = Lambda(lambda w: tf.split(w, 2, 1))(x)  # custom splitting layer
 
-        val_stream, adv_stream = Lambda(lambda w: tf.split(w, 2, 1))(x)  # custom splitting layer
+        #val_stream = Flatten()(val_stream)
+        #val = Dense(1,)(val_stream)
 
-        val_stream = Flatten()(val_stream)
-        val = Dense(1, kernel_initializer=VarianceScaling(scale=2.))(val_stream)
+        #adv_stream = Flatten()(adv_stream)
+        #adv = Dense(self.n_actions)(adv_stream)
 
-        adv_stream = Flatten()(adv_stream)
-        adv = Dense(self.n_actions, kernel_initializer=VarianceScaling(scale=2.))(adv_stream)
-
-        reduce_mean = Lambda(lambda w: tf.reduce_mean(w, axis=1, keepdims=True))  # custom layer for reduce mean
-        q_vals = Add()([val, Subtract()([adv, reduce_mean(adv)])])
+        #reduce_mean = Lambda(lambda w: tf.reduce_mean(w, axis=1, keepdims=True))  # custom layer for reduce mean
+        #q_vals = Add()([val, Subtract()([adv, reduce_mean(adv)])])
+        q_vals = Dense(self.n_actions)(x)
 
         model = Model(model_input, q_vals)
         model.compile(Adam(learning_rate), loss=tf.keras.losses.Huber())
@@ -129,7 +128,7 @@ class DuelDQN:
         self.target_qnet.set_weights(weights)
         return
 
-    def learn_step(self, batch_size=32):
+    def learn_step(self,batch_size):
         # Sample from buffer
         if self.replay_buffer.use_per:
             (states, actions, rewards, nstates, dones), importance, indices = self.replay_buffer.get_minibatch(batch_size=batch_size, priority_scale=self.priority_scale)
@@ -147,9 +146,9 @@ class DuelDQN:
             qvalues = self.prim_qnet(tf.stack(states))
             Q = tf.reduce_sum(tf.multiply(qvalues, tf.keras.utils.to_categorical(actions, self.n_actions)), axis=1)
             error = target_q - Q  # this is for importance sample
-            loss = tf.keras.losses.Huber()(target_q, Q)
-            if self.replay_buffer.use_per:
-                loss = tf.reduce_mean(loss*importance)  # not entirely sure if this works or not (?)
+            loss = tf.reduce_mean(tf.keras.losses.MSE(target_q, Q))
+            #if self.replay_buffer.use_per:
+            #    loss = tf.reduce_mean(loss*importance)  # not entirely sure if this works or not (?)
 
         grads = tape.gradient(loss, self.prim_qnet.trainable_variables)
         self.prim_qnet.optimizer.apply_gradients(zip(grads, self.prim_qnet.trainable_variables))
@@ -196,13 +195,14 @@ class DuelDQN:
             reward_history.append(reward)
             cumulative_reward_history.append(cumulative_reward)
             if k > episodes_before_learn:
-                loss_history.append(self.learn_step(batch_size=batch_size))
+                for kk in range(10): 
+                    loss_history.append(self.learn_step(batch_size=batch_size))
 
             state = self.env.reset()
             done = False
             while not done:
                 action = self.give_action(state, ep=0)
-                next_state, reward, done, info = self.env.step(action, checking=False)
+                next_state, reward, done, info = self.env.step(action,evaluating=True)
                 state = next_state
             pt.append(reward)
 
@@ -312,7 +312,7 @@ class ReplayBuffer:
         else:
             return states, self.actions[indices], self.rewards[indices], new_states, self.terminal_flags[indices]
 
-    def set_priorities(self, indices, errors, offset=0.1):
+    def set_priorities(self, indices, errors, offset=0.01):
         """Update priorities for PER
         Arguments:
             indices: Indices to update
@@ -338,6 +338,9 @@ class ReplayBuffer:
         self.states = np.load(folder_name + '/frames.npy')
         self.rewards = np.load(folder_name + '/rewards.npy')
         self.terminal_flags = np.load(folder_name + '/terminal_flags.npy')
-        self.count = len(self.rewards)
-        self.current = len(self.rewards)
+        count = len(np.load(folder_name+"/cumulative_reward_per_episode.npy"))
         self.priorities = np.load(folder_name+"/priorities.npy")
+        self.count = count
+        self.current = count
+
+#

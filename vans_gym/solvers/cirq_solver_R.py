@@ -51,6 +51,15 @@ class CirqSolverR:
             one_hot_gate[ind] = 1.
             self.alphabet.append(one_hot_gate)
 
+
+    def index_meaning(self,index):
+        if index<self.number_of_cnots:
+            print("cnot: ",self.indexed_cnots[str(index)])
+            return
+        else:
+            print(self.alphabet_gates[1:][int((index-self.number_of_cnots)/self.n_qubits)], "on qubit: ",(index-self.number_of_cnots)%self.n_qubits)
+            return
+
     def load_observable(self, obs,g=1, J=0):
         """
         obs can either be a string, a list with cirq's gates or a matrix (array)
