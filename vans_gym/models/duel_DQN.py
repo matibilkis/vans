@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import os
 import random
 from datetime import datetime
-
+import pickle
 # N=1000
 # episodes = np.arange(1,N,1)
 # tt = .75*len(episodes)/np.log(1/0.05)
@@ -20,8 +20,9 @@ from datetime import datetime
 
 class DuelDQN:
     def __init__(self, env, use_tqdm=False, learning_rate = 0.01,
-        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01,tau=0.1, priority_scale=0.5, plotter=False, use_per=True):
+        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01,tau=0.1, priority_scale=0.5, plotter=False, use_per=True, fits_per_ep=50):
 
+        """fits_per_ep is the number of fits in the Q-network per episode (a bit experimental.. but works!)"""
 
         self.name = name
         self.use_tqdm = use_tqdm
@@ -78,7 +79,7 @@ class DuelDQN:
         self.policy = policy
         self.ep0 = ep
         self.exp_decay_effective_exploitation = 0.5  # percentage of time at which ep(t0) = \ep0 with #ep(t) = \ep0 exp[- t / t0]
-
+        self.fits_per_ep = fits_per_ep
 
 
 
@@ -193,6 +194,7 @@ class DuelDQN:
         episodes = np.arange(1, total_timesteps+1, 1)
         start = datetime.now()
         loss_step = 0
+        trajectories={"episode":[], "reward":[], "sequence":[], "params":[]}
 
         self.env.reset()
 
@@ -205,11 +207,15 @@ class DuelDQN:
                 next_state, reward, done, info = self.env.step(action)
                 self.replay_buffer.add_experience(action, [state, next_state], reward, done)
                 state = next_state
+            trajectories["episode"].append(k)
+            trajectories["reward"].append(reward)
+            trajectories["sequence"].append(state)
+            trajectories["params"].append(self.env.solver.final_params)
             cumulative_reward += reward
             reward_history.append(reward)
             cumulative_reward_history.append(cumulative_reward)
             if k > episodes_before_learn:
-                for kk in range(10):
+                for kk in range(self.fits_per_ep):
                     loss_step+=1
                     loss_history.append(self.learn_step(batch_size=batch_size))
                     with self.fw_loss.as_default():
@@ -240,6 +246,8 @@ class DuelDQN:
                      f"tau (target update): {self.tau}\n\n" \
                      f"TOTAL_TIME: {end - start}"
 
+        with open(self.dir_to_save+'/data_collected/circuits.pickle', 'wb') as handle:
+            pickle.dump(trajectories, handle, protocol=pickle.HIGHEST_PROTOCOL)
         self.save_learning_curves(cumulative_reward_history/np.array(episodes), reward_history, pt, loss_history)
 
     def save_learning_curves(self, cum_reward_per_e, reward_history, pt, loss_history):

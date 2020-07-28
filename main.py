@@ -28,6 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--priority_scale", type=float, default=0.0)
     parser.add_argument("--qlr", type=float, default=0.05)
     parser.add_argument("--qepochs", type=int, default=50)
+    parser.add_argument("--fitsep", type=int, default=50)
 
 
     args = parser.parse_args()
@@ -37,7 +38,7 @@ if __name__ == "__main__":
 
     env = VansEnvsSeq(solver, checker, depth_circuit=args.depth_circuit)
 
-    model = DuelDQN(env, name=args.names, policy=args.policy_agent, ep=args.ep, use_tqdm=not args.use_tqdm, plotter=args.plotter, learning_rate=args.learning_rate,tau=args.tau, priority_scale=args.priority_scale, use_per=False) #tqdm 0 not using, 1 using
+    model = DuelDQN(env, name=args.names, policy=args.policy_agent, ep=args.ep, use_tqdm=not args.use_tqdm, plotter=args.plotter, learning_rate=args.learning_rate,tau=args.tau, priority_scale=args.priority_scale, use_per=False, fits_per_ep=args.fitsep) #tqdm 0 not using, 1 using
 
     print("\n------------------------ Training ------------------------\n")
     model.learn(total_timesteps=args.total_timesteps, episodes_before_learn=args.episodes_before_learn, batch_size=args.batch_size)

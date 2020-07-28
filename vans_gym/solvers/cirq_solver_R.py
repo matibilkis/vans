@@ -51,7 +51,7 @@ class CirqSolverR:
             one_hot_gate[ind] = 1.
             self.alphabet.append(one_hot_gate)
 
-
+        self.final_params = []
     def index_meaning(self,index):
         if index<self.number_of_cnots:
             print("cnot: ",self.indexed_cnots[str(index)])
@@ -137,8 +137,6 @@ class CirqSolverR:
         for k in gates_index:
             circuit, symbols = self.append_to_circuit(self.alphabet[int(k)],circuit,symbols)
 
-
-
         circuit = cirq.Circuit(circuit)
         effective_qubits = list(circuit.all_qubits())
         for k in self.qubits:
@@ -151,11 +149,15 @@ class CirqSolverR:
                                             tfqcircuit,
                                             operators=tfq.convert_to_tensor([self.observable]))
             energy = np.float32(np.squeeze(tf.math.reduce_sum(expval, axis=-1, keepdims=True)))
+            self.final_params = []
+
         else:
             model = self.TFQ_model(symbols)
             qoutput = tf.ones((1, 1))*self.ground_state_energy
             model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=self.display_progress)
             energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
+            self.final_params = [np.squeeze(k.numpy()) for k in model.trainable_variables]
+
         #if sim_q_state:
             #simulator = cirq.Simulator()
             #result = simulator.simulate(circuit, qubit_order=self.qubits)
