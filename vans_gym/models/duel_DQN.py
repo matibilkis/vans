@@ -43,9 +43,21 @@ class DuelDQN:
                 f.close()
 
         dir_to_save = self.name+"/run_"+str(number_run)
+        self.number_run = number_run
         os.makedirs(dir_to_save)
         os.makedirs(dir_to_save+"/data_collected")
         self.dir_to_save = dir_to_save
+
+        rewlogdir = self.name+"/logs/scalars/run_"+str(self.number_run)+"/reward"
+        cumrewlogdir = self.name+"/logs/scalars/run_"+str(self.number_run)+"/cumreward"
+        greedylogdir = self.name+"/logs/scalars/run_"+str(self.number_run)+"/greedy"
+        losslogdir = self.name+"/logs/scalars/run_"+str(self.number_run)+"/loss"
+
+
+        self.fw_rew = tf.summary.create_file_writer(rewlogdir)
+        self.fw_cumrew = tf.summary.create_file_writer(cumrewlogdir)
+        self.fw_greedy = tf.summary.create_file_writer(greedylogdir)
+        self.fw_loss = tf.summary.create_file_writer(losslogdir)
 
 
         self.env = env
@@ -116,6 +128,7 @@ class DuelDQN:
         q_vals = Dense(self.n_actions)(x)
 
         model = Model(model_input, q_vals)
+
         model.compile(Adam(learning_rate), loss=tf.keras.losses.Huber())
         return model
 
@@ -179,6 +192,7 @@ class DuelDQN:
         cumulative_reward = 0
         episodes = np.arange(1, total_timesteps+1, 1)
         start = datetime.now()
+        loss_step = 0
 
         self.env.reset()
 
@@ -195,8 +209,17 @@ class DuelDQN:
             reward_history.append(reward)
             cumulative_reward_history.append(cumulative_reward)
             if k > episodes_before_learn:
-                for kk in range(10): 
+                for kk in range(10):
+                    loss_step+=1
                     loss_history.append(self.learn_step(batch_size=batch_size))
+                    with self.fw_loss.as_default():
+                        tf.summary.scalar('loss', tf.convert_to_tensor(loss_history[-1]), step=loss_step)
+
+            with self.fw_rew.as_default():
+                tf.summary.scalar('reward', tf.convert_to_tensor(reward), step=k)
+
+            with self.fw_cumrew.as_default():
+                tf.summary.scalar('cumulative reward', tf.convert_to_tensor(cumulative_reward/(k)), step=k)
 
             state = self.env.reset()
             done = False
@@ -205,6 +228,10 @@ class DuelDQN:
                 next_state, reward, done, info = self.env.step(action,evaluating=True)
                 state = next_state
             pt.append(reward)
+
+            with self.fw_greedy.as_default():
+                tf.summary.scalar('greedy energy', tf.convert_to_tensor(reward), step=k)
+
 
         end = datetime.now()
         self.info += f"batch_size: {batch_size}\n" \
