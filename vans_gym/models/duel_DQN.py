@@ -20,7 +20,8 @@ import pickle
 
 class DuelDQN:
     def __init__(self, env, use_tqdm=False, learning_rate = 0.01,
-        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01,tau=0.1, priority_scale=0.5, plotter=False, use_per=True, fits_per_ep=50):
+        size_rp=10**5, name="DueDQN", policy="exp-decay", ep=0.01,
+        tau=0.1, priority_scale=0.5, plotter=False, use_per=True, fits_per_ep=50):
 
         """fits_per_ep is the number of fits in the Q-network per episode (a bit experimental.. but works!)"""
 
@@ -78,7 +79,7 @@ class DuelDQN:
         # Define Policy
         self.policy = policy
         self.ep0 = ep
-        self.exp_decay_effective_exploitation = 0.5  # percentage of time at which ep(t0) = \ep0 with #ep(t) = \ep0 exp[- t / t0]
+        self.exp_decay_effective_exploitation = 0.3  # percentage of time at which ep(t0) = \ep0 with #ep(t) = \ep0 exp[- t / t0]
         self.fits_per_ep = fits_per_ep
 
 
@@ -112,9 +113,10 @@ class DuelDQN:
         """
 
         model_input = Input(shape=self.env.state_shape)
-        x = Dense(64, activation='relu', use_bias=False)(model_input)
-        x = Dense(64,activation='relu', use_bias=False)(x)
-        x = Dense(64, activation='relu', use_bias=False)(x)
+        x = Lambda(lambda layer: layer / self.n_actions)(model_input)
+        x = Dense(256, activation='relu', use_bias=False)(model_input)
+        x = Dense(256,activation='relu', use_bias=False)(x)
+        x = Dense(256, activation='relu', use_bias=False)(x)
 
         #val_stream, adv_stream = Lambda(lambda w: tf.split(w, 2, 1))(x)  # custom splitting layer
 
@@ -280,7 +282,7 @@ class DuelDQN:
 
 
 class ReplayBuffer:
-    def __init__(self, state_shape, size=10**5, use_per=True):
+    def __init__(self, state_shape, size=10**4, use_per=True):
         self.size = size
         self.count = 0  # total index of memory written to, always less than self.size
         self.current = 0  # index to write to
@@ -296,11 +298,14 @@ class ReplayBuffer:
 
     def add_experience(self, action, states, reward, terminal):
         # self.max_reward = max(self.max_reward, reward)
+
         self.actions[self.current] = action
         self.states[self.current] = states
         self.rewards[self.current] = reward
         self.terminal_flags[self.current] = terminal
-        self.priorities[self.current] = max(self.priorities.max(), 1)
+        if reward+.05 >= self.max_reward:
+            self.max_reward = reward
+            self.priorities[self.current] = max(self.priorities.max(), 1)
 
         self.count = max(self.count, self.current+1)
         self.current = (self.current + 1) % self.size

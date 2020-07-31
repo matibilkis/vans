@@ -12,10 +12,8 @@ do
         do
           for fits in 1 10 50 100
           do
-
           NAME=run_${nrun}
           nrun=$(($nrun +1))
-
           STR="
           #!/bin/tcsh\n\
           #SBATCH --time=15:59:00\n\
@@ -30,7 +28,7 @@ do
           #SBATCH --error=error/${NAME}.err\n\
           #SBATCH --signal=23@60\n\
           \n\
-          python3 main.py --batch_size $batch --use_tqdm 0 --names "$ep-Greedy-$nq -Qubits-$fits-fits" --total_timesteps $((nq*1000)) --n_qubits $nq --policy_agent "random" --ep $ep --episodes_before_learn $((nq*100)) --depth_circuit $((2*nq))+ --learning_rate $lr --tau $tau --fitsep $fits
+          python3 main.py --batch_size $batch --use_tqdm 0 --names "${ep}-Greedy-${nq}-Qubi-${fits}-fits" --total_timesteps $((nq*1000)) --n_qubits $nq --policy_agent "random" --ep $ep --episodes_before_learn $((nq*100)) --depth_circuit $((2*nq)) --learning_rate $lr --tau $tau --fitsep $fits
           \n\
           echo "Stopping:"\n\
           date\n\

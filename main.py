@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--ep", type=float, default=0.05)
     parser.add_argument("--tau", type=float, default=0.01)
-    parser.add_argument("--priority_scale", type=float, default=0.0)
+    parser.add_argument("--priority_scale", type=float, default=0.7)
     parser.add_argument("--qlr", type=float, default=0.05)
     parser.add_argument("--qepochs", type=int, default=50)
     parser.add_argument("--fitsep", type=int, default=50)

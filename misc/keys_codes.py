@@ -1,0 +1,1 @@
+          python3 main.py --batch_size $batch --use_tqdm 0 --names "${ep}-Greedy-${nq}-Qubi-${fits}-fits" --total_timesteps $((nq*1000)) --n_qubits $nq --policy_agent "random" --ep $ep --episodes_before_learn $((nq*100)) --depth_circuit $((2*nq)) --learning_rate $lr --tau $tau --fitsep $fits
