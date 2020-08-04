@@ -2,20 +2,20 @@
 nrun=0
 for nq in 2
 do
-  for ep in 1 0.1 0.01
+  for ep in 1
   do
-    for lr in 0.01 0.001 0.0001
+    for lr in 0.01
     do
-      for batch in 8 32 64
+      for batch in 8
       do
-        for tau in 0.01 0.1
+        for tau in 0.01
         do
-          for priosc in 0.001 0.01 0.25 0.5 0.75
+          for priosc in 0.001
           do
             NAME=run_${nrun}
             nrun=$(($nrun +1))
             nrun1=0
-            for reps in 25
+            for reps in 1
             do
             NAME1=run_${nrun1}
             nrun1=$(($nrun1 +1))
@@ -33,7 +33,7 @@ do
             #SBATCH --error=error/${NAME}.err\n\
             #SBATCH --signal=23@60\n\
             \n\
-            python3 dqn_train_from_dicts.py --batch_size $batch --names "${NAME}_${NAME1}" --ep $ep --lr $lr --tau $tau --priority_scale $priosc --total_timesteps 100000
+            python3 dqn_train_from_dicts.py --batch_size $batch --names "${NAME}_${NAME1}" --ep $ep --lr $lr --tau $tau --priority_scale $priosc --total_timesteps 10
             \n\
             echo "Stopping:"\n\
             date\n\
