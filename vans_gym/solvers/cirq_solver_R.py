@@ -192,6 +192,8 @@ class Checker():
         for k in range(2):
             oh = self.detect_u3_and_reduce(oh)
             oh = self.convert_to_One_Hot(self.delete_identities(oh))
+            if len(oh)==0:
+                break
             oh = self.check_and_recheck(oh)
         final_traj=self.delete_identities(oh)
         return final_traj
@@ -386,7 +388,6 @@ class Checker():
                 else:
                     w1 = ws_previous[d]
                     ws_odd.append(w1)
-
             ws_final = [ws_odd[0]]
             for d in range(1, len(ws_odd), 2):
                 if d<len(ws_odd)-1:
