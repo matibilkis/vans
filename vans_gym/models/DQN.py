@@ -14,7 +14,7 @@ import pickle
 
 
 class qnet(tf.keras.Model):
-    def __init__(self, seed_val=0.08, state_shape=3, n_actions=8, learning_rate=10**-3):
+    def __init__(self, seed_val=0.08, state_shape=3, n_actions=6, learning_rate=10**-3):
 
         super(qnet,self).__init__()
 
@@ -36,7 +36,7 @@ class qnet(tf.keras.Model):
 
 
 
-    @tf.function
+    # @tf.function
     def train_step(self, data):
         states, actions, target_q = data
 
@@ -109,8 +109,8 @@ class DQN:
         state_shape = self.env.depth_circuit  # We will modify this.
 
         ### define qnets ###
-        self.prim_qnet = qnet(state_shape=state_shape, learning_rate=learning_rate)
-        self.target_qnet = qnet(state_shape=state_shape)
+        self.prim_qnet = qnet(state_shape=state_shape, learning_rate=learning_rate, n_actions=self.n_actions)
+        self.target_qnet = qnet(state_shape=state_shape,n_actions=self.n_actions)
 
         self.prim_qnet.compile(loss="mse")
         self.prim_qnet(tf.random.uniform((1,1,state_shape)))

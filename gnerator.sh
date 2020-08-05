@@ -33,7 +33,7 @@ do
             #SBATCH --error=error/${NAME}.err\n\
             #SBATCH --signal=23@60\n\
             \n\
-            python3 dqn_train_from_dicts.py --batch_size $batch --names "${NAME}_${NAME1}" --ep $ep --lr $lr --tau $tau --priority_scale $priosc --total_timesteps 100000
+            python3 main.py --batch_size $batch --names "${NAME}_${NAME1}" --ep $ep --learning_rate $lr --tau $tau --priority_scale $priosc --total_timesteps 100000
             \n\
             echo "Stopping:"\n\
             date\n\
