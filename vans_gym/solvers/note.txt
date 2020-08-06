@@ -1,1 +1,1 @@
-pennylane_solver < cirq_solver < cirq_smart_solver < cirq.solver_R
+pennylane_solver < cirq_solver < cirq.solver_seq

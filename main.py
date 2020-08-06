@@ -45,3 +45,4 @@ if __name__ == "__main__":
     model.learn(total_timesteps=args.total_timesteps, episodes_before_learn=args.episodes_before_learn, batch_size=args.batch_size)
 
     #env.close() ##if werun this on hpc error since plt
+# python3 main.py --ep 0.01 --learning_rate 0.01 --priority_scale 0.4 --batch_size 32 --depth_circuit 3 --policy_agent "exp-decay" --total_timesteps 500 --use_tqdm 1
