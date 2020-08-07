@@ -59,7 +59,7 @@ class VansEnvsSeq(gym.Env):
         # if self.i_step>(10*self.depth_circuit):
         #    print("10 i_steps!")
 
-        return len(self.sequence) >= self.depth_circuit or self.i_step>(5*self.depth_circuit)
+        return len(self.sequence) >= self.depth_circuit or self.i_step>5#*self.depth_circuit
 
     def step(self, action, evaluating=False):
         """the action is an index of the alphabet"""
@@ -68,7 +68,6 @@ class VansEnvsSeq(gym.Env):
         if self.checking and not evaluating:
             try:
                 self.sequence = self.checker.correct_trajectory(self.sequence)
-                #print("doing it!")
             except IndexError:
                 pass #this may be due to little number of gates
         self.state[:len(self.sequence)] = self.sequence
@@ -77,6 +76,8 @@ class VansEnvsSeq(gym.Env):
         done = self.check_if_finish()
         if done:
             reward = self.solver.run_circuit(self.state, sim_q_state=False)
+            if reward < .9:
+                reward = -1.
         else:
             reward = 0.
 
