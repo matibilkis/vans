@@ -1,1 +1,0 @@
-pennylane_solver < cirq_solver < cirq.solver_seq

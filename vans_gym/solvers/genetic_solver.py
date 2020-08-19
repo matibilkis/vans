@@ -1,3 +1,4 @@
+import gc
 import numpy as np
 import sympy
 import cirq
@@ -9,10 +10,10 @@ import matplotlib.pyplot as plt
 #from IPython.display import SVG, display
 #from cirq.contrib.svg import SVGCircuit
 
-import resource
-class MemoryCallback(tf.keras.callbacks.Callback):
-    def on_epoch_end(self, epoch, log={}):
-        print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+# import resource
+# class MemoryCallback(tf.keras.callbacks.Callback):
+#     def on_epoch_end(self, epoch, log={}):
+#         print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
 class GeneticSolver:
     def __init__(self, n_qubits=3, qlr=0.01, qepochs=100,verbose=0, g=1, J=0, noises={}):
@@ -49,7 +50,7 @@ class GeneticSolver:
         self.lowest_energy_found = -.1
         self.best_circuit_found = []
         self.best_resolver_found = {}
-        self.expectation_layer = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(0.001)))
+        #self.expectation_layer = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(0.001)))
 
 
     def ising_obs(self, g=1, J=0):
@@ -256,25 +257,35 @@ class GeneticSolver:
             energy = np.float32(np.squeeze(tf.math.reduce_sum(expval, axis=-1, keepdims=True)))
             final_params = []
             resolver = {"th_"+str(ind):var  for ind,var in enumerate(final_params)}
+            del expval
+            gc.collect()
         else:
             if hyperparameters is None:
                 model = self.TFQ_model(symbols)
                 qoutput = tf.ones((1, 1))*self.lower_bound_Eg
-                print("about to fit!")
-                model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=self.verbose,workers=1)#, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)])#, MemoryCallback()])
+                #print("about to fit!")
+                model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5, mode="min")])#, MemoryCallback()])
                 energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
                 final_params = model.trainable_variables[0].numpy()
                 resolver = {"th_"+str(ind):var  for ind,var in enumerate(final_params)}
+                del model
+                gc.collect()
+
             else:
                 model = self.TFQ_model(symbols, hyperparameters[1])
                 qoutput = tf.ones((1, 1))*self.lower_bound_Eg
-                print("about to fit!")
-                model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=hyperparameters[0], verbose=self.verbose,workers=1)#,callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)])#,MemoryCallback()])
+                #print("about to fit!")
+                model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5, mode="min")])
                 energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
                 final_params = model.trainable_variables[0].numpy()
                 resolver = {"th_"+str(ind):var  for ind,var in enumerate(final_params)}
+                del model
+                gc.collect()
+
         #self.current_circuit = gates_index
         self.resolver = resolver
+        #del output
+
         if self.accept_modification(energy):
             self.lowest_energy_found = energy
             self.best_circuit_found = gates_index
@@ -300,7 +311,7 @@ class GeneticSolver:
 
         tfqcircuit = tfq.convert_to_tensor([circuit])
         qoutput = tf.ones((1, 1))*self.lower_bound_Eg
-        model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=self.verbose, workers=1)#, verbose=self.verbose,workers=1,callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)])#), MemoryCallback()])
+        model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5, mode="min")])
         energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
 
         if self.accept_modification(energy):
@@ -409,6 +420,8 @@ class GeneticSolver:
                                         operators=tfq.convert_to_tensor([self.observable]))
                 new_energy = np.float32(np.squeeze(tf.math.reduce_sum(expval, axis=-1, keepdims=True)))
 
+                del expval
+                gc.collect()
                 if self.accept_modification(new_energy):
                     ordered_resolver = {}
                     for ind,k in enumerate(nr.values()):
