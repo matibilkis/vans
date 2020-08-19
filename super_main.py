@@ -213,9 +213,9 @@ class GeneticSolver:
         #         initializer=tf.keras.initializers.RandomNormal())
         model = tf.keras.Model(inputs=circuit_input, outputs=output)
         if lr is None:
-            adam = tf.keras.optimizers.Adam(learning_rate=self.qlr)
+            adam = tf.keras.optimizers.SGD(learning_rate=self.qlr)
         else:
-            adam = tf.keras.optimizers.Adam(learning_rate=lr)
+            adam = tf.keras.optimizers.SGD(learning_rate=lr)
         model.compile(optimizer=adam, loss='mse')
         return model
 
@@ -515,9 +515,9 @@ class GeneticSolver:
 
 sols = {}
 J=1.21
-for dep in [0.1, 0.01]:
+for dep in [0.1, 0.01,0.001]:
     print("dep", dep)
-    sol = GeneticSolver(n_qubits= 2, qlr=0.1, qepochs=10, g=1, J=J, noises={"depolarizing":dep}, verbose=1)
+    sol = GeneticSolver(n_qubits= 4, qlr=0.05, qepochs=50, g=1, J=J, noises={"depolarizing":dep}, verbose=1)
     sol.history_circuits=[]
     history_energies=[]
     best_energies_found = []
@@ -527,11 +527,11 @@ for dep in [0.1, 0.01]:
     sol.history_circuits.append(gates_index)
 #    sol.current_circuit = gates_index
 
-    for kk in tqdm(range(4)):
-        print("\n%%%%%%%%%%%%%%%%%%%%%%%%%")
-        print("new iteration: ",kk)
-        print("1:" )
-        print(sol.give_circuit(gates_index)[0])
+    for kk in tqdm(range(5)):
+        #print("\n%%%%%%%%%%%%%%%%%%%%%%%%%")
+        #print("new iteration: ",kk)
+        #print("1:" )
+        #print(sol.give_circuit(gates_index)[0])
 
         enns = [energy]
         which_block = np.random.choice([0,1], p=[.5,.5])
@@ -551,28 +551,27 @@ for dep in [0.1, 0.01]:
         model = sol.initialize_model_insertion(variables) ### initialize the model in the previously optimized parameters & resolution to identity for the block
 
         gates_index, resolver, energy, accepted = sol.optimize_and_update(gates_index,model, circuit, variables, insertion_index,block_to_insert) #inside, if better circuit is found, saves it.
-        del model
-        print("2:")
-        print(sol.give_circuit(gates_index)[0])
+        #print("2:")
+        #print(sol.give_circuit(gates_index)[0])
         if accepted:
-            print("accepted")
+            #print("accepted")
             sol.history_circuits.append(gates_index)
             #### try to kill one qubit unitaries ###
             for k in range(10):
                 if len(gates_index)-sol.count_number_cnots(gates_index) > 2:
                     gates_index, resolver, energy, simplified =  sol.kill_one_unitary(gates_index, resolver, energy)
-                    print("3: ")
-                    print(sol.give_circuit(gates_index)[0])
+                    #print("3: ")
+                    #print(sol.give_circuit(gates_index)[0])
                     sol.history_circuits.append(gates_index)
 
             ### simplify the circuit and if the length is changed I run the optimization again
-            print("about to simplify")
+            #print("about to simplify")
             simplified_gates_index = sol.simplify_circuit(gates_index)
             if len(simplified_gates_index)<len(gates_index) and len(simplified_gates_index)>0:
-                print("actually simplified!: running opt")
-                ggates_index, rresolver, eenergy = sol.run_circuit_from_index(simplified_gates_index,hyperparameters=[20,0.01]) #here I don't save the resolver since it's a mess
-                print("3:")
-                print(sol.give_circuit(ggates_index)[0])
+                #print("actually simplified!: running opt")
+                ggates_index, rresolver, eenergy = sol.run_circuit_from_index(simplified_gates_index,hyperparameters=[100,0.01]) #here I don't save the resolver since it's a mess
+                #print("3:")
+                #print(sol.give_circuit(ggates_index)[0])
 
                 if energy < sol.lowest_energy_found:
                     sol.lowest_energy_found = energy
@@ -589,9 +588,9 @@ for dep in [0.1, 0.01]:
         #print("energy: ", energy, "... j", j)
     sol.history_energies=history_energies
     sols[str(dep)] = sol
-    print(history_energies)
+    #print(history_energies)
     with open("noise_test/"+str(dep)+'.pickle', 'wb') as handle:
-        pickle.dump(v, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(sol, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 

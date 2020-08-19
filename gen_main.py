@@ -3,6 +3,7 @@ import os
 import pickle
 from tqdm import tqdm
 import numpy as np
+import gc
 
 sols = {}
 J=1.21
