@@ -6,9 +6,16 @@ import tensorflow_quantum as tfq
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+#from IPython.display import SVG, display
+#from cirq.contrib.svg import SVGCircuit
 
-class Solver:
-    def __init__(self, n_qubits=3, qlr=0.01, qepochs=100,verbose=0, g=1, J=0):
+import resource
+class MemoryCallback(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, log={}):
+        print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+
+class GeneticSolver:
+    def __init__(self, n_qubits=3, qlr=0.01, qepochs=100,verbose=0, g=1, J=0, noises={}):
 
         """"solver with n**2 possible actions: n(n-1) CNOTS + n 1-qubit unitary"""
         self.n_qubits = n_qubits
@@ -33,6 +40,8 @@ class Solver:
 
         self.final_params = []
         self.parametrized_unitary = [cirq.rz, cirq.rx, cirq.rz]
+        self.noises=noises
+        self.noise_level = self.noises["depolarizing"]
 
         self.observable=self.ising_obs(g=g, J=J)
         self.resolver = {}
@@ -40,6 +49,7 @@ class Solver:
         self.lowest_energy_found = -.1
         self.best_circuit_found = []
         self.best_resolver_found = {}
+        self.expectation_layer = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(0.001)))
 
 
     def ising_obs(self, g=1, J=0):
@@ -129,7 +139,7 @@ class Solver:
         return c
 
 
-    def prepare_circuit_insertion(self,gates_index, block_to_insert, index_insertion):
+    def prepare_circuit_insertion(self,gates_index, block_to_insert, insertion_index):
         """gates_index is a vector with integer entries, each one describing a gate
             block_to_insert is block of unitaries to insert at index insertion
         """
@@ -186,12 +196,15 @@ class Solver:
 
     def TFQ_model(self, symbols, lr=None):
         circuit_input = tf.keras.Input(shape=(), dtype=tf.string)
-        output = tfq.layers.Expectation()(
-                circuit_input,
+        # output = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level)))(
+        #         circuit_input,
+        #         symbol_names=symbols,
+        #         operators=tfq.convert_to_tensor([self.observable]),
+        #         initializer=tf.keras.initializers.RandomNormal()) #we may change this!!!
+        output = self.expectation_layer(circuit_input,
                 symbol_names=symbols,
                 operators=tfq.convert_to_tensor([self.observable]),
-                initializer=tf.keras.initializers.RandomNormal()) #we may change this!!!
-
+                initializer=tf.keras.initializers.RandomNormal())
         model = tf.keras.Model(inputs=circuit_input, outputs=output)
         if lr is None:
             adam = tf.keras.optimizers.Adam(learning_rate=self.qlr)
@@ -237,7 +250,7 @@ class Solver:
 
         tfqcircuit = tfq.convert_to_tensor([circuit])
         if len(symbols) == 0:
-            expval = tfq.layers.Expectation()(
+            expval = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level)))(
                                             tfqcircuit,
                                             operators=tfq.convert_to_tensor([self.observable]))
             energy = np.float32(np.squeeze(tf.math.reduce_sum(expval, axis=-1, keepdims=True)))
@@ -247,14 +260,16 @@ class Solver:
             if hyperparameters is None:
                 model = self.TFQ_model(symbols)
                 qoutput = tf.ones((1, 1))*self.lower_bound_Eg
-                model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=self.verbose)
+                print("about to fit!")
+                model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=self.verbose,workers=1)#, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)])#, MemoryCallback()])
                 energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
                 final_params = model.trainable_variables[0].numpy()
                 resolver = {"th_"+str(ind):var  for ind,var in enumerate(final_params)}
             else:
                 model = self.TFQ_model(symbols, hyperparameters[1])
                 qoutput = tf.ones((1, 1))*self.lower_bound_Eg
-                model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=hyperparameters[0], verbose=self.verbose)
+                print("about to fit!")
+                model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=hyperparameters[0], verbose=self.verbose,workers=1)#,callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)])#,MemoryCallback()])
                 energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
                 final_params = model.trainable_variables[0].numpy()
                 resolver = {"th_"+str(ind):var  for ind,var in enumerate(final_params)}
@@ -271,11 +286,11 @@ class Solver:
         return np.abs(energy)/np.abs(self.lowest_energy_found) > .98
 
 
-    def optimize_and_update(self, gates_index, model, circuit,variables,insertion_index_loaded):
+    def optimize_and_update(self, gates_index, model, circuit,variables,insertion_index_loaded, block_to_insert):
 
         effective_qubits = list(circuit.all_qubits())
         q=0
-        for k in self.qubits:
+        for k in self.qubits:#che, lo que no estoy
             if k not in effective_qubits:
                 circuit.append(cirq.I.on(k))
                 q+=1
@@ -285,7 +300,7 @@ class Solver:
 
         tfqcircuit = tfq.convert_to_tensor([circuit])
         qoutput = tf.ones((1, 1))*self.lower_bound_Eg
-        model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=0)
+        model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=self.verbose, workers=1)#, verbose=self.verbose,workers=1,callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)])#), MemoryCallback()])
         energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
 
         if self.accept_modification(energy):
@@ -310,10 +325,10 @@ class Solver:
                 if ind == insertion_index_loaded:
                     for gate in block_to_insert:
                         new_circuit.append(gate)
-                        if gate < sol.number_of_cnots:
+                        if gate < self.number_of_cnots:
                             pass
                         else:
-                            for par, gateblock in zip(range(3),sol.parametrized_unitary):
+                            for par, gateblock in zip(range(3),self.parametrized_unitary):
 
                                 var1 = "New_th_"+str(len(old_added))
                                 old_added.append(var1)
@@ -339,7 +354,7 @@ class Solver:
             #self.current_circuit = new_circuit #### now the current circuit is the better one! otherwise you keep the previous (from self.run_circuit_from_index)
             self.best_circuit_found = new_circuit
             self.lowest_energy_found = energy
-            self.best_resolver_found = resolver
+            self.best_resolver_found = final_resolver
             return new_circuit, self.resolver, energy, True
         else:
             return gates_index, self.resolver, self.lowest_energy_found, False
@@ -389,7 +404,7 @@ class Solver:
                         prop.append(cirq.I.on(k))
 
                 tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(prop, nr)]) ###resolver parameters !!!
-                expval = tfq.layers.Expectation()(
+                expval = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level)))(
                                         tfqcircuit,
                                         operators=tfq.convert_to_tensor([self.observable]))
                 new_energy = np.float32(np.squeeze(tf.math.reduce_sum(expval, axis=-1, keepdims=True)))
