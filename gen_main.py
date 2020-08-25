@@ -1,91 +1,69 @@
-from vans_gym.solvers import GeneticSolver
-import os
-import pickle
-from tqdm import tqdm
-import numpy as np
-import gc
+def kill_one_unitary(self, gates_index, resolver, historial):
 
-sols = {}
-J=1.21
-for dep in [0.01,0.001]:
-    print("dep", dep)
-    sol = GeneticSolver(n_qubits= 4, qlr=0.01, qepochs=100, g=1, J=J, noises={"depolarizing":dep}, verbose=1)
-    sol.history_circuits=[]
-    history_energies=[]
-    best_energies_found = []
+    circuit_proposals=[] #storing all good candidates.
+    circuit_proposals_energies=[]
+    for j in gates_index:
+        indexed_prop=[]
 
-    gates_index = [sol.number_of_cnots] ## begin with a certain circuit
-    gates_index, resolver, energy= sol.run_circuit_from_index(gates_index)
-    sol.history_circuits.append(gates_index)
-#    sol.current_circuit = gates_index
+        prop=cirq.Circuit()
+        checking = False
+        ko=0
+        to_pop=[]
 
-    for kk in tqdm(range(15)):
-        print("\n%%%%%%%%%%%%%%%%%%%%%%%%%")
+        for k in gates_index:
+            if k < self.number_of_cnots:
+                indexed_prop.append(k)
+                control, target = self.indexed_cnots[str(k)]
+                prop.append(cirq.CNOT.on(self.qubits[control], self.qubits[target]))
+            else:
+                if k != j:
+                    indexed_prop.append(k)
+                    qubit = self.qubits[(k-self.number_of_cnots)%self.n_qubits]
+                    for par, gate in zip(range(3),self.parametrized_unitary):
+                        new_param = "th_"+str(ko)
+                        ko+=1
+                        prop.append(gate(sympy.Symbol(new_param)).on(qubit))
+                else:
+                    checking=True
+                    for i in range(3):
+                        to_pop.append("th_"+str(ko))
+                        ko+=1
+        if checking is True:
+            nr = resolver.copy()
+            for p in to_pop:
+                nr.pop(p)
 
-        enns = [energy]
-        which_block = np.random.choice([0,1], p=[.5,.5])
-        if which_block == 0:
-            qubit = np.random.choice(sol.n_qubits)
-            block_to_insert = sol.resolution_1qubit(qubit)
-            insertion_index = np.random.choice(max(1,len(gates_index))) #gives index between \in [0, len(gates_index) )
-        else:
-            qubits = np.random.choice(sol.n_qubits, 2,replace = False)
-            block_to_insert = sol.resolution_2cnots(qubits[0], qubits[1])
-            insertion_index = np.random.choice(max(1,len(gates_index))) #gives index between \in [0, len(gates_index) )
+            #### check if I actually kill a part of the circuit (for sure this won't help)
+            reject=False
+            effective_qubits = list(prop.all_qubits())
+            for k in self.qubits:
+                if k not in effective_qubits:
+                    reject=True
+                    #prop.append(cirq.I.on(k))
+            if reject:
+                pass
+            else:
+                tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(prop, nr)]) ###resolver parameters !!!
+                #backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level))
+                expval = tfq.layers.Expectation()(
+                                        tfqcircuit,
+                                        operators=tfq.convert_to_tensor([self.observable]))
+                new_energy = np.float32(np.squeeze(tf.math.reduce_sum(expval, axis=-1, keepdims=True)))
+                del expval
+                gc.collect()
+                if historial.accept_energy(new_energy, kill_one_unitary=True):
+                    ordered_resolver = {}
+                    for ind,k in enumerate(nr.values()):
+                        ordered_resolver["th_"+str(ind)] = k
+                    circuit_proposals.append([indexed_prop,ordered_resolver,new_energy])
+                    circuit_proposals_energies.append(new_energy)
 
-        #print(block_to_insert)
-        ### optimize the circuit with the block appended. This is tricky since we initialize
-        ###  the continuous parameters with the older ones, and the "block ones" close to identity
-        circuit, variables = sol.prepare_circuit_insertion(gates_index, block_to_insert, insertion_index) #this either accepts or reject the insertion
-        model = sol.initialize_model_insertion(variables) ### initialize the model in the previously optimized parameters & resolution to identity for the block
-
-        gates_index, resolver, energy, accepted = sol.optimize_and_update(gates_index,model, circuit, variables, insertion_index,block_to_insert) #inside, if better circuit is found, saves it.
-        del model
-        del circuit
-        gc.collect()
-
-        print("2:")
-        print(sol.give_circuit(gates_index)[0])
-        if accepted:
-            #print("accepted")
-            sol.history_circuits.append(gates_index)
-            #### try to kill one qubit unitaries ###
-            for k in range(100):
-                if len(gates_index)-sol.count_number_cnots(gates_index) > 2:
-                    gates_index, resolver, energy, simplified =  sol.kill_one_unitary(gates_index, resolver, energy)
-                    #print("3: ")
-                    #print(sol.give_circuit(gates_index)[0])
-                    sol.history_circuits.append(gates_index)
-
-            ### simplify the circuit and if the length is changed I run the optimization again
-            #print("about to simplify")
-            simplified_gates_index = sol.simplify_circuit(gates_index)
-            if len(simplified_gates_index)<len(gates_index) and len(simplified_gates_index)>0:
-                #print("actually simplified!: running opt")
-                ggates_index, rresolver, eenergy = sol.run_circuit_from_index(simplified_gates_index,hyperparameters=[200,0.01]) #here I don't save the resolver since it's a mess
-                print("3:")
-                print(sol.give_circuit(ggates_index)[0])
-
-                if np.abs(energy/sol.lowest_energy_found) > .98 :
-                    sol.lowest_energy_found = energy
-                    sol.best_circuit_found = gates_index
-                    sol.best_resolver_found = resolver
-                    gates_index = ggates_index
-                    sol.history_circuits.append(gates_index)
-                    resolver = resolver
-                    energy = eenergy
-
-        sol.new_resolver = {}
-        history_energies.append(sol.lowest_energy_found)
-        enns=[]
-        #print("energy: ", energy, "... j", j)
-    sol.history_energies=history_energies
-    sols[str(dep)] = sol
-    print(history_energies)
-    with open("noise_test/"+str(dep)+'.pickle', 'wb') as handle:
-        pickle.dump(sol, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
-
-
-# for k,v in sols.items():
+    if len(circuit_proposals)>0:
+        favourite = np.random.choice(len(circuit_proposals))
+        short_circuit, resolver, energy = circuit_proposals[favourite]
+        simplified=True
+        _,_, simplified_index_to_symbols = self.give_circuit(short_circuit)
+        return short_circuit, resolver, energy, simplified_index_to_symbols, simplified
+    else:
+        simplified=False
+        return gates_index, resolver, None, None, simplified
