@@ -13,8 +13,9 @@ import matplotlib.pyplot as plt
 
 
 
+
 class GeneticSolver:
-    def __init__(self, n_qubits=3, qlr=0.01, qepochs=100,verbose=0, g=1, J=0, noises={}):
+    def __init__(self, n_qubits=3, qlr=0.01, qepochs=100,verbose=0, g=1, J=0, noise=False, noise_level=0.01):
 
         self.n_qubits = n_qubits
         self.qubits = cirq.GridQubit.rect(1, n_qubits)
@@ -38,12 +39,13 @@ class GeneticSolver:
 
         self.final_params = []
         self.parametrized_unitary = [cirq.rz, cirq.rx, cirq.rz]
-        self.noises=noises
-        if len(list(self.noises.values()))==1:
-            self.noise_level = self.noises.values()[0]
+
+
         self.observable=self.ising_obs(g=g, J=J)
         self.single_qubit_unitaries = {"u":self.parametrized_unitary, "rx":[cirq.rx], "rz":[cirq.rz]}
 
+        self.noise = noise
+        self.noise_level = noise_level
 
     def ising_obs(self, g=1, J=0):
         self.g=g
@@ -138,12 +140,20 @@ class GeneticSolver:
 
     def TFQ_model(self, symbols, lr):
         circuit_input = tf.keras.Input(shape=(), dtype=tf.string)
-        #backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level))
-        output = tfq.layers.Expectation()(
-                circuit_input,
-                symbol_names=symbols,
-                operators=tfq.convert_to_tensor([self.observable]),
-                initializer=tf.keras.initializers.RandomNormal(stddev=np.pi/2))
+
+        if self.noise is True:
+            output = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level)))(
+                    circuit_input,
+                    symbol_names=symbols,
+                    operators=tfq.convert_to_tensor([self.observable]),
+                    initializer=tf.keras.initializers.RandomNormal())
+
+        else:
+            output = tfq.layers.Expectation()(
+                    circuit_input,
+                    symbol_names=symbols,
+                    operators=tfq.convert_to_tensor([self.observable]),
+                    initializer=tf.keras.initializers.RandomNormal())
 
         model = tf.keras.Model(inputs=circuit_input, outputs=output)
         adam = tf.keras.optimizers.Adam(learning_rate=lr)
@@ -484,7 +494,12 @@ class GeneticSolver:
         circuit_proposals=[] #storing all good candidates.
         circuit_proposals_energies=[]
 
-        expectation_layer = tfq.layers.Expectation()
+        if self.noise is True:
+            expectation_layer = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level)))
+
+        else:
+            expectation_layer = tfq.layers.Expectation()
+            
         for j in gates_index:
             indexed_prop=[]
 
