@@ -32,9 +32,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--J", type=float, default=1.21)
+    parser.add_argument("--n_qubits", type=int, default=3)
+
+    parser.add_argument("--noise", type=bool, default=False)
+
     args = parser.parse_args()
 
-    sol = GeneticSolver(n_qubits=3, g=1, J=args.J, qlr=.01, qepochs=100)
+    sol = GeneticSolver(n_qubits=args.n_qubits, g=1, J=args.J, qlr=.01, qepochs=100, noise=args.noise)
     historial=History(g=sol.g,J=sol.J)
 
     ### initialize circuit ####
@@ -49,7 +53,7 @@ if __name__ == "__main__":
     historial.raw_history[str(len(list(historial.raw_history.keys())))] = [circuit, SymbolToValue, energy]
 
 
-    for it in tqdm(range(3)):
+    for it in tqdm(range(30)):
         ####### append a block #####
         which_block = np.random.choice([0,1], p=[.5,.5])
         if which_block == 0:
@@ -97,5 +101,5 @@ if __name__ == "__main__":
     if not os.path.exists("results"):
         os.makedirs("results")
 
-    with open("results/"+str(sol.J)+'.pickle', 'wb') as handle:
+    with open("results/noisy"+str(sol.J)+'.pickle', 'wb') as handle:
         pickle.dump(historial, handle, protocol=pickle.HIGHEST_PROTOCOL)

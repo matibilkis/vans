@@ -5,6 +5,11 @@ import cirq
 import tensorflow_quantum as tfq
 from tqdm import tqdm
 import tensorflow as tf
+from solver import GeneticSolver
+import argparse
+import os
+import pickle
+import matplotlib.pyplot as plt
 
 
 
@@ -138,7 +143,7 @@ class GeneticSolver:
                 circuit_input,
                 symbol_names=symbols,
                 operators=tfq.convert_to_tensor([self.observable]),
-                initializer=tf.keras.initializers.RandomNormal())
+                initializer=tf.keras.initializers.RandomNormal(stddev=np.pi/2))
 
         model = tf.keras.Model(inputs=circuit_input, outputs=output)
         adam = tf.keras.optimizers.Adam(learning_rate=lr)
@@ -170,16 +175,17 @@ class GeneticSolver:
         tfqcircuit = tfq.convert_to_tensor([circuit])
 
         model = self.TFQ_model(symbols, hyperparameters[1])
-        qoutput = tf.ones((1, 1))*self.lower_bound_Eg
+        qoutput = tf.ones((1, 1))*self.lower_bound_Eg ##### important to discuss with Lucksasz.
         #print("about to fit!")
-        model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=hyperparameters[0], verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=20, mode="min")])
+        h=model.fit(x=tfqcircuit, y=qoutput, batch_size=1,
+                    epochs=hyperparameters[0], verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=20, mode="min")])
         energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
         final_params = model.trainable_variables[0].numpy()
         resolver = {"th_"+str(ind):var  for ind,var in enumerate(final_params)}
         del model
         gc.collect()
 
-        return resolver, energy
+        return resolver, energy,h
 
 
 
@@ -277,6 +283,7 @@ class GeneticSolver:
                     symbols.append(new_symbol)
                     circuit.append(gate(sympy.Symbol(new_symbol)).on(qubit))
                     if not new_symbol in SymbolsToValues.keys(): #this is in case it's the first time. Careful when deleting !
+                        print("WARNING!!!! I SHOULD NOT DISPLAY! ~")
                         SymbolsToValues[new_symbol] = np.random.uniform(-np.pi, np.pi)
                         full_resolver["th_"+str(len(full_resolver.keys()))] = SymbolsToValues[new_symbol]
                     else:
@@ -311,14 +318,14 @@ class GeneticSolver:
         return energy
 
 
-    def reduce_circuit(self, simp_indices, idxToSymbol, SymbolToVal, max_its=5):
+    def reduce_circuit(self, simp_indices, idxToSymbol, SymbolToVal, max_its=None):
         l0 = len(simp_indices)
         reducing = True
-        its=0
-        while reducing:
-            its+=1
+        if max_its is None:
+            max_its = l0
+        for its in range(max_its):
             simp_indices, idxToSymbol, SymbolToVal = self.simplify_circuit(simp_indices, idxToSymbol, SymbolToVal) #it would be great to have a way to realize that insertion was trivial...RL? :-)
-            if len(simp_indices) == l0 or its>max_its:
+            if len(simp_indices) == l0:
                 reducing = False
 
         return simp_indices, idxToSymbol, SymbolToVal
@@ -380,30 +387,31 @@ class GeneticSolver:
         new_indexed_circuit = indexed_circuit.copy()
         new_symbol_to_value = symbol_to_value.copy()
         flagged_symbols = {k:True for k in list(symbol_to_value.keys())}
-        NRE ={}
-        NPars = []
 
+        NRE ={}
+        symbols_to_delete=[]
+        symbols_to_use = []
+        symbols_on = {str(q):[] for q in list(connections.keys())}
         for q, path in connections.items(): ###sweep over qubits: path is all the gates that act this qubit during the circuit
             for ind,gate in enumerate(path):
                 if gate == "u" and not new_indexed_circuit[places_gates[str(q)][ind]] == -1: ## IF GATE IS SINGLE QUIT UNITARY, CHECK IF THE NEXT ONES ARE ALSO UNITARIES AND KILL 'EM
                     gate_to_compile=[]
-                    symbols_to_delete = []
                     pars_here=[]
                     compile_gate=False
+                    symbols_deleted_here=[]
                     for ug, symbol in zip(self.single_qubit_unitaries[gate], index_to_symbols[places_gates[str(q)][ind]]):
                         value_symbol = symbol_to_value[symbol]
                         gate_to_compile.append(ug(value_symbol).on(self.qubits[int(q)]))
-                        NPars.append("th_"+str(len(NPars)))
-                        pars_here.append(NPars[-1])
+                        pars_here.append(symbol)
 
-                    #gate_compile = [gate]
                     for k in range(len(path)-ind-1):
                         if path[ind+k+1] in list(self.single_qubit_unitaries.keys()):
                             new_indexed_circuit[places_gates[str(q)][ind+k+1]] = -1
                             compile_gate = True #we'll compile!
                             for ug, symbol in zip(self.single_qubit_unitaries[gate], index_to_symbols[places_gates[str(q)][ind+k+1]]):
-                                symbols_to_delete.append(symbol)
                                 value_symbol = symbol_to_value[symbol]
+                                symbols_to_delete.append(symbol)
+                                symbols_deleted_here.append(symbol)
                                 gate_to_compile.append(ug(value_symbol).on(self.qubits[int(q)]))
                         else:
                             break
@@ -411,13 +419,20 @@ class GeneticSolver:
                         u = cirq.unitary(cirq.Circuit(gate_to_compile))
                         vals = np.real(self.give_rz_rx_rz(u)[::-1]) #not entirely real since finite number of iterations
                         for smb,v in zip(pars_here,vals):
-                            NRE[smb] = v
+                            sname = "th_"+str(int(smb.replace("th_",""))+len(symbols_to_delete)-len(symbols_deleted_here))
+                            NRE[sname] = v
+                            symbols_on[str(q)].append(sname)
                     else:
                         old_values = [symbol_to_value[sym] for sym in index_to_symbols[places_gates[str(q)][ind]]]
-                        for smb,v in zip(pars_here,old_values):
-                            NRE[smb] = v
 
-                elif gate in range(self.number_of_cnots) and ind<len(path)-1: ### self.number_of_cnots is the maximum index of a CNOT gate for a fixed self.n_qubits.
+                        for smb,v in zip(pars_here,old_values):
+                            #print(smb)
+                            ##### this +len(symbols_to_delete) should respect qubit order..
+                            sname="th_"+str(int(smb.replace("th_",""))+len(symbols_to_delete)-len(symbols_deleted_here))
+                            NRE[sname] = v
+                            symbols_on[str(q)].append(sname)
+
+                if gate in range(self.number_of_cnots) and ind<len(path)-1: ### self.number_of_cnots is the maximum index of a CNOT gate for a fixed self.n_qubits.
                     if path[ind+1]==gate and not (new_indexed_circuit[places_gates[str(q)][ind]] == -1): #check if the next gate is the same CNOT; and check if I haven't corrected the original one (otherwise you may simplify 3 CNOTs to id)
                         others = self.indexed_cnots[str(gate)].copy()
                         others.remove(int(q)) #the other qubit affected by the CNOT
@@ -442,12 +457,27 @@ class GeneticSolver:
         final=[]
         final_values={}
         fpars=[]
+        final_idx_to_symbols={}
+        final_dict = {}
+
+        SN=0
         for gmarked in new_indexed_circuit:
             if not gmarked == -1:
                 final.append(gmarked)
+                final_idx_to_symbols[int(len(final)-1)] = []
 
-        _,_, simplified_index_to_symbols = self.give_circuit(final)
-        return final, simplified_index_to_symbols, NRE
+                if 0 <= gmarked - self.number_of_cnots < self.n_qubits:
+                    for indd, sym in enumerate(symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)]):
+                        if sym != -1:
+                            break
+                    for k in range(3):
+                        final_idx_to_symbols[int(len(final)-1)].append("th_"+str(SN))#symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd+k])
+                        final_dict["th_"+str(SN)] = NRE[symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd+k]]
+                        symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd+k]=-1
+                        SN+=1
+
+        #_,_, final_idx_to_symbols = self.give_circuit(final)
+        return final, final_idx_to_symbols, final_dict, places_gates
 
     def kill_one_unitary(self, gates_index, resolver, historial):
 
