@@ -5,7 +5,6 @@ import cirq
 import tensorflow_quantum as tfq
 from tqdm import tqdm
 import tensorflow as tf
-from solver import GeneticSolver
 import argparse
 import os
 import pickle
@@ -112,6 +111,9 @@ class GeneticSolver:
             else:
                 return circuit, params
 
+    def give_unitary(self,idx, res):
+        return cirq.resolve_parameters(self.give_circuit(idx)[0], res)
+
     def give_circuit(self, lista,give_index_to_symbols=True):
         if give_index_to_symbols:
             circuit, symbols, index_to_symbols = [], [], {}
@@ -137,6 +139,24 @@ class GeneticSolver:
         return [u1]
 
 
+    def unravel(self, gates_index):#, ordered_symbol_to_value):
+        """
+        this function gives the circuit in terms of single-qubit untaries explicitely (without the index associated to u)
+
+        assuming the symbol corresponds to gates_index (if I have number_of_cnots < index < Ncnots + n_qubits)
+        it means we've rz(\theta_0+len(symbols_appended_so_far)) rx(\theta_1+len(symbols_appended_so_far)
+        rz("th_2+len(symbols_appended_so_far)).
+        """
+        unraveled = []
+        for nn, idq in enumerate(gates_index):
+            if 0<= idq - self.number_of_cnots  < self.n_qubits:
+                #target_qubit = (idq - self.number_of_cnots)%self.n_qubits
+                for addition in [1,2,1]:
+                    unraveled.append(idq+(self.n_qubits*addition))
+            else:
+                unraveled.append(idq)
+        return unraveled
+
 
     def TFQ_model(self, symbols, lr):
         circuit_input = tf.keras.Input(shape=(), dtype=tf.string)
@@ -146,14 +166,14 @@ class GeneticSolver:
                     circuit_input,
                     symbol_names=symbols,
                     operators=tfq.convert_to_tensor([self.observable]),
-                    initializer=tf.keras.initializers.RandomNormal())
+                    initializer=tf.keras.initializers.RandomNormal(stddev=np.pi/2))
 
         else:
             output = tfq.layers.Expectation()(
                     circuit_input,
                     symbol_names=symbols,
                     operators=tfq.convert_to_tensor([self.observable]),
-                    initializer=tf.keras.initializers.RandomNormal())
+                    initializer=tf.keras.initializers.RandomNormal(stddev=np.pi/2))
 
         model = tf.keras.Model(inputs=circuit_input, outputs=output)
         adam = tf.keras.optimizers.Adam(learning_rate=lr)
@@ -161,9 +181,10 @@ class GeneticSolver:
         return model
 
     def initialize_model_insertion(self, symbols_to_values):
-        ## symbols_to_values has the resolution of identity included, but coming from a simplified circuit :-)
+        ## notice I add some noise! maybe we want to vary this noise according to how "stucked" the algorithm is
         model = self.TFQ_model(list(symbols_to_values.keys()), lr=self.qlr)
-        model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32))) #initialize parameters of model (continuous parameters of unitaries)
+        model.trainable_variables[0].assign(
+            tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32))) #initialize parameters of model (continuous parameters of unitaries) + 0.1*np.random.randn(len(list(symbols_to_values.values()))).astype(np.float32)
         return model
 
 
@@ -245,17 +266,16 @@ class GeneticSolver:
                 error=True
         return vals
 
-    def prepare_circuit_insertion(self, gates_index, block_to_insert, insertion_index, SymbolsToValues):
+    def prepare_circuit_insertion(self, gates_index, block_to_insert, insertion_index, SymbolsToValues,ep=0.01, init_params="PosNeg"):
         """gates_index is a vector with integer entries, each one describing a gate
             block_to_insert is block of unitaries to insert at index insertion
         """
-        circuit = cirq.Circuit()
         idx_circuit=[]
         symbols = []
         new_symbols = []
         new_resolver = {}
-        full_resolver={}
-        full_indices=[]
+        full_resolver={} #this is the final output
+        full_indices=[] #this is the final output
 
         if gates_index == []:
             indices = [-1]
@@ -270,45 +290,50 @@ class GeneticSolver:
                     idx_circuit.append(gate)
                     if gate < self.number_of_cnots:
                         control, target = self.indexed_cnots[str(gate)]
-                        circuit.append(cirq.CNOT.on(self.qubits[control], self.qubits[target]))
-                    else:
+                    else: ### i do only add block of unitaries.
                         qubit = self.qubits[(gate-self.number_of_cnots)%self.n_qubits]
+                        ### with prob .5 I add
+                        if init_params == "PosNeg":
+                            rot = np.random.uniform(-np.pi,np.pi)
+                            new_values = [rot, np.random.uniform(-ep,ep), -rot]
+                        else:
+                            new_values = [np.random.uniform(-ep,ep) for oo in range(3)]
+
                         for par, gateblack in zip(range(3),self.parametrized_unitary):
                             new_symbol = "New_th_"+str(len(new_symbols))
                             new_symbols.append(new_symbol)
-                            new_resolver[new_symbol] = np.random.uniform(-.1,.1) #rotation around epsilon... we can do it better afterwards
+                            new_resolver[new_symbol] = new_values[par] #rotation around epsilon... we can do it better afterwards
                             full_resolver["th_"+str(len(full_resolver.keys()))] = new_resolver[new_symbol]
-                            circuit.append(gateblack(sympy.Symbol(new_symbol)).on(qubit))
             if 0<= g < self.number_of_cnots:
                 full_indices.append(g)
                 idx_circuit.append(g)
                 control, target = self.indexed_cnots[str(g)]
-                circuit.append(cirq.CNOT.on(self.qubits[control], self.qubits[target]))
             elif g>= self.number_of_cnots:
                 full_indices.append(g)
                 idx_circuit.append(g)
                 qubit = self.qubits[(ind-self.number_of_cnots)%self.n_qubits]
-                for par, gate in zip(range(3),self.parametrized_unitary):
+
+                if 0<= g-self.number_of_cnots < self.n_qubits:
+                    for par, gate in zip(range(3),self.parametrized_unitary):
+                        new_symbol = "th_"+str(len(symbols))
+                        symbols.append(new_symbol)
+                        full_resolver["th_"+str(len(full_resolver.keys()))] = SymbolsToValues[new_symbol]
+
+
+                if self.n_qubits<= g-self.number_of_cnots < 2*self.n_qubits:
                     new_symbol = "th_"+str(len(symbols))
                     symbols.append(new_symbol)
-                    circuit.append(gate(sympy.Symbol(new_symbol)).on(qubit))
-                    if not new_symbol in SymbolsToValues.keys(): #this is in case it's the first time. Careful when deleting !
-                        print("WARNING!!!! I SHOULD NOT DISPLAY! ~")
-                        SymbolsToValues[new_symbol] = np.random.uniform(-np.pi, np.pi)
-                        full_resolver["th_"+str(len(full_resolver.keys()))] = SymbolsToValues[new_symbol]
-                    else:
-                        full_resolver["th_"+str(len(full_resolver.keys()))] = SymbolsToValues[new_symbol]
-        ### add identity for TFQ tocompute correctily expected value####
-        effective_qubits = list(circuit.all_qubits())
-        for k in self.qubits:
-            if k not in effective_qubits:
-                circuit.append(cirq.I.on(k))
+                    full_resolver["th_"+str(len(full_resolver.keys()))] = SymbolsToValues[new_symbol]
 
-        variables = [symbols, new_symbols]
+                if 2*self.n_qubits<= g-self.number_of_cnots < 3*self.n_qubits:
+                    new_symbol = "th_"+str(len(symbols))
+                    symbols.append(new_symbol)
+                    full_resolver["th_"+str(len(full_resolver.keys()))] = SymbolsToValues[new_symbol]
+
+
         _,_, IndexToSymbols = self.give_circuit(full_indices)
 
         return full_indices, IndexToSymbols, full_resolver
-        #return circuit, variables, new_resolver, SymbolsToValues, full_resolver, full_indices,IndexToSymbols
 
 
     def optimize_model_from_indices(self, indices, model):
@@ -319,23 +344,32 @@ class GeneticSolver:
             if k not in effective_qubits:
                 circuit.append(cirq.I.on(k))
 
-
         tfqcircuit = tfq.convert_to_tensor([circuit])
 
         qoutput = tf.ones((1, 1))*self.lower_bound_Eg
-        model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs, verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5, mode="min")])
+        h=model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs,
+                  verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=20, mode="min")])
         energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
-        return energy
+        return energy,h
 
+    def check_qubits_on(self,circuit):
+        check = True
+        effective_qubits = list(circuit.all_qubits())
+        for k in self.qubits:
+            if k not in effective_qubits:
+                check = False
+                break
+        return check
 
     def reduce_circuit(self, simp_indices, idxToSymbol, SymbolToVal, max_its=None):
         l0 = len(simp_indices)
         reducing = True
         if max_its is None:
             max_its = l0
+
         for its in range(max_its):
             simp_indices, idxToSymbol, SymbolToVal = self.simplify_circuit(simp_indices, idxToSymbol, SymbolToVal) #it would be great to have a way to realize that insertion was trivial...RL? :-)
-            if len(simp_indices) == l0:
+            if len(simp_indices) == l0 or self.check_qubits_on(self.give_circuit(simp_indices)[0]) is False:
                 reducing = False
 
         return simp_indices, idxToSymbol, SymbolToVal
@@ -343,18 +377,16 @@ class GeneticSolver:
 
     def simplify_circuit(self,indexed_circuit, index_to_symbols, symbol_to_value):#, symbol_to_position):
         """
-        index_to_symbols is a dictionary with the indexed_circuit input as keys and the values of the parametrized gates.
-        importantly, it respects the order of indexed_circuit to be friendly with the other part of the code.
+        what i do:
 
-        TODO:
-        1) Simplify this:
+        1) if you have rz, rx, rz then kill all future 1-qubit unitaries (if not cnot) on that qubit
+        2) if you have a cnot as first gate, kill it
+        3) two cnots compile to identity
 
-        rz rx rz @ rz rx rz
-        ---------X---------
+        things to do:
+        1) if you have rz in the beggining, kill it (but this can be done with the kill_on_unitary!)
+        2) if you have rx after target, move it if you can simplify the circuit further (this is more subtle, maybe i should unravel)
 
-        2) Scan the circuit to gather u (rz rx rz) so we can go on applying these rules
-
-        3) if you have rz right in the begging kill it since it does nothing to |0>
         """
         #load circuit on each qubit
         #position_to_symbol = {str(k):l for k,l in zip(symbol_to_position.values(), symbol_to_position.keys())}
@@ -391,7 +423,7 @@ class GeneticSolver:
             if k is not True:
                 err = True
         if err is True:
-            raise Error("not all gates are flagged!")
+            raise Error("not all gates have been flagged! check Solver.simplify method")
 
         ### now reducing the circuit
         new_indexed_circuit = indexed_circuit.copy()
@@ -485,11 +517,25 @@ class GeneticSolver:
                         final_dict["th_"+str(SN)] = NRE[symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd+k]]
                         symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd+k]=-1
                         SN+=1
+                if self.n_qubits <= gmarked - self.number_of_cnots < 3*self.n_qubits:
+                    for indd, sym in enumerate(symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)]):
+                        if sym != -1:
+                            break
+                    for k in range(1):
+                        final_idx_to_symbols[int(len(final)-1)].append("th_"+str(SN))#symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd+k])
+                        final_dict["th_"+str(SN)] = NRE[symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd+k]]
+                        symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd+k]=-1
+                        SN+=1
 
         #_,_, final_idx_to_symbols = self.give_circuit(final)
-        return final, final_idx_to_symbols, final_dict, places_gates
+        return final, final_idx_to_symbols, final_dict
 
-    def kill_one_unitary(self, gates_index, resolver, historial):
+
+
+    def kill_one_unitary(self, gates_index, SymbolToValue, historial):
+        """notice this accepts either gates_index that encode u = [rz rx rz] or single gates (rz, rx).
+            Importantly SymbolToValue respects the order of gates_index.
+        """
 
         circuit_proposals=[] #storing all good candidates.
         circuit_proposals_energies=[]
@@ -499,8 +545,22 @@ class GeneticSolver:
 
         else:
             expectation_layer = tfq.layers.Expectation()
-            
-        for j in gates_index:
+
+        #cir =
+        #effective_qubits = list(cir.all_qubits())
+        #for k in self.qubits:
+        #    cir.append(cirq.I.on(k))
+        #    if k not in effective_qubits:
+        #        reject=True
+
+
+        tfqcircuit_gates_index_energy = tfq.convert_to_tensor([cirq.resolve_parameters(self.give_circuit(gates_index)[0], SymbolToValue)]) ###SymbolToValue parameters !!!
+        #backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level))
+        expval_gates_index = expectation_layer(  tfqcircuit_gates_index_energy,
+                                operators=tfq.convert_to_tensor([self.observable]))
+        gates_index_energy = np.float32(np.squeeze(tf.math.reduce_sum(expval_gates_index, axis=-1, keepdims=True)))
+
+        for i1, j in enumerate(gates_index):
             indexed_prop=[]
 
             prop=cirq.Circuit()
@@ -508,59 +568,111 @@ class GeneticSolver:
             ko=0
             to_pop=[]
 
-            for k in gates_index:
+            for i2, k in enumerate(gates_index):
                 if k < self.number_of_cnots:
                     indexed_prop.append(k)
                     control, target = self.indexed_cnots[str(k)]
                     prop.append(cirq.CNOT.on(self.qubits[control], self.qubits[target]))
                 else:
-                    if k != j:
+                    if i1 != i2:
                         indexed_prop.append(k)
                         qubit = self.qubits[(k-self.number_of_cnots)%self.n_qubits]
-                        for par, gate in zip(range(3),self.parametrized_unitary):
-                            new_param = "th_"+str(ko)
-                            ko+=1
-                            prop.append(gate(sympy.Symbol(new_param)).on(qubit))
-                    else:
+                        if 0<= k-self.number_of_cnots < self.n_qubits:
+                            for par, gate in zip(range(3),self.parametrized_unitary):
+                                new_param = "th_"+str(ko)
+                                ko+=1
+                                prop.append(gate(sympy.Symbol(new_param)).on(qubit))
+                        else:
+                            if self.n_qubits <= k-self.number_of_cnots < 2*self.n_qubits:
+                                new_param = "th_"+str(ko)
+                                ko+=1
+                                prop.append(cirq.rz(sympy.Symbol(new_param)).on(qubit))
+
+                            if 2*self.n_qubits <= k-self.number_of_cnots < 3*self.n_qubits:
+                                new_param = "th_"+str(ko)
+                                ko+=1
+                                prop.append(cirq.rx(sympy.Symbol(new_param)).on(qubit))
+
+                    else: #i1 == i2
                         checking=True
-                        for i in range(3):
-                            to_pop.append("th_"+str(ko))
-                            ko+=1
+                        if 0<= k-self.number_of_cnots < self.n_qubits:
+                            for i in range(3):
+                                to_pop.append("th_"+str(ko))
+                                ko+=1
+                        else:
+                            if self.n_qubits <= k-self.number_of_cnots < 3*self.n_qubits:
+                                to_pop.append("th_"+str(ko))
+                                ko+=1
+
+
             if checking is True:
-                nr = resolver.copy()
+                reject = False
+                nr = SymbolToValue.copy()
                 for p in to_pop:
                     nr.pop(p)
 
                 #### check if I actually kill a part of the circuit (for sure this won't help)
-                reject=False
-                effective_qubits = list(prop.all_qubits())
-                for k in self.qubits:
-                    if k not in effective_qubits:
-                        reject=True
-                        #prop.append(cirq.I.on(k))
-                if reject:
-                    pass
-                else:
-                    tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(prop, nr)]) ###resolver parameters !!!
+                connections={str(q):[] for q in range(self.n_qubits)} #this saves the gates in each qubit. Notice that this does not necessarily respects the order.
+
+                for nn,idq in enumerate(indexed_prop): #sweep over all gates in original circuit's vector
+                    for q in range(self.n_qubits): #sweep over all qubits
+                        if (idq-self.number_of_cnots)%self.n_qubits == q and (idq>self.number_of_cnots): #check if the unitary is applied to the qubit we are looking at
+                            connections[str(q)].append("hey gate")
+
+                for q in range(self.n_qubits): #sweep over all qubits
+                    if connections[str(q)] == []:
+                        reject = True
+                        break
+
+                if reject is False:
+                    tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(prop, nr)]) ###SymbolToValue parameters !!!
                     #backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level))
                     expval = expectation_layer(  tfqcircuit,
                                             operators=tfq.convert_to_tensor([self.observable]))
                     new_energy = np.float32(np.squeeze(tf.math.reduce_sum(expval, axis=-1, keepdims=True)))
-                    if historial.accept_energy(new_energy, kill_one_unitary=True):
-                        ordered_resolver = {}
+
+                    #if historial.accept_energy(new_energy, kill_one_unitary=True):
+                    #if (new_energy - gates_index_energy)/np.abs(gates_index_energy) <= 0.01:
+                    if (new_energy - historial.lowest_energy)/np.abs(historial.lowest_energy) <= 0.01:
+
+                    # if new_energy < gatex_index even better.
+                        #if new_energy > gates_index ---> new_energy - gatex_index > 0
+                        # let's allow that at most new_energy = gatex_index_energy + 0.01*np.abs(gates_index_energy)
+                        # hence we want that new_energy < gates_index_enery + 0.01*np.abs(gates_index_enery)
+
+                        ordered_SymbolToValue = {}
                         for ind,k in enumerate(nr.values()):
-                            ordered_resolver["th_"+str(ind)] = k
-                        circuit_proposals.append([indexed_prop,ordered_resolver,new_energy])
+                            ordered_SymbolToValue["th_"+str(ind)] = k
+                        circuit_proposals.append([indexed_prop,ordered_SymbolToValue,new_energy])
                         circuit_proposals_energies.append(new_energy)
 
         del expectation_layer
-
         if len(circuit_proposals)>0:
-            favourite = np.random.choice(len(circuit_proposals))
-            short_circuit, resolver, energy = circuit_proposals[favourite]
+            favourite = np.where(np.array(circuit_proposals_energies) == np.min(circuit_proposals_energies))[0][0]
+            short_circuit, SymbolToValue, energy = circuit_proposals[favourite]
             simplified=True
             _,_, simplified_index_to_symbols = self.give_circuit(short_circuit)
-            return short_circuit, resolver, energy, simplified_index_to_symbols, simplified
+            return short_circuit, SymbolToValue, energy, simplified_index_to_symbols, simplified, gates_index_energy
         else:
             simplified=False
-            return gates_index, resolver, None, None, simplified
+            return gates_index, SymbolToValue, None, None, simplified,gates_index_energy
+
+
+
+    def simplify_kill_simplify(self, NewIndices, New_Idx_To_Symbols,New_SymbolToValue, historial , max_its=None):
+        simp_indices, idxToSymbol, SymbolToVal = self.reduce_circuit(NewIndices, New_Idx_To_Symbols,New_SymbolToValue)
+
+        l0 = len(simp_indices)
+        if max_its is None:
+            max_its = l0
+
+        simplified, itt = True, 0
+        while simplified or itt<max_its:
+            itt+=1
+            simp_indices, SymbolToVal, new_energy, idxToSymbol, simplified, _ = self.kill_one_unitary(simp_indices, SymbolToVal, historial)
+            if simplified:
+                ### iterate many times circuit simplification
+                simp_indices, idxToSymbol, SymbolToVal = self.reduce_circuit(simp_indices, idxToSymbol, SymbolToVal)
+            else:
+                break
+        return simp_indices, idxToSymbol, SymbolToVal
