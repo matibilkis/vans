@@ -532,7 +532,7 @@ class GeneticSolver:
 
 
 
-    def kill_one_unitary(self, gates_index, SymbolToValue, historial):
+    def kill_one_unitary(self, gates_index, SymbolToValue, historial, mode="input_gate"):
         """notice this accepts either gates_index that encode u = [rz rx rz] or single gates (rz, rx).
             Importantly SymbolToValue respects the order of gates_index.
         """
@@ -546,19 +546,17 @@ class GeneticSolver:
         else:
             expectation_layer = tfq.layers.Expectation()
 
-        #cir =
-        #effective_qubits = list(cir.all_qubits())
-        #for k in self.qubits:
-        #    cir.append(cirq.I.on(k))
-        #    if k not in effective_qubits:
-        #        reject=True
-
 
         tfqcircuit_gates_index_energy = tfq.convert_to_tensor([cirq.resolve_parameters(self.give_circuit(gates_index)[0], SymbolToValue)]) ###SymbolToValue parameters !!!
         #backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level))
         expval_gates_index = expectation_layer(  tfqcircuit_gates_index_energy,
                                 operators=tfq.convert_to_tensor([self.observable]))
         gates_index_energy = np.float32(np.squeeze(tf.math.reduce_sum(expval_gates_index, axis=-1, keepdims=True)))
+
+        if not mode=="input_gate":
+            compare_energy=historial.lowest_energy
+        else:
+            compare_energy = gates_index_energy
 
         for i1, j in enumerate(gates_index):
             indexed_prop=[]
@@ -616,7 +614,7 @@ class GeneticSolver:
 
                 for nn,idq in enumerate(indexed_prop): #sweep over all gates in original circuit's vector
                     for q in range(self.n_qubits): #sweep over all qubits
-                        if (idq-self.number_of_cnots)%self.n_qubits == q and (idq>self.number_of_cnots): #check if the unitary is applied to the qubit we are looking at
+                        if (idq-self.number_of_cnots)%self.n_qubits == q and (idq>=self.number_of_cnots): #check if the unitary is applied to the qubit we are looking at
                             connections[str(q)].append("hey gate")
 
                 for q in range(self.n_qubits): #sweep over all qubits
@@ -630,10 +628,10 @@ class GeneticSolver:
                     expval = expectation_layer(  tfqcircuit,
                                             operators=tfq.convert_to_tensor([self.observable]))
                     new_energy = np.float32(np.squeeze(tf.math.reduce_sum(expval, axis=-1, keepdims=True)))
-
                     #if historial.accept_energy(new_energy, kill_one_unitary=True):
                     #if (new_energy - gates_index_energy)/np.abs(gates_index_energy) <= 0.01:
-                    if (new_energy - historial.lowest_energy)/np.abs(historial.lowest_energy) <= 0.01:
+
+                    if (new_energy - compare_energy)/np.abs(compare_energy) <= 0.01:
 
                     # if new_energy < gatex_index even better.
                         #if new_energy > gates_index ---> new_energy - gatex_index > 0
