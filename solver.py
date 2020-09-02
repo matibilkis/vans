@@ -674,3 +674,21 @@ class GeneticSolver:
             else:
                 break
         return simp_indices, idxToSymbol, SymbolToVal
+
+
+
+class History:
+    def __init__(self,g=None,J=None):
+        self.history={}
+        self.raw_history = {}
+        self.novel_discoveries = {}
+        self.hamiltonian_parameters={"g":g,"J":J}
+        self.lowest_energy = 0.
+
+
+
+    def accept_energy(self, E, kill_one_unitary=False):
+        if kill_one_unitary:
+            return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
+        else:
+            return E < self.lowest_energy

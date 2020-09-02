@@ -5,26 +5,11 @@ import cirq
 import tensorflow_quantum as tfq
 from tqdm import tqdm
 import tensorflow as tf
-from solver import GeneticSolver
+from solver import GeneticSolver, History
 import argparse
 import os
 import pickle
 
-class History:
-    def __init__(self,g=None,J=None):
-        self.history={}
-        self.raw_history = {}
-        self.novel_discoveries = {}
-        self.hamiltonian_parameters={"g":g,"J":J}
-        self.lowest_energy = 0.
-
-
-
-    def accept_energy(self, E, kill_one_unitary=False):
-        if kill_one_unitary:
-            return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
-        else:
-            return E < self.lowest_energy
 
 def diff(u_1, u_2, cnots_simplified = False, numpy_type=True):
     ui = cirq.unitary(u_1)
