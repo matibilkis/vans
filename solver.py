@@ -1,18 +1,5 @@
-import gc
-import numpy as np
-import sympy
-import cirq
-import tensorflow_quantum as tfq
-from tqdm import tqdm
-import tensorflow as tf
-import argparse
-import os
-import pickle
-import matplotlib.pyplot as plt
-
-
 class Solver:
-    def __init__(self, n_qubits=3, qlr=0.01, qepochs=10**4,verbose=0, g=1, J=0, noise_level=0.0, patience=100):
+    def __init__(self, n_qubits=3, qlr=0.01, qepochs=10**4,verbose=0, g=1, J=0, noise=False, noise_level=0.01, patience=100):
 
         """
         patience: used at EarlyStopping in training
@@ -42,14 +29,8 @@ class Solver:
 
         self.observable=self.ising_obs(g=g, J=J)
 
+        self.noise = noise
         self.noise_level = noise_level
-        if self.noise_level != 0.0:
-            self.noise=True
-        else:
-            self.noise=False
-
-
-        self.name_obj = "n_"+str(self.noise)+"_"+str(self.J)
 
     def ising_obs(self, g=1, J=0):
         self.g=g
@@ -250,10 +231,11 @@ class Solver:
         """
         ## notice I add some noise! maybe we want to vary this noise according to how "stucked" the algorithm is
         model = self.TFQ_model(list(symbols_to_values.keys()), lr=self.qlr)
-        model.trainable_variables[0].assign(
-            tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32))) #initialize parameters of model (continuous parameters of unitaries) + 0.1*np.random.randn(len(list(symbols_to_values.values()))).astype(np.float32)
+        if np.random.random() < .5:
+            model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32)+ 0.01*np.random.randn(len(list(symbols_to_values.values()))).astype(np.float32))) #initialize parameters of model (continuous parameters of unitaries)         return model
+        else:
+            model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32)+ 0.5*np.random.randn(len(list(symbols_to_values.values()))).astype(np.float32)))
         return model
-
 
     def optimize_model_from_indices(self, indexed_circuit, model):
         """
@@ -305,7 +287,6 @@ class Solver:
         gc.collect()
 
         return resolver, energy,h
-
 
     def simplify_circuit(self,indexed_circuit, index_to_symbols, symbol_to_value):
         """
@@ -387,7 +368,7 @@ class Solver:
                     original_symbol = index_to_symbols[places_gates[str(q)][ind]]
                     original_value = symbol_to_value[original_symbol]
 
-                    if ind==0 and gate=="rz": ### RZ AT BEGGINING DOES NOTHING
+                    if ind==0 and gate=="rz" and (ind+1 != len(path)): ### RZ AT BEGGINING DOES NOTHING, unless it's the only gate: we could change it to rx, but leave this for the moment..
                         symbols_to_delete.append(original_symbol)
                         new_indexed_circuit[places_gates[str(q)][ind]] = -1
                         finish_here = True
@@ -559,7 +540,7 @@ class Solver:
 
         return indexed_circuit, index_to_symbols, symbol_to_value
 
-    def kill_one_unitary(self, indexed_circuit, index_to_symbols, symbol_to_value, energy_bound=-0.01, mode="best_ever"):
+    def kill_one_unitary(self, indexed_circuit, index_to_symbols, symbol_to_value, energy_bound=-0.01, mode="current_gate"):
         """notice this accepts either indexed_circuit that encode u = [rz rx rz] or single gates (rz, rx).
             Importantly symbol_to_value respects the order of indexed_circuit.
         """
@@ -576,12 +557,16 @@ class Solver:
         if mode=="best_ever":
             compare_energy=energy_bound
         else:
-            tfqcircuit_gates_index_energy = tfq.convert_to_tensor([cirq.resolve_parameters(self.give_circuit(indexed_circuit)[0], symbol_to_value)])
+            cirquit = self.give_circuit(indexed_circuit)[0]
+            effective_qubits = list(circuit.all_qubits())
+            for k in self.qubits:#che, lo que no estoy
+                if k not in effective_qubits:
+                    cirquit.append(cirq.I.on(k))
+            tfqcircuit_gates_index_energy = tfq.convert_to_tensor([cirq.resolve_parameters(cirquit, symbol_to_value)])
             expval_gates_index = expectation_layer(  tfqcircuit_gates_index_energy,
                                     operators=tfq.convert_to_tensor([self.observable]))
             gates_index_energy = np.float32(np.squeeze(tf.math.reduce_sum(expval_gates_index, axis=-1, keepdims=True)))
             compare_energy = gates_index_energy
-
         #sweep over indexed_circuit
         for i1, j in enumerate(indexed_circuit):
             indexed_prop=[]
@@ -627,8 +612,9 @@ class Solver:
                     for q in range(self.n_qubits): #sweep over all qubits
                         if (idq-self.number_of_cnots)%self.n_qubits == q and (idq>=self.number_of_cnots): #check if the unitary is applied to the qubit we are looking at
                             connections[str(q)].append("hey you") # ["hey you"] != [] -> reject True
+
                 for q in range(self.n_qubits): #sweep over all qubits
-                    if len(connections[str(q)]) < 2:
+                    if len(connections[str(q)]) < 1:
                         reject = True
                         break
 

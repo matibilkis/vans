@@ -91,7 +91,7 @@ if __name__ == "__main__":
         if historial.accept_energy(new_energy, noise=sol.noise):
             trained_symols_to_val = {s:k for s, k in zip(list(symbol_to_value_proposal.keys()), model.trainable_variables[0].numpy())}
 
-            indexed_circuit, index_to_symbols, symbol_to_value = sol.simplify_kill_simplify(indexed_circuit_proposal, index_to_symbols_proposal, symbol_to_value_proposal, historial.lowest_energy)
+            indexed_circuit, index_to_symbols, symbol_to_value = sol.simplify_kill_simplify(indexed_circuit_proposal, index_to_symbols_proposal, trained_symols_to_val, historial.lowest_energy)
 
             historial.lowest_energy = new_energy
             historial.novel_discoveries[str(len(list(historial.novel_discoveries.keys())))] = [sol.give_circuit(indexed_circuit)[0], index_to_symbols, new_energy]
@@ -101,17 +101,18 @@ if __name__ == "__main__":
         gc.collect()
         historial.history[str(iteration)] = [sol.give_circuit(indexed_circuit)[0], index_to_symbols, energy]
 
-        print("iteration: ", iteration)
-        print("energy of current circuit: ",energy)
-        print("\n")
-        print(historial.history[str(iteration)][0])
-        print(historial.history[str(iteration)][-1])
-        print("\n")
-        print("\n")
-        print("RAW")
-        print(historial.raw_history[str(iteration)][0])
-        print(historial.raw_history[str(iteration)][-1])
-        print("\n")
+    print("iteration: ", iteration)
+    print("energy of current circuit: ",energy)
+    print("\n")
+    print(cirq.resolve_parameters(historial.history[str(iteration)][0],historial.history[str(iteration)][1]) )
+    print(historial.history[str(iteration)][-1])
+
+    print("\n")
+    print("\n")
+    print("RAW")
+    print(cirq.resolve_parameters(historial.raw_history[str(iteration)][0],historial.raw_history[str(iteration)][1]) )
+    print(historial.raw_history[str(iteration)][-1])
+
 
     if not os.path.exists(args.folder_result):
         os.makedirs(args.folder_result)
