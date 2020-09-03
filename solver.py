@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 
 class Solver:
-    def __init__(self, n_qubits=3, qlr=0.01, qepochs=10**4,verbose=0, g=1, J=0, noise=False, noise_level=0.01, patience=100):
+    def __init__(self, n_qubits=3, qlr=0.01, qepochs=10**4,verbose=0, g=1, J=0, noise_level=0.0, patience=100):
 
         """
         patience: used at EarlyStopping in training
@@ -42,8 +42,12 @@ class Solver:
 
         self.observable=self.ising_obs(g=g, J=J)
 
-        self.noise = noise
         self.noise_level = noise_level
+        if self.noise_level != 0.0:
+            self.noise=True
+        else:
+            self.noise=False
+
 
         self.name_obj = "n_"+str(self.noise)+"_"+str(self.J)
 

@@ -9,17 +9,7 @@ from solver import Solver, History
 import argparse
 import os
 import pickle
-
-
-def diff(u_1, u_2, cnots_simplified = False, numpy_type=True):
-    ui = cirq.unitary(u_1)
-    uf = cirq.unitary(u_2)
-    if cnots_simplified:
-        return np.sum(np.abs((ui - uf)[:,0]))
-    else:
-        return np.sum(np.abs((ui - uf)))
-
-
+from datetime import datetime
 
 
 if __name__ == "__main__":
@@ -29,14 +19,31 @@ if __name__ == "__main__":
     parser.add_argument("--n_qubits", type=int, default=3)
 
     parser.add_argument("--noise", type=bool, default=False)
+    parser.add_argument("--noise_level", type=float, default=0.0)
+
     parser.add_argument("--reps", type=int, default=15)
+    parser.add_argument("--names", type=str, default="obj")
+    parser.add_argument("--folder_result", type=str, default="results")
+
 
     args = parser.parse_args()
 
 
-    sol = Solver(n_qubits=args.n_qubits, g=1, J=args.J, qlr=.01, qepochs=5000, noise=args.noise, patience=100)
+    sol = Solver(n_qubits=args.n_qubits, g=1, J=args.J, qlr=.01, qepochs=5000, patience=100, noise_level=args.noise_level)
     historial=History(g=sol.g,J=sol.J)
 
+    begin = datetime.now()
+    info = "\n\n\n\nYou are using GENETIC-VANS: \n"
+    info += f"len(n_qubits): {sol.n_qubits}\n" \
+                        f"g: {sol.g}, \n" \
+                        f"J: {sol.J}\n" \
+                        f"qlr: {sol.qlr}\n" \
+                        f"qepochs: {sol.qepochs}\n" \
+                        f"noise_level: {sol.noise_level}\n" \
+                        f"patience: {sol.patience}\n" \
+                        f"genetic runs: {args.reps}\n"
+    print(info)
+    print("\n\n")
     indexed_circuit=[sol.number_of_cnots+k for k in range(sol.n_qubits,2*sol.n_qubits)]
     ### maybe add some Rz here ? ###
 
@@ -46,7 +53,7 @@ if __name__ == "__main__":
 
 
     circuit, symbols, index_to_symbols = sol.give_circuit(indexed_circuit)
-    symbol_to_value, energy, h = sol.compute_energy_first_time(circuit, symbols,[10000,0.001]) ##very nie 5000, 0.01
+    symbol_to_value, energy, h = sol.compute_energy_first_time(circuit, symbols,[sol.qepochs,sol.qlr]) ##very nie 5000, 0.01
 
     historial.history["0"] = [circuit, symbol_to_value, energy]
     historial.lowest_energy = energy
@@ -54,7 +61,9 @@ if __name__ == "__main__":
     historial.raw_history[str(len(list(historial.raw_history.keys())))] = [circuit, symbol_to_value, energy]
 
     for iteration in tqdm(range(args.reps)):
-        print(iteration, energy, "\n")
+
+        print("Iteration "+str(iteration-1)+" has finished after: ", str(datetime.now()-begin) )
+        begin = datetime.now()
 
         which_block = np.random.choice([0,1], p=[.5,.5])
         insertion_index = np.random.choice(max(1,len(indexed_circuit)))
@@ -92,10 +101,20 @@ if __name__ == "__main__":
         gc.collect()
         historial.history[str(iteration)] = [sol.give_circuit(indexed_circuit)[0], index_to_symbols, energy]
 
+        print("iteration: ", iteration)
+        print("energy of current circuit: ",energy)
+        print("\n")
+        print(historial.history[str(iteration)][0])
+        print(historial.history[str(iteration)][-1])
+        print("\n")
+        print("\n")
+        print("RAW")
+        print(historial.raw_history[str(iteration)][0])
+        print(historial.raw_history[str(iteration)][-1])
+        print("\n")
 
+    if not os.path.exists(args.folder_result):
+        os.makedirs(args.folder_result)
 
-    if not os.path.exists("results"):
-        os.makedirs("results")
-
-    with open("results/"+sol.name_obj+'.pickle', 'wb') as handle:
+    with open(args.folder_result+"/"+args.names+'.pickle', 'wb') as handle:
         pickle.dump(historial, handle, protocol=pickle.HIGHEST_PROTOCOL)
