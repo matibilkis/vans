@@ -94,10 +94,212 @@ class Solver:
         circuit = cirq.Circuit(circuit)
         return circuit, symbols, index_to_symbols
 
+    def resolution_2cnots(self, q1, q2):
+        rzq1 = self.number_of_cnots + q1
+        rzq2 = self.number_of_cnots +  q2
+        rxq1 = self.number_of_cnots + self.n_qubits + q1
+        rxq2 = self.number_of_cnots + self.n_qubits + q2
+        cnot = self.cnots_index[str([q1,q2])]
+        return [cnot, rzq1, rxq1, rzq1,  rzq2, rxq2, rzq2, cnot]
+
+    def resolution_1qubit(self, q):
+        rzq1 = self.number_of_cnots +  q
+        rxq1 = self.number_of_cnots + self.n_qubits + q
+        return [rzq1, rxq1, rzq1]
+
+    def rotation(self,vals):
+        alpha,beta,gamma = vals
+        return np.array([[np.cos(beta/2)*np.cos(alpha/2 + gamma/2) - 1j*np.cos(beta/2)*np.sin(alpha/2 + gamma/2),
+                 (-1j)*np.cos(alpha/2 - gamma/2)*np.sin(beta/2) - np.sin(beta/2)*np.sin(alpha/2 - gamma/2)],
+                [(-1j)*np.cos(alpha/2 - gamma/2)*np.sin(beta/2) + np.sin(beta/2)*np.sin(alpha/2 - gamma/2),
+                 np.cos(beta/2)*np.cos(alpha/2 + gamma/2) + 1j*np.cos(beta/2)*np.sin(alpha/2 + gamma/2)]])
+
+
+    def give_rz_rx_rz(self,u):
+        """
+        finds \alpha, \beta \gamma s.t m = Rz(\alpha) Rx(\beta) Rz(\gamma)
+        ****
+        input: 2x2 unitary matrix as numpy array
+        output: [\alpha \beta \gamma]
+        """
+        a = sympy.Symbol("a")
+        b = sympy.Symbol("b")
+        g = sympy.Symbol("g")
+
+        eqs = [sympy.exp(-sympy.I*.5*(a+g))*sympy.cos(.5*b) ,
+               -sympy.I*sympy.exp(-sympy.I*.5*(a-g))*sympy.sin(.5*b),
+                sympy.exp(sympy.I*.5*(a+g))*sympy.cos(.5*b)
+              ]
+
+        kk = np.reshape(u, (4,))
+        s=[]
+        for i,r in enumerate(kk):
+            if i!=2:
+                s.append(r)
+
+        t=[]
+        for eq, val in zip(eqs,s):
+            t.append((eq)-np.round(val,5))
+
+        ### this while appears since the seed values may enter in vanishing gradients and through Matrix-zero error.
+        error=True
+        while error:
+            try:
+                solution = sympy.nsolve(t,[a,b,g],np.pi*np.array([np.random.random(),np.random.random(),np.random.random()]) ,maxsteps=3000, verify=True)
+                vals = np.array(solution.values()).astype(np.complex64)
+                #print(np.round(rotation(vals),3)-m)
+                error=False
+            except Exception:
+                error=True
+        return vals
+
+
+    def TFQ_model(self, symbols, lr):
+        circuit_input = tf.keras.Input(shape=(), dtype=tf.string)
+
+        if self.noise is True:
+            output = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise_level)))(
+                    circuit_input,
+                    symbol_names=symbols,
+                    operators=tfq.convert_to_tensor([self.observable]),
+                    initializer=tf.keras.initializers.RandomNormal(stddev=np.pi))
+
+        else:
+            output = tfq.layers.Expectation()(
+                    circuit_input,
+                    symbol_names=symbols,
+                    operators=tfq.convert_to_tensor([self.observable]),
+                    initializer=tf.keras.initializers.RandomNormal(stddev=np.pi))
+
+        model = tf.keras.Model(inputs=circuit_input, outputs=output)
+        adam = tf.keras.optimizers.Adam(learning_rate=lr)
+        model.compile(optimizer=adam, loss='mse')
+        return model
+
+    def prepare_circuit_insertion(self, indexed_circuit, block_to_insert, insertion_index, symbol_to_value,ep=0.01, init_params="random"):
+        """
+        indexed_circuit is a vector with integer entries, each one describing a gate
+        block_to_insert is block of unitaries to insert at index insertion.
+
+        $Assumptions: block_to_instert has 3 parametrized unitaries each one with 1 free parameter.
+        """
+        symbols = []
+        new_symbols = []
+        new_resolver = {}
+        full_resolver={} #this is the final output
+        full_indices=[] #this is the final output
+
+        par = 0
+        for ind, g in enumerate(indexed_circuit):
+            #### insert new block ####
+            #### insert new block ####
+            if ind == insertion_index:
+
+                if par%3==0:
+                    #### PARAMETER INITIALIZATION
+                    #### PARAMETER INITIALIZATION
+                    if init_params == "PosNeg":
+                        rot = np.random.uniform(-np.pi,np.pi)
+                        new_values = [rot, np.random.uniform(-ep,ep), -rot]
+                    else:
+                        new_values = [np.random.uniform(-ep,ep) for oo in range(3)]
+                    #### PARAMETER INITIALIZATION
+                    #### PARAMETER INITIALIZATION
+
+                for gate in block_to_insert:
+                    full_indices.append(gate)
+                    if gate < self.number_of_cnots:
+                        control, target = self.indexed_cnots[str(gate)]
+                    else: ### i do only add block of unitaries.
+                        qubit = self.qubits[(gate-self.number_of_cnots)%self.n_qubits]
+                        #for par, gateblack in zip(range(3),self.parametrized_unitary):
+                        new_symbol = "New_th_"+str(len(new_symbols))
+                        new_symbols.append(new_symbol)
+                        new_resolver[new_symbol] = new_values[par%3] #rotation around epsilon... we can do it better afterwards
+                        full_resolver["th_"+str(len(full_resolver.keys()))] = new_resolver[new_symbol]
+                        par+=1
+            #### or go on with the rest of the circuit ####
+            #### or go on with the rest of the circuit ####
+            if 0<= g < self.number_of_cnots:
+                full_indices.append(g)
+                control, target = self.indexed_cnots[str(g)]
+
+            elif 0<= g-self.number_of_cnots < 2*self.n_qubits:
+                full_indices.append(g)
+                new_symbol = "th_"+str(len(symbols))
+                symbols.append(new_symbol)
+                full_resolver["th_"+str(len(full_resolver.keys()))] = symbol_to_value[new_symbol]
+            else:
+                print("error insertion_block")
+        _,_, index_to_symbols = self.give_circuit(full_indices)
+        symbol_to_value = full_resolver
+        return full_indices, index_to_symbols, symbol_to_value
+
+    def initialize_model_insertion(self, symbols_to_values):
+        """
+        Assigns the "quantum"-model each parameter from resolver of the circuit to be optimized.
+        In G-VANS you previously add a (perturbated) identity resolver.
+
+        Question: is it helpful to add some noise to each parameter ?
+        """
+        ## notice I add some noise! maybe we want to vary this noise according to how "stucked" the algorithm is
+        model = self.TFQ_model(list(symbols_to_values.keys()), lr=self.qlr)
+        if np.random.random() < .5:
+            model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32)+ 0.01*np.random.randn(len(list(symbols_to_values.values()))).astype(np.float32))) #initialize parameters of model (continuous parameters of unitaries)         return model
+        else:
+            model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32)+ 0.5*np.random.randn(len(list(symbols_to_values.values()))).astype(np.float32)))
+        return model
+
+    def optimize_model_from_indices(self, indexed_circuit, model):
+        """
+        fits model from indices, optionally,
+        the model is previously initialized according to specific parameters (example: self.initialize_model_insertion)
+        """
+        circuit, variables, _ = self.give_circuit(indexed_circuit)
+        effective_qubits = list(circuit.all_qubits())
+
+        for k in self.qubits:#che, lo que no estoy
+            if k not in effective_qubits:
+                circuit.append(cirq.I.on(k))
+
+        tfqcircuit = tfq.convert_to_tensor([circuit])
+
+        qoutput = tf.ones((1, 1))*self.lower_bound_Eg
+        h=model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.qepochs,
+                  verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min")])
+        energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
+        return energy,h
 
 
 
+    def compute_energy_first_time(self, circuit, symbols, hyperparameters):
+        """
+        takes as input vector with actions described as integer
+        and outputsthe energy of that circuit (w.r.t self.observable)
 
+        hyperparameters = [epoch, lr]
+        """
+
+        ### this is because each qubit should be "activated" in TFQ to do the optimization (if the observable has support on this qubit as well and you don't add I then error)
+        effective_qubits = list(circuit.all_qubits())
+        for k in self.qubits:
+            if k not in effective_qubits:
+                circuit.append(cirq.I.on(k))
+
+        tfqcircuit = tfq.convert_to_tensor([circuit])
+
+        model = self.TFQ_model(symbols, hyperparameters[1])
+        qoutput = tf.ones((1, 1))*self.lower_bound_Eg ##### important to discuss with Lucksasz.
+        #print("about to fit!")
+        h=model.fit(x=tfqcircuit, y=qoutput, batch_size=1,
+                    epochs=hyperparameters[0], verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min")])
+        energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
+        final_params = model.trainable_variables[0].numpy()
+        resolver = {"th_"+str(ind):var  for ind,var in enumerate(final_params)}
+        del model
+        gc.collect()
+
+        return resolver, energy,h
 
     def simplify_circuit(self,indexed_circuit, index_to_symbols, symbol_to_value):
         """
@@ -334,6 +536,22 @@ class Solver:
                 break
         return check
 
+    def reduce_circuit(self, indexed_circuit, index_to_symbols, symbol_to_value, max_its=None):
+        """iterate many times simplify circuit, break if you have
+        no gates on a given qubit (can happen after applying kill_unitary, if the circuit is no good enough)"""
+
+        l0 = len(indexed_circuit)
+        reducing = True
+
+        if max_its is None:
+            max_its = l0
+
+        for its in range(max_its):
+            if len(indexed_circuit) == l0 or self.check_qubits_on(self.give_circuit(indexed_circuit)[0]) is False:
+                reducing = False
+            indexed_circuit, index_to_symbols, symbol_to_value = self.simplify_circuit(indexed_circuit, index_to_symbols, symbol_to_value) #it would be great to have a way to realize that insertion was trivial...RL? :-)
+
+        return indexed_circuit, index_to_symbols, symbol_to_value
 
     def kill_one_unitary(self, indexed_circuit, index_to_symbols, symbol_to_value, energy_bound=-0.01, mode="current_gate"):
         """notice this accepts either indexed_circuit that encode u = [rz rx rz] or single gates (rz, rx).
@@ -501,3 +719,20 @@ def plot(data):
     ax.set_xlabel("Iteration")
 
     return fig
+
+class History:
+    def __init__(self,g=None,J=None):
+        self.history={}
+        self.raw_history = {}
+        self.novel_discoveries = {}
+        self.hamiltonian_parameters={"g":g,"J":J}
+        self.lowest_energy = -0.01
+
+    def accept_energy(self, E, noise=False):
+        """
+        in the presence of noise, don't give gates for free!
+        """
+        if noise:
+            return E < self.lowest_energy
+        else:
+            return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
