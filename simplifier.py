@@ -19,7 +19,7 @@ class Simplifier(Basic):
                 6. Rz(control) and CNOT(control, target) Rz(control) --> Rz(control) CNOT
                 7. Rx(target) and CNOT(control, target) Rx(target) --> Rx(target) CNOT
 
-        Oiginally, it was a single big function now splitted into smaller ones..
+        Notice it's splitted into small blocks of code for the sake of simplicity.
         """
         super(Simplifier, self).__init__(n_qubits=n_qubits)
         self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
@@ -28,8 +28,13 @@ class Simplifier(Basic):
         """
         Returns the (simplified) indexed_circuit, index_to_symbols, symbol_to_value.
         """
-        connnections, places_gates = self.scan_qubits(indexed_circuit, index_to_symbols)
-        new_indexed_circuit, NRE, symbols_on = self.simplify_intermediate(indexed_circuit, symbol_to_value, index_to_symbols, connnections, places_gates)
+
+        self.indexed_circuit = indexed_circuit
+        self.symbol_to_value = symbol_to_value
+        self.index_to_symbols = index_to_symbols
+
+        connnections, places_gates = self.scan_qubits()
+        new_indexed_circuit, NRE, symbols_on = self.simplify_intermediate(connnections, places_gates)
         Sindexed_circuit, Ssymbols_to_values, Sindex_to_symbols = self.translate_to_output(new_indexed_circuit, NRE, symbols_on)
         return Sindexed_circuit, Ssymbols_to_values, Sindex_to_symbols
 
@@ -69,6 +74,372 @@ class Simplifier(Basic):
             if len(indexed_circuit) == l0:
                 break
         return indexed_circuit, symbol_to_value,index_to_symbols
+
+
+
+    def scan_qubits(self):
+        """
+        this function scans the circuit as described by {self.indexed_circuit}
+        and returns a dictionary with the gates acting on each qubit and the order of appearence on the original circuit
+        """
+        connections={str(q):[] for q in range(self.n_qubits)} #this saves the gates at each qubit. It does not respects the order.
+        places_gates = {str(q):[] for q in range(self.n_qubits)} #this saves, for each gate on each qubit, the position in the original indexed_circuit
+        flagged = [False]*len(self.indexed_circuit) #used to check if you have seen a cnot already, so not to append it twice to the qubit's dictionary
+
+        for nn,idq in enumerate(self.indexed_circuit): #sweep over all gates in original circuit's list
+            for q in range(self.n_qubits): #sweep over all qubits
+                if idq<self.number_of_cnots: #if the gate it's a CNOT or not
+                    control, target = self.indexed_cnots[str(idq)] #give control and target qubit
+                    if q in [control, target] and not flagged[nn]: #if the qubit we are looking at is affected by this CNOT, and we haven't add this CNOT to the dictionary yet
+                        connections[str(control)].append(idq)
+                        connections[str(target)].append(idq)
+                        places_gates[str(control)].append(nn)
+                        places_gates[str(target)].append(nn)
+                        flagged[nn] = True #so you don't add the other
+                else:
+                    if (idq-self.number_of_cnots)%self.n_qubits == q: #check if the unitary is applied to the qubit we are looking at
+                        if 0 <= idq - self.number_of_cnots< self.n_qubits:
+                            connections[str(q)].append("rz")
+                        elif self.n_qubits <= idq-self.number_of_cnots <  2*self.n_qubits:
+                            connections[str(q)].append("rx")
+                        places_gates[str(q)].append(nn)
+                    flagged[nn] = True #to check that all gates have been flagged
+        ####quick test
+        for k in flagged:
+            if k is False:
+                raise Error("not all flags in flagged are True!")
+        return connections, places_gates
+
+
+    def rule_1(self, step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
+        """
+        1. if I have a CNOT just after initializing, it does nothing (if |0> initialization).
+        """
+        modification = False
+        q, path, ind,gate = step
+        if gate in range(self.number_of_cnots):
+            if ind == 0 and not new_indexed_circuit[places_gates[str(q)][ind]] == -1:
+                others = self.indexed_cnots[str(gate)].copy()
+                others.remove(int(q)) #the other qubit affected by the CNOT
+                control, target = self.indexed_cnots[str(self.indexed_circuit[places_gates[str(q)][ind]])]
+                for jind, jgate in enumerate(connections[str(others[0])]): ##Be sure it's the right gate
+                    if (int(q) == control) and (jgate == gate) and (places_gates[str(q)][ind] == places_gates[str(others[0])][jind]):
+                        new_indexed_circuit[places_gates[str(q)][ind]] = -1
+                        modification = True
+                        break
+        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
+
+    def rule_2(self, step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
+        """
+        2 consecutive and equal CNOTS compile to identity.
+        """
+        modification = False
+        q, path, ind,gate = step
+        c1 = gate in range(self.number_of_cnots)
+        c2 = ind<len(path)-1
+
+        if c1 and c2:
+            c3 = not (new_indexed_circuit[places_gates[str(q)][ind]] == -1)
+            c4 = not (new_indexed_circuit[places_gates[str(q)][ind+1]] == -1)
+            c5 = path[ind+1] == gate
+            if c3 and c4 and c5:
+                others = self.indexed_cnots[str(gate)].copy()
+                others.remove(int(q)) #the other qubit affected by the CNOT
+                for jind, jgate in enumerate(connections[str(others[0])][:-1]): ##sweep the other qubit's gates until i find "gate"
+                    if (jgate == gate) and (connections[str(others[0])][jind+1] == gate): ##i find the same gate that is repeated in both the original qubit and this one
+                        if (places_gates[str(q)][ind] == places_gates[str(others[0])][jind]) and (places_gates[str(q)][ind+1] == places_gates[str(others[0])][jind+1]): #check that positions in the indexed_circuit are the same
+                         ###maybe I changed before, so I have repeated in the original but one was shut down..
+                            new_indexed_circuit[places_gates[str(q)][ind]] = -1 ###just kill the repeated CNOTS
+                            new_indexed_circuit[places_gates[str(q)][ind+1]] = -1 ###just kill the repeated CNOTS
+                            break
+        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
+
+
+
+
+    def rule_3(self, step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
+        """
+         3 Rotation around z axis of |0> does only add a phase, hence leaves invariant <H>. We kill it.
+        """
+        modification = False
+        q, path, ind,gate = step
+        c1 = ind == 0
+        c2 = gate == "rz"
+
+        if c1 and c2:
+            original_symbol = self.index_to_symbols[places_gates[str(q)][ind]]
+            original_value = self.symbol_to_value[original_symbol]
+
+            symbols_to_delete.append(original_symbol)
+            new_indexed_circuit[places_gates[str(q)][ind]] = -1
+            modification = True
+
+        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
+
+
+
+
+    def rule_4(self, step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
+        """
+        Repeated rotations: add the values
+        """
+        modification = False
+        q, path, ind,gate = step
+
+        c1 = gate in ["rz","rx"]
+        c2 = ind < len(path)
+
+        if c1 and c2:
+
+            original_symbol = self.index_to_symbols[places_gates[str(q)][ind]]
+            original_value = self.symbol_to_value[original_symbol]
+            values_to_add = []
+            for ni, next_gates in enumerate(path[ind+1:]):
+                next_gate_placed = new_indexed_circuit[places_gates[str(q)][ni+ind+1]]
+                if (not next_gate_placed == -1) and path[ni+ind+1] == gate:
+                    next_symbol = self.index_to_symbols[places_gates[str(q)][ni+ind+1]]
+                    symbols_to_delete.append(next_symbol)
+                    new_indexed_circuit[places_gates[str(q)][ni+ind+1]] = -1
+                    values_to_add.append(self.symbol_to_value[next_symbol])
+                else:
+                    break
+            if len(values_to_add)>0:
+                sname="th_"+str(len(list(NRE.keys())))
+                NRE[sname] = original_value + np.sum(values_to_add)
+                symbols_on[str(q)].append(sname)
+                modification=True
+
+        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
+
+    def rule_5(self, step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
+        """
+        Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
+        """
+        modification = False
+        q, path, ind,gate = step
+        c1 = gate in ["rz","rx"]
+        c2 = ind< len(path)-2
+
+
+        if c1 and c2:
+            original_symbol = self.index_to_symbols[places_gates[str(q)][ind]]
+            original_value = self.symbol_to_value[original_symbol]
+
+            gates = ["rz", "rx"] #which gate am I? Which gate are you?
+            gates.remove(gate) #which gate am I? Which gate are you?
+            other_gate = gates[0] #which gate am I? Which gate are you?
+
+            if path[ind+1] == other_gate and path[ind+2] == gate:
+                compile_gate = False
+                gate_to_compile = [self.single_qubit_unitaries[gate](original_value).on(self.qubits[int(q)])]
+
+                for pp in [1,2]: ##append next 2 gates to the gate_to_compile list (as appearing in the circuit)
+                    gate_to_compile.append(self.single_qubit_unitaries[path[ind+pp]](self.symbol_to_value[self.index_to_symbols[places_gates[str(q)][ind+pp]]]).on(self.qubits[int(q)]))
+
+                for ilum, next_gates_to_compile in enumerate(path[(ind+3):]): #Now scan the remaining part of that qubit line
+                    if next_gates_to_compile in ["rz","rx"] and not new_indexed_circuit[places_gates[str(q)][ind+3+ilum]] == -1:
+                        compile_gate = True #we'll compile!
+
+                        new_indexed_circuit[places_gates[str(q)][ind+3+ilum]] = -1
+                        dele = self.index_to_symbols[places_gates[str(q)][ind+3+ilum]]
+                        symbols_to_delete.append(dele)
+
+                        gate_to_compile.append(self.single_qubit_unitaries[next_gates_to_compile](self.symbol_to_value[dele]).on(self.qubits[int(q)]))
+                    else:
+                        break
+                if compile_gate: ### if conditions are met s.t. you can absorb everything into U_3:
+                    u = cirq.unitary(cirq.Circuit(gate_to_compile))
+                    vals = np.real(self.give_rz_rx_rz(u)[::-1]) #not entirely real since there's a finite number of iterations
+
+                    #### make sure this is rz rx rz
+                    new_indexed_circuit[places_gates[str(q)][ind]] = self.number_of_cnots+int(q)
+                    new_indexed_circuit[places_gates[str(q)][ind+1]] = self.number_of_cnots+int(q)+self.n_qubits
+                    new_indexed_circuit[places_gates[str(q)][ind+2]] = self.number_of_cnots+int(q)
+
+                    for v in zip(list(vals)):
+                        sname="th_"+str(len(list(NRE.keys())))
+                        NRE[sname] = v[0]
+                        symbols_on[str(q)].append(sname)
+                    modification = True
+
+        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
+
+    def rule_6(self, step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
+        """
+        Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
+        """
+        modification = False
+        q, path, ind,gate = step
+        c1 = gate in ["rz","rx"]
+        c2 = ind< len(path)-2
+
+
+        if c1 and c2:
+
+            original_symbol = self.index_to_symbols[places_gates[str(q)][ind]]
+            original_value = self.symbol_to_value[original_symbol]
+
+            if path[ind+1] not in ["rx", "rz"] and not new_indexed_circuit[places_gates[str(q)][ind+1]] == -1:
+                control, target = self.indexed_cnots[str(path[ind+1])]
+                values_to_add=[]
+                if int(q) == control and gate == "rz":
+                        ### scan for the next gates after CNOT and break when you find a new CNOT being target or Rx.
+                    for npip, pip in enumerate(path[ind+2:]):
+                        if (new_indexed_circuit[places_gates[str(q)][ind+2+npip]] == -1) or (pip == "rx") or not self.indexed_cnots[str(npip)][0] == int(q):
+                            break
+                        else:
+                            if (pip == "rz"):
+                                next_symbol = self.index_to_symbols[places_gates[str(q)][ind+2+npip]]
+                                symbols_to_delete.append(next_symbol)
+                                new_indexed_circuit[places_gates[str(q)][ind+2+npip]] = -1
+                                values_to_add.append(self.symbol_to_value[next_symbol])
+                            else:
+                                break
+                    ### merge all the values into the first guy.
+                    if len(values_to_add)>0:
+                        sname="th_"+str(len(list(NRE.keys()))) ## this is safe, since we are looping on the indices first, and the resolver dict is ordered
+                        NRE[sname] = original_value + np.sum(values_to_add)
+                        symbols_on[str(q)].append(sname)
+                        modification = True
+        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
+
+    def rule_7(self, step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
+        """
+        Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
+        """
+        modification = False
+        q, path, ind,gate = step
+        c1 = gate in ["rz","rx"]
+        c2 = ind< len(path)-2
+
+        if c1 and c2:
+            original_symbol = self.index_to_symbols[places_gates[str(q)][ind]]
+            original_value = self.symbol_to_value[original_symbol]
+
+            if path[ind+1] not in ["rx", "rz"] and not new_indexed_circuit[places_gates[str(q)][ind+1]] == -1:
+                control, target = self.indexed_cnots[str(path[ind+1])]
+                values_to_add=[]
+                if int(q) == target and gate == "rx":
+                        ### scan for the next gates after CNOT and break when you find a new CNOT being control or Rz.
+                    for npip, pip in enumerate(path[ind+2:]):
+                        if (new_indexed_circuit[places_gates[str(q)][ind+2+npip]] == -1) or (pip == "rz") or not self.indexed_cnots[str(npip)][1] == int(q):
+                            break
+                        else:
+                            if (pip == "rx"):
+                                next_symbol = self.index_to_symbols[places_gates[str(q)][ind+2+npip]]
+                                symbols_to_delete.append(next_symbol)
+                                new_indexed_circuit[places_gates[str(q)][ind+2+npip]] = -1
+                                values_to_add.append(self.symbol_to_value[next_symbol])
+                            else:
+                                break
+                    ### merge all the values into the first guy.
+                    if len(values_to_add)>0:
+                        sname="th_"+str(len(list(NRE.keys()))) ## this is safe, since we are looping on the indices first, and the resolver dict is ordered
+                        NRE[sname] = original_value + np.sum(values_to_add)
+                        symbols_on[str(q)].append(sname)
+                        modification = True
+        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
+
+    def rule_handler(self, cnt_rule,  step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
+        if cnt_rule == 1:
+            return self.rule_1(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
+        elif cnt_rule == 2:
+            return self.rule_2(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
+        elif cnt_rule == 3:
+            return self.rule_3(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
+        elif cnt_rule == 4:
+            return self.rule_4(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
+        elif cnt_rule == 5:
+            return self.rule_5(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
+        elif cnt_rule == 6:
+            return self.rule_6(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
+        elif cnt_rule == 7:
+            return self.rule_7(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
+        else:
+            print("cnt_rule wrong! not so many rules..", cnt_rule)
+
+    def simplify_intermediate(self, connections, places_gates):
+        """
+        Scans each qubit, and apply rules listed below to the circuit.
+
+        Rules:  1. CNOT's control is |0>, kill that cnot.
+                2. Two consecutive and equal CNOTS compile to identity.
+                3. Rotation around z axis of |0> only adds phase hence leaves invariant <H>. Two options: kill it or replace it by Rx (to avoid having no gates)
+                4. two equal rotations: add the values.
+                5. Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
+                6. Rz(control) and CNOT(control, target) Rz(control) --> Rz(control) CNOT
+                7. Rx(target) and CNOT(control, target) Rx(target) --> Rx(target) CNOT
+        """
+        new_indexed_circuit = self.indexed_circuit.copy() #intermediate list of gates, the deleted ones are set to -1
+        symbols_to_delete=[] # list to store the symbols that will be deleted/modified
+        symbols_on = {str(q):[] for q in list(connections.keys())}
+        NRE ={} #NewREsolver
+
+
+        for q, path in connections.items(): ###sweep over qubits: path is all the gates that act this qubit during the circuit
+            for ind,gate in enumerate(path): ### for each qubit, sweep over the list of gates
+                modified = False
+                cnt_rule = 1
+                step = [q, path, ind,gate]
+                while (cnt_rule < 8) and (modified==False):
+                    modified, new_indexed_circuit, symbols_to_delete, symbols_on, NRE = self.rule_handler(cnt_rule,  step ,connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
+                    cnt_rule+=1
+                #If no modifications, add that gate to the new_circuit_index and parameter (if any) to NRE, symbols_on
+                if (modified == False) and (gate in ["rx", "rz"]):
+                    original_symbol = self.index_to_symbols[places_gates[str(q)][ind]]
+                    original_value = self.symbol_to_value[original_symbol]
+                    sname="th_"+str(len(list(NRE.keys())))
+                    NRE[sname] = original_value
+                    symbols_on[str(q)].append(sname)
+
+        return new_indexed_circuit, NRE, symbols_on
+
+    def translate_to_output(self, new_indexed_circuit, NRE, symbols_on):
+        """
+        Final building block for the simplifying function.
+
+        this function takes a processed new_indexed_circuit (with marked gates to deleted to be -1)
+        a new resolver NRE with symbols whose corresponding qubit is obtained from symbols_on dict. Symbols_dict contains, for each qubit, the list of symbols acting on it, apppearing in order, when sweeping on the original indexed_circuit. The current function sweeps again over the original indexed_circuit, and marks for each qubit the symbols already used.
+
+        If all gates over a qubit are deleted (since they are not necessary), we add Rx(0), so to avoid problems
+        with further continuous optimizations.
+
+        """
+        final=[]
+        final_idx_to_symbols={}
+        final_dict = {}
+
+        index_gate=0
+
+
+        for gmarked in new_indexed_circuit:
+            if not gmarked == -1:
+                final.append(gmarked)
+                if 0 <= gmarked - self.number_of_cnots < 2*self.n_qubits:
+                    ### in which position we add this symbol ?
+                    for indd, k in enumerate(symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)]):
+                        if k != -1:
+                            break
+                    final_idx_to_symbols[int(len(final)-1)] = "th_"+str(len(list(final_dict.keys())))
+                    final_dict["th_"+str(len(list(final_dict.keys())))] = NRE[symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd]]
+                    symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd]=-1
+                else:
+                    final_idx_to_symbols[int(len(final)-1)] = ""
+
+        #### Now we scan again so to check we have not killed all the gates. If so, we add Rx(0)
+        self.indexed_circuit = final
+        self.symbol_to_value = final_dict
+        self.index_to_symbols = final_idx_to_symbols
+
+        connections, places_gates = self.scan_qubits()
+        for q, path in connections.items():
+            if len(path) == 0:
+                final.append(self.number_of_cnots+self.n_qubits+int(q))
+                new_symbol = "th_"+str(len(final_dict.keys()))
+                final_dict[new_symbol] = 0
+                final_idx_to_symbols[len(final)-1] = new_symbol
+
+        return final, final_dict, final_idx_to_symbols
 
 
     def rotation(self,vals):
@@ -120,354 +491,6 @@ class Simplifier(Basic):
             except Exception:
                 error=True
         return vals
-
-
-    def scan_qubits(self,indexed_circuit, index_to_symbols):
-        """
-        this function scans the circuit as described by {indexed_circuit, index_to_symbols}
-        and returns a dictionary with the gates acting on each qubit and the order of appearence on the original circuit
-        """
-        connections={str(q):[] for q in range(self.n_qubits)} #this saves the gates at each qubit. It does not respects the order.
-        places_gates = {str(q):[] for q in range(self.n_qubits)} #this saves, for each gate on each qubit, the position in the original indexed_circuit
-        flagged = [False]*len(indexed_circuit) #used to check if you have seen a cnot already, so not to append it twice to the qubit's dictionary
-
-        for nn,idq in enumerate(indexed_circuit): #sweep over all gates in original circuit's list
-            for q in range(self.n_qubits): #sweep over all qubits
-                if idq<self.number_of_cnots: #if the gate it's a CNOT or not
-                    control, target = self.indexed_cnots[str(idq)] #give control and target qubit
-                    if q in [control, target] and not flagged[nn]: #if the qubit we are looking at is affected by this CNOT, and we haven't add this CNOT to the dictionary yet
-                        connections[str(control)].append(idq)
-                        connections[str(target)].append(idq)
-                        places_gates[str(control)].append(nn)
-                        places_gates[str(target)].append(nn)
-                        flagged[nn] = True #so you don't add the other
-                else:
-                    if (idq-self.number_of_cnots)%self.n_qubits == q: #check if the unitary is applied to the qubit we are looking at
-                        if 0 <= idq - self.number_of_cnots< self.n_qubits:
-                            connections[str(q)].append("rz")
-                        elif self.n_qubits <= idq-self.number_of_cnots <  2*self.n_qubits:
-                            connections[str(q)].append("rx")
-                        places_gates[str(q)].append(nn)
-                    flagged[nn] = True #to check that all gates have been flagged
-        ####quick test
-        for k in flagged:
-            if k is False:
-                raise Error("not all flags in flagged are True!")
-        return connections, places_gates
-
-
-    def rule_1(self, ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
-        """
-        1. if I have a CNOT just after initializing, it does nothing (if |0> initialization).
-        """
-        modification = False
-        if gate in range(self.number_of_cnots):
-            if ind == 0 and not new_indexed_circuit[places_gates[str(q)][ind]] == -1:
-                others = self.indexed_cnots[str(gate)].copy()
-                others.remove(int(q)) #the other qubit affected by the CNOT
-                control, target = self.indexed_cnots[str(indexed_circuit[places_gates[str(q)][ind]])]
-                for jind, jgate in enumerate(connections[str(others[0])]): ##Be sure it's the right gate
-                    if (int(q) == control) and (jgate == gate) and (places_gates[str(q)][ind] == places_gates[str(others[0])][jind]):
-                        new_indexed_circuit[places_gates[str(q)][ind]] = -1
-                        modification = True
-                        break
-        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
-
-    def rule_2(self, ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
-        """
-        2 consecutive and equal CNOTS compile to identity.
-        """
-        modification = False
-        c1 = gate in range(self.number_of_cnots)
-        c2 = ind<len(path)-1
-        c3 = not (new_indexed_circuit[places_gates[str(q)][ind]] == -1)
-        c4 = not (new_indexed_circuit[places_gates[str(q)][ind+1]] == -1)
-        c5 = path[ind+1] == gate
-
-        if c1 and c2 and c3 and c4 and c5:
-            others = self.indexed_cnots[str(gate)].copy()
-            others.remove(int(q)) #the other qubit affected by the CNOT
-            for jind, jgate in enumerate(connections[str(others[0])][:-1]): ##sweep the other qubit's gates until i find "gate"
-                if (jgate == gate) and (connections[str(others[0])][jind+1] == gate): ##i find the same gate that is repeated in both the original qubit and this one
-                    if (places_gates[str(q)][ind] == places_gates[str(others[0])][jind]) and (places_gates[str(q)][ind+1] == places_gates[str(others[0])][jind+1]): #check that positions in the indexed_circuit are the same
-                     ###maybe I changed before, so I have repeated in the original but one was shut down..
-                        new_indexed_circuit[places_gates[str(q)][ind]] = -1 ###just kill the repeated CNOTS
-                        new_indexed_circuit[places_gates[str(q)][ind+1]] = -1 ###just kill the repeated CNOTS
-                        break
-        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
-
-
-
-
-    def rule_3(self, ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
-        """
-         3 Rotation around z axis of |0> does only add a phase, hence leaves invariant <H>. We kill it unless we get rid of rx.}
-        """
-        modification = False
-
-        c1 = gate in ["rz","rx"]
-        c2 = ind == 0
-        c3 = ind == "rz"
-
-        if c1 and c2 and c3:
-
-            gates = ["rz", "rx"] #which gate am I? Which gate are you?
-            gates.remove(gate) #which gate am I? Which gate are you?
-            other_gate = gates[0] #which gate am I? Which gate are you?
-
-            original_symbol = index_to_symbols[places_gates[str(q)][ind]]
-            original_value = symbol_to_value[original_symbol]
-
-            not_more_rxs = False
-            modification = True
-            for ngs in path[ind+1:]:
-                if ngs in ["rx"]:
-                    symbols_to_delete.append(original_symbol)
-                    new_indexed_circuit[places_gates[str(q)][ind]] = -1
-                    not_more_rxs = True
-                    break
-            if not_more_rxs is False:
-                new_indexed_circuit[places_gates[str(q)][ind]] = self.number_of_cnots+self.n_qubits+int(q)
-                symbol_to_value[original_symbol] = 0
-                sname="th_"+str(len(list(NRE.keys())))
-                NRE[sname] = 0
-                symbols_on[str(q)].append(sname)
-        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
-
-
-
-
-    def rule_4(self, ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
-        """
-        Repeated rotations: add the values
-        """
-        modification = False
-        original_symbol = index_to_symbols[places_gates[str(q)][ind]]
-        original_value = symbol_to_value[original_symbol]
-
-        c1 = gate in ["rz","rx"]
-        c2 = ind != len(path)-1
-
-        if c1 and c2:
-            next_gate_placed = new_indexed_circuit[places_gates[str(q)][ind+1]]
-            if path[ind+1] == gate and not next_gate_placed == -1:
-                next_symbol = index_to_symbols[places_gates[str(q)][ind+1]]
-                symbols_to_delete.append(next_symbol)
-                new_indexed_circuit[places_gates[str(q)][ind+1]] = -1
-
-                sname="th_"+str(len(list(NRE.keys())))
-                NRE[sname] = original_value + symbol_to_value[next_symbol]
-                symbols_on[str(q)].append(sname)
-                modification=True
-
-        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
-
-    def rule_5(self, ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
-        """
-        Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
-        """
-        modification = False
-        c1 = gate in ["rz","rx"]
-        c2 = ind< len(path)-2
-        original_symbol = index_to_symbols[places_gates[str(q)][ind]]
-        original_value = symbol_to_value[original_symbol]
-
-        if c1 and c2:
-            gates = ["rz", "rx"] #which gate am I? Which gate are you?
-            gates.remove(gate) #which gate am I? Which gate are you?
-            other_gate = gates[0] #which gate am I? Which gate are you?
-
-            if path[ind+1] == other_gate and path[ind+2] == gate:
-                compile_gate = False
-                gate_to_compile = [self.single_qubit_unitaries[gate](original_value).on(self.qubits[int(q)])]
-
-                for pp in [1,2]: ##append next 2 gates to the gate_to_compile list (as appearing in the circuit)
-                    gate_to_compile.append(self.single_qubit_unitaries[path[ind+pp]](symbol_to_value[index_to_symbols[places_gates[str(q)][ind+pp]]]).on(self.qubits[int(q)]))
-
-                for ilum, next_gates_to_compile in enumerate(path[(ind+3):]): #Now scan the remaining part of that qubit line
-                    if next_gates_to_compile in ["rz","rx"] and not new_indexed_circuit[places_gates[str(q)][ind+3+ilum]] == -1:
-                        compile_gate = True #we'll compile!
-
-                        new_indexed_circuit[places_gates[str(q)][ind+3+ilum]] = -1
-                        dele = index_to_symbols[places_gates[str(q)][ind+3+ilum]]
-                        symbols_to_delete.append(dele)
-
-                        gate_to_compile.append(self.single_qubit_unitaries[next_gates_to_compile](symbol_to_value[dele]).on(self.qubits[int(q)]))
-                    else:
-                        break
-                if compile_gate: ### if conditions are met s.t. you can absorb everything into U_3:
-                    u = cirq.unitary(cirq.Circuit(gate_to_compile))
-                    vals = np.real(self.give_rz_rx_rz(u)[::-1]) #not entirely real since there's a finite number of iterations
-
-                    #### make sure this is rz rx rz
-                    new_indexed_circuit[places_gates[str(q)][ind]] = self.number_of_cnots+int(q)
-                    new_indexed_circuit[places_gates[str(q)][ind+1]] = self.number_of_cnots+int(q)+self.n_qubits
-                    new_indexed_circuit[places_gates[str(q)][ind+2]] = self.number_of_cnots+int(q)
-
-                    for o in range(3):
-                        new_indexed_circuit_unitary[places_gates[str(q)][ind+o]] = True
-
-                    for v in zip(list(vals)):
-                        sname="th_"+str(len(list(NRE.keys())))
-                        NRE[sname] = v[0]
-                        symbols_on[str(q)].append(sname)
-                    modification = True
-
-        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
-
-    def rule_6(self, ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
-        """
-        Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
-        """
-        modification = False
-        c1 = gate in ["rz","rx"]
-        c2 = ind< len(path)-2
-
-        original_symbol = index_to_symbols[places_gates[str(q)][ind]]
-        original_value = symbol_to_value[original_symbol]
-
-        if c1 and c2:
-            if path[ind+1] not in ["rx", "rz"] and not new_indexed_circuit[places_gates[str(q)][ind+1]] == -1:
-                control, target = self.indexed_cnots[str(path[ind+1])]
-                values_to_add=[]
-                if int(q) == control and gate == "rz":
-                        ### scan for the next gates after CNOT and break when you find a new CNOT being target or Rx.
-                    for npip, pip in enumerate(path[ind+2:]):
-                        if (new_indexed_circuit[places_gates[str(q)][ind+2+npip]] == -1) or (pip == "rx") or not self.indexed_cnots[str(npip)][0] == int(q):
-                            break
-                        else:
-                            if (pip == "rz"):
-                                next_symbol = index_to_symbols[places_gates[str(q)][ind+2+npip]]
-                                symbols_to_delete.append(next_symbol)
-                                new_indexed_circuit[places_gates[str(q)][ind+2+npip]] = -1
-                                values_to_add.append(symbol_to_value[next_symbol])
-                            else:
-                                break
-                    ### merge all the values into the first guy.
-                    if len(values_to_add)>0:
-                        sname="th_"+str(len(list(NRE.keys()))) ## this is safe, since we are looping on the indices first, and the resolver dict is ordered
-                        NRE[sname] = original_value + np.sum(values_to_add)
-                        symbols_on[str(q)].append(sname)
-                        modification = True
-        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
-
-    def rule_7(self, ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
-        """
-        Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
-        """
-        modification = False
-        c1 = gate in ["rz","rx"]
-        c2 = ind< len(path)-2
-
-        original_symbol = index_to_symbols[places_gates[str(q)][ind]]
-        original_value = symbol_to_value[original_symbol]
-
-        if c1 and c2:
-            if path[ind+1] not in ["rx", "rz"] and not new_indexed_circuit[places_gates[str(q)][ind+1]] == -1:
-                control, target = self.indexed_cnots[str(path[ind+1])]
-                values_to_add=[]
-                if int(q) == target and gate == "rx":
-                        ### scan for the next gates after CNOT and break when you find a new CNOT being control or Rz.
-                    for npip, pip in enumerate(path[ind+2:]):
-                        if (new_indexed_circuit[places_gates[str(q)][ind+2+npip]] == -1) or (pip == "rz") or not self.indexed_cnots[str(npip)][1] == int(q):
-                            break
-                        else:
-                            if (pip == "rx"):
-                                next_symbol = index_to_symbols[places_gates[str(q)][ind+2+npip]]
-                                symbols_to_delete.append(next_symbol)
-                                new_indexed_circuit[places_gates[str(q)][ind+2+npip]] = -1
-                                values_to_add.append(symbol_to_value[next_symbol])
-                            else:
-                                break
-                    ### merge all the values into the first guy.
-                    if len(values_to_add)>0:
-                        sname="th_"+str(len(list(NRE.keys()))) ## this is safe, since we are looping on the indices first, and the resolver dict is ordered
-                        NRE[sname] = original_value + np.sum(values_to_add)
-                        symbols_on[str(q)].append(sname)
-                        modification = True
-        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE
-
-    def rule_handler(self, cnt_rule,  ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE):
-        if cnt_rule == 1:
-            return self.rule_1(ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
-        elif cnt_rule == 2:
-            return self.rule_2(ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
-        elif cnt_rule == 3:
-            return self.rule_3(ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
-        elif cnt_rule == 4:
-            return self.rule_4(ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
-        elif cnt_rule == 5:
-            return self.rule_5(ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
-        elif cnt_rule == 6:
-            return self.rule_6(ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
-        elif cnt_rule == 7:
-            return self.rule7(ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
-        else:
-            raise Error("cnt_rule wrong! not so many rules..")
-
-    def simplify_intermediate(self,indexed_circuit, symbol_to_value,index_to_symbols, connections, places_gates):
-        """
-        Scans each qubit, and apply rules listed below to the circuit.
-
-        Rules:  1. CNOT's control is |0>, kill that cnot.
-                2. Two consecutive and equal CNOTS compile to identity.
-                3. Rotation around z axis of |0> only adds phase hence leaves invariant <H>. Two options: kill it or replace it by Rx (to avoid having no gates)
-                4. two equal rotations: add the values.
-                5. Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
-                6. Rz(control) and CNOT(control, target) Rz(control) --> Rz(control) CNOT
-                7. Rx(target) and CNOT(control, target) Rx(target) --> Rx(target) CNOT
-        """
-        new_indexed_circuit = indexed_circuit.copy() #intermediate list of gates, the deleted ones are set to -1
-        new_indexed_circuit_unitary = [False for k in indexed_circuit] #also used as a control if parametrized gates has been shut down
-        symbols_to_delete=[] # list to store the symbols that will be deleted/modified
-        symbols_on = {str(q):[] for q in list(connections.keys())}
-        NRE ={} #NewREsolver
-
-        for q, path in connections.items(): ###sweep over qubits: path is all the gates that act this qubit during the circuit
-            for ind,gate in enumerate(path): ### for each qubit, sweep over the list of gates
-                modified = False
-                cnt_rule = 1
-                while modified is False or cnt_rule < 8:
-                     modified, new_indexed_circuit, symbols_to_delete, symbols_on, NRE = self.rule_handler(cnt_rule,  ind, gate, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE)
-
-            ### think this carefully!!!!
-                if modified == False:
-                    sname="th_"+str(len(list(NRE.keys())))
-                    NRE[sname] = original_value
-                    symbols_on[str(q)].append(sname)
-
-
-        return new_indexed_circuit, NRE, symbols_on
-
-    def translate_to_output(self, new_indexed_circuit, NRE, symbols_on):
-        """
-        Final building block for the simplifying function.
-
-        this function takes a processed new_indexed_circuit (with marked gates to deleted to be -1)
-        a new resolver NRE with symbols whose corresponding qubit is obtained from symbols_on dict. Symbols_dict contains, for each qubit, the list of symbols acting on it, apppearing in order, when sweeping on the original indexed_circuit. The current function sweeps again over the original indexed_circuit, and marks for each qubit the symbols already used.
-
-        """
-        final=[]
-        final_idx_to_symbols={}
-        final_dict = {}
-
-        index_gate=0
-        for gmarked in new_indexed_circuit:
-            if not gmarked == -1:
-                final.append(gmarked)
-                if 0 <= gmarked - self.number_of_cnots < 2*self.n_qubits:
-                    ### in which position we add this symbol ?
-                    for indd, k in enumerate(symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)]):
-                        if k != -1:
-                            break
-                    final_idx_to_symbols[int(len(final)-1)] = "th_"+str(len(list(final_dict.keys())))
-                    final_dict["th_"+str(len(list(final_dict.keys())))] = NRE[symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd]]
-                    symbols_on[str((gmarked - self.number_of_cnots)%self.n_qubits)][indd]=-1
-                else:
-                    final_idx_to_symbols[int(len(final)-1)] = ""
-
-        return final, final_dict, final_idx_to_symbols
-
 
 
 

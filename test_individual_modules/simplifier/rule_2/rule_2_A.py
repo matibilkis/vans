@@ -4,17 +4,20 @@ import cirq
 import numpy as np
 
 
-print("\n Rule 3 - Rotation around z axis of |0> only adds phase hence leaves invariant <H>.")
+print("\n 1. CNOT just after initializing, it does nothing (if |0> initialization).")
 
-print("Case 1: ran out of gates.-")
-indices = [6,7,8]#,#9,10,11]
+print("Case 1: one step")
+
 Simp = Simplifier(n_qubits=3)
+indices=[]
+for k in range(Simp.number_of_cnots):
+    indices.append(k)
 circuit,symbols,index_symbols=Simp.give_circuit(indices)
 
 print("\n***\n")
 symbols_to_values = {s:k for s,k in zip(symbols, range(len(symbols)))}
 print(Simp.give_unitary(indices,symbols_to_values))
-Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.simplify_step(indices, symbols_to_values, index_symbols)
+Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(indices, symbols_to_values, index_symbols)
 print("\n\n")
 print(Simp.give_unitary(Sindices, Ssymbols_to_values))
 
@@ -28,20 +31,25 @@ print("Sindices: ", Sindices)
 print("Ssymbol_to_values", Ssymbols_to_values)
 print("Sindex_to_symbols", Sindex_to_symbols)
 
-print("\n\n\n*****")
-print("*****\n\n\n")
-print("Case 2: ansatz complex enough")
 
-indices = [6,7,8,9,10,11,6,7,8]
+
+
+
+
+print("Case 2: one step")
+
 Simp = Simplifier(n_qubits=3)
+indices=[]
+for k in range(Simp.number_of_cnots):
+    indices.append(k)
 circuit,symbols,index_symbols=Simp.give_circuit(indices)
 
+print("\n***\n")
 symbols_to_values = {s:k for s,k in zip(symbols, range(len(symbols)))}
 print(Simp.give_unitary(indices,symbols_to_values))
-Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.simplify_step(indices, symbols_to_values, index_symbols)
+Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(indices, symbols_to_values, index_symbols)
 print("\n\n")
 print(Simp.give_unitary(Sindices, Ssymbols_to_values))
-print("\n")
 
 print("ORIGINAL: \n")
 print("indices: ", indices)

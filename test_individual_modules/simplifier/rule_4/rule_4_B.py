@@ -4,7 +4,7 @@ import cirq
 import numpy as np
 
 
-print("\n  Two consecutive and equal CNOTS compile to identity. By using values = range(N) it's very easy to do the additions ;)")
+print("\n  Rule 4: adding values of repeated rotations. It's very easy to do the additions ;)")
 
 for nn in [4]:
     print("\n\n\n")
@@ -20,6 +20,8 @@ for nn in [4]:
     for k in range(Simp.number_of_cnots,Simp.number_of_cnots+Simp.n_qubits):
         indices.append(k)
         indices.append(k)
+        indices.append(k)
+
 
     circuit,symbols,index_symbols=Simp.give_circuit(indices)
 
@@ -30,7 +32,7 @@ for nn in [4]:
     print(Simp.give_unitary(indices,symbols_to_values))
     print(index_symbols)
 
-    Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.simplify_step(indices, symbols_to_values, index_symbols)
+    Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(indices, symbols_to_values, index_symbols)
     print("\n\n")
 
     print("ORIGINAL: \n")
