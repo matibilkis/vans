@@ -3,9 +3,10 @@ import numpy as np
 import sympy
 
 class Basic:
-    def __init__(self, n_qubits=3):
+    def __init__(self, n_qubits=3, testing=False):
         """
         n_qubits: number of qubits on your ansatz
+        testing: this is inherited by other classes to ease the debugging.
         """
         self.n_qubits = n_qubits
         self.qubits = cirq.GridQubit.rect(1, n_qubits)
@@ -23,6 +24,7 @@ class Basic:
                     count += 1
         self.number_of_cnots = len(self.indexed_cnots)
 
+        self.testing=testing
 
 
     def append_to_circuit(self, ind, circuit, params, index_to_symbols):

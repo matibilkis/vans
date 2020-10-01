@@ -11,16 +11,16 @@ class Simplifier(Basic):
         Importantly, it keeps the parameter values of the untouched gates.
 
         Works on circuits containing CNOTS, Z-rotations and X-rotations.It applies the following rules:
-        
+
         Rules:  1. CNOT just after initializing, it does nothing (if |0> initialization).
                 2. Two consecutive and equal CNOTS compile to identity.
-                3. Rotation around z axis of |0> only adds phase hence leaves invariant <H>. Either kill it or replace it by Rx(0) (if we have no Rx in that wire, i.e. the ansatz becomes too simple, TFQ runs into problems).
+                3. Rotation around z axis of |0> only adds phase hence leaves invariant <H>. It kills it.
                 4. two equal rotations: add the values.
                 5. Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
                 6. Rz(control) and CNOT(control, target) Rz(control) --> Rz(control) CNOT
                 7. Rx(target) and CNOT(control, target) Rx(target) --> Rx(target) CNOT
 
-        Notice it's splitted into small blocks of code for the sake of simplicity.
+        Finally, if the circuit becomes too short, for example, there're no gates at a given qubit, an Rx(0) is placed.
         """
         super(Simplifier, self).__init__(n_qubits=n_qubits)
         self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
@@ -375,7 +375,6 @@ class Simplifier(Basic):
         symbols_to_delete=[] # list to store the symbols that will be deleted/modified
         symbols_on = {str(q):[] for q in list(connections.keys())}
         NRE ={} #NewREsolver
-
 
         for q, path in connections.items(): ###sweep over qubits: path is all the gates that act this qubit during the circuit
             for ind,gate in enumerate(path): ### for each qubit, sweep over the list of gates

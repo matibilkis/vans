@@ -2,13 +2,15 @@ from circuit_basics import Basic
 import numpy as np
 import cirq
 import sympy
+import tensorflow_quantum as tfq
+import tensorflow as tf
 
 class UnitaryMurder(Basic):
-    def __init__(self, n_qubits=3,  mode="current_gate", g=1, J=0):
+    def __init__(self, n_qubits=3,  g=1, J=0, testing=False):
         """
         Scans a circuit, evaluates mean value of observable and retrieves a shorter circuit if the energy is not increased too much.
         """
-        super(Simplifier, self).__init__(n_qubits=n_qubits)
+        super(UnitaryMurder, self).__init__(n_qubits=n_qubits, testing=testing)
         self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
         self.expectation_layer = tfq.layers.Expectation() #this computes hamiltonian's mean value
         self.observable = self.ising_obs(g=g, J=J) #shared with vqe module...
@@ -21,48 +23,15 @@ class UnitaryMurder(Basic):
             observable.append(-float(0.5*J)*cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
         return observable
 
-    def create_proposal_without_gate(self, info_gate):
-        """
-        Create a circuit without the gate corresponding to info_gate.
-        Also, if the new circuit has no gates enough, returns bool value (valid)
-        so to not consider this into tfq.expectation_layer.
-        """
-
-        index_victim, victim = info_gate
-
-        proposal_circuit=[]
-        proposal_symbols_to_values = {}
-        prop_cirq_circuit=cirq.Circuit()
-
-        ko=0 #index_of_smymbols_added_to_circuit
-        for ind_survivors, gate_survivors in enumerate(indexed_circuit):
-            if ind_survivors < self.number_of_cnots:
-                proposal_circuit.append(k)
-                control, target = self.indexed_cnots[str(k)]
-                prop_cirq_circuit.append(cirq.CNOT.on(self.qubits[control], self.qubits[target]))
-            else:
-                if ind_survivors != index_victim:
-                    proposal_circuit.append(gate_survivors)
-                    qubit = self.qubits[(gate_survivors-self.number_of_cnots)%self.n_qubits]
-                    new_param = "th_"+str(len(proposal_symbols_to_values.keys()))
-                    if 0 <= k-self.number_of_cnots < self.n_qubits:
-                        prop_cirq_circuit.append(cirq.rz(sympy.Symbol(new_param)).on(qubit))
-                    else:
-                        prop_cirq_circuit.append(cirq.rx(sympy.Symbol(new_param)).on(qubit))
-                    #### add value to resolver ####
-                    proposal_symbols_to_values[new_param] = self.symbol_to_value["th_"+str(ko)]
-                ko+=1
-
-        connections, _ = self.scan_qubits(proposal_circuit)
-        valid=True
-        #now check if we have killed all the gates in a given qubit. If so, will return valid=False
-        for q, path in connections.items():
-            if len(path) == 0:
-                valid = False
-            else:
-                if ("rx" not in path) and "rz" not in path):
-                    valid = False
-        return valid, proposal_circuit, proposal_symbols_to_values, prop_cirq_circuit
+    def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols):
+        max_its = len(indexed_circuit)
+        reduced = True
+        count=0
+        while reduced is True and count < max_its:
+            indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = self.kill_one_unitary(indexed_circuit, symbol_to_value, index_to_symbols)
+            print(reduced)
+            count+=1
+        return indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced
 
     def kill_one_unitary(self, indexed_circuit, symbol_to_value, index_to_symbols):
         """
@@ -79,6 +48,10 @@ class UnitaryMurder(Basic):
                                 operators=tfq.convert_to_tensor([self.observable]))
         original_energy = np.float32(np.squeeze(tf.math.reduce_sum(ftq_original_energy, axis=-1, keepdims=True)))
 
+        if self.testing:
+            print("ORIGINAL ENERGY", original_energy, ftq_original_energy)
+            print(symbol_to_value)
+            print("----")
         circuit_proposals=[]
         circuit_proposals_energies=[]
 
@@ -87,7 +60,7 @@ class UnitaryMurder(Basic):
         ###### STEP 2: Loop over original circuit. #####
         for index_victim, victim in enumerate(indexed_circuit):
             #this first index will be the one that - potentially - will be deleted
-            if j < self.number_of_cnots:
+            if victim < self.number_of_cnots:
                 pass
             else:
                 info_gate = [index_victim, victim]
@@ -95,13 +68,20 @@ class UnitaryMurder(Basic):
                 if valid:
 
                     tfqcircuit_proposal = tfq.convert_to_tensor([cirq.resolve_parameters(prop_cirq_circuit, proposal_symbols_to_values)])
-                    expval_proposal = expectation_layer(  tfqcircuit_proposal,
+                    expval_proposal = self.expectation_layer(tfqcircuit_proposal,
                                             operators=tfq.convert_to_tensor([self.observable]))
                     proposal_energy = np.float32(np.squeeze(tf.math.reduce_sum(expval_proposal, axis=-1, keepdims=True)))
 
+                    if self.testing:
+                        print("\n")
+                        print("PROPOSAL ENERGY: ", proposal_energy)
+                        print(proposal_symbols_to_values)
+                        print(cirq.resolve_parameters(prop_cirq_circuit, proposal_symbols_to_values))
+                        print("\n")
+
                     if self.accepting_criteria(proposal_energy, original_energy):
                         circuit_proposals.append([proposal_circuit, proposal_symbols_to_values,proposal_energy])
-                        circuit_proposals_energies.append(new_energy)
+                        circuit_proposals_energies.append(proposal_energy)
 
         ### STEP 3: keep the one of lowest energy (if there're many)
         if len(circuit_proposals)>0:
@@ -118,6 +98,51 @@ class UnitaryMurder(Basic):
         we give %1 in exchange of killing an unitary.
         """
         return np.abs(e_new/e_old) > .99
+
+
+    def create_proposal_without_gate(self, info_gate):
+        """
+        Create a circuit without the gate corresponding to info_gate.
+        Also, if the new circuit has no gates enough, returns bool value (valid)
+        so to not consider this into tfq.expectation_layer.
+        """
+
+        index_victim, victim = info_gate
+
+        proposal_circuit=[]
+        proposal_symbols_to_values = {}
+        prop_cirq_circuit=cirq.Circuit()
+
+        ko=0 #index_of_smymbols_added_to_circuit
+        for ind_survivors, gate_survivors in enumerate(self.indexed_circuit):
+            if gate_survivors < self.number_of_cnots:
+                proposal_circuit.append(gate_survivors)
+                control, target = self.indexed_cnots[str(gate_survivors)]
+                prop_cirq_circuit.append(cirq.CNOT.on(self.qubits[control], self.qubits[target]))
+            else:
+                if ind_survivors != index_victim:
+                    proposal_circuit.append(gate_survivors)
+                    qubit = self.qubits[(gate_survivors-self.number_of_cnots)%self.n_qubits]
+                    new_param = "th_"+str(len(proposal_symbols_to_values.keys()))
+                    if 0 <= gate_survivors-self.number_of_cnots < self.n_qubits:
+                        prop_cirq_circuit.append(cirq.rz(sympy.Symbol(new_param)).on(qubit))
+                    else:
+                        prop_cirq_circuit.append(cirq.rx(sympy.Symbol(new_param)).on(qubit))
+                    #### add value to resolver ####
+                    proposal_symbols_to_values[new_param] = self.symbol_to_value["th_"+str(ko)]
+                ko+=1
+
+        connections, _ = self.scan_qubits(proposal_circuit)
+        valid=True
+        #now check if we have killed all the gates in a given qubit. If so, will return valid=False
+        for q, path in connections.items():
+            if len(path) == 0:
+                valid = False
+            else:
+                if ("rx" not in path) and ("rz" not in path):
+                    valid = False
+
+        return valid, proposal_circuit, proposal_symbols_to_values, prop_cirq_circuit
 
 
     def scan_qubits(self, indexed_circuit):

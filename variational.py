@@ -53,11 +53,9 @@ class VQE(Basic):
         symbols_to_values: dictionary with the values of each symbol. Importantly, they should respect the order of indexed_circuit, i.e. list(symbols_to_values.keys()) = self.give_circuit(indexed_circuit)[1]
         """
         circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
-
-        tfqcircuit = tfq.convert_to_tensor([circuit])
-        model = self.TFQ_model(symbols, symbols_to_values=symbols_to_values)
-
-        energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
+        tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(circuit, symbols_to_values)])
+        tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]))
+        energy = np.squeeze(tf.math.reduce_sum(tfq_layer, axis=-1))
         return energy
 
 
