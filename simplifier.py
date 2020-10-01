@@ -6,11 +6,12 @@ import sympy
 class Simplifier(Basic):
     def __init__(self, n_qubits=3):
         """
-        simplifies the circuit according to some rules that preserve the expected value of target hamiltornian.
+        Simplifies the circuit according to some rules that preserve the expected value of target hamiltornian.
         takes help from index_to_symbol (dict) and symbol_to_value (dict).
         Importantly, it keeps the parameter values of the untouched gates.
 
-        It applies the following rules:
+        Works on circuits containing CNOTS, Z-rotations and X-rotations.It applies the following rules:
+        
         Rules:  1. CNOT just after initializing, it does nothing (if |0> initialization).
                 2. Two consecutive and equal CNOTS compile to identity.
                 3. Rotation around z axis of |0> only adds phase hence leaves invariant <H>. Either kill it or replace it by Rx(0) (if we have no Rx in that wire, i.e. the ansatz becomes too simple, TFQ runs into problems).
