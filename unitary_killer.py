@@ -29,7 +29,6 @@ class UnitaryMurder(Basic):
         count=0
         while reduced is True and count < max_its:
             indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = self.kill_one_unitary(indexed_circuit, symbol_to_value, index_to_symbols)
-            print(reduced)
             count+=1
         return indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced
 
