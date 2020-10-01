@@ -58,29 +58,33 @@ if __name__ == "__main__":
     evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=True)
     evaluator.lowest_energy = energy
 
-    ### create a mutation M (maybe this word is too fancy)
-    M_indices, M_symbols_to_values, M_idx_to_symbols = iid.randomly_place_almost_identity(indexed_circuit, symbol_to_value)
+    for iteration in range(args.reps):
 
-    ### simplify the circuit as much as possible
-    Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(M_indices, M_symbols_to_values, M_idx_to_symbols)
+        ### create a mutation M (maybe this word is too fancy)
+        M_indices, M_symbols_to_values, M_idx_to_symbols = iid.randomly_place_almost_identity(indexed_circuit, symbol_to_value)
 
-    ## compute the energy of the mutated-simplified circuit [Note 1]
-    MSenergy, MSsymbols_to_values, _ = vqe_handler.vqe(Sindices)
+        ### simplify the circuit as much as possible
+        Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(M_indices, M_symbols_to_values, M_idx_to_symbols)
 
-    if evaluator.accept_energy(MSenergy):
-        indexed_circuit, symbol_to_value, index_to_symbols = Sindices, MSsymbols_to_values, Sindex_to_symbols
-        # unitary slaughter: delete as many 1-qubit gates as possible, as long as the energy doesn't go up (we allow %1 increments per iteration)
-        cnt=0
-        reduced=True
-        lmax=len(indexed_circuit)
-        while reduced and cnt < lmax:
-            indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = killer.unitary_slaughter(indexed_circuit, symbol_to_value, index_to_symbols)
-            indexed_circuit, symbol_to_value, index_to_symbols = Simp.reduce_circuit(indexed_circuit, symbol_to_value, index_to_symbols)
-            cnt+=1
+        ## compute the energy of the mutated-simplified circuit [Note 1]
+        MSenergy, MSsymbols_to_values, _ = vqe_handler.vqe(Sindices)
 
-        evaluator.add_step(indexed_circuit, symbol_to_value, energy)
+        if evaluator.accept_energy(MSenergy):
+            indexed_circuit, symbol_to_value, index_to_symbols = Sindices, MSsymbols_to_values, Sindex_to_symbols
+            # unitary slaughter: delete as many 1-qubit gates as possible, as long as the energy doesn't go up (we allow %1 increments per iteration)
+            cnt=0
+            reduced=True
+            lmax=len(indexed_circuit)
+            while reduced and cnt < lmax:
+                indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = killer.unitary_slaughter(indexed_circuit, symbol_to_value, index_to_symbols)
+                indexed_circuit, symbol_to_value, index_to_symbols = Simp.reduce_circuit(indexed_circuit, symbol_to_value, index_to_symbols)
+                cnt+=1
 
-    print("current energy: ", energy)
-    print(vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
-    print("\n")
+            evaluator.add_step(indexed_circuit, symbol_to_value, energy)
+
+        print("current energy: ", energy)
+        print(vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
+        print("\n")
+
+        
 ### [Note 1]: Even if the circuit gets simplified to the original one, it's harmless to compute the energy again since i) you give another try to the optimization, ii) we have the EarlyStopping and despite of the added noise, it's supossed the seeds are close to optima.
