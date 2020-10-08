@@ -34,10 +34,19 @@ if __name__ == "__main__":
 
 
     begin = datetime.now()
+    #VQE in charge of continuous optimization
     vqe_handler = VQE(n_qubits=args.n_qubits, lr=0.01, epochs=2000, patience=100, random_perturbations=True, verbose=0, g=1, J = args.J)
+
+    #Evaluator keeps a record of the circuit and accepts or not certain configuration
     evaluator = Evaluator(n_qubits=args.n_qubits)
+
+    #IdInserter appends to a given circuit an identity resolution
     iid = IdInserter(n_qubits=args.n_qubits)
+
+    #Simplifier reduces gates number as much as possible while keeping same expected value of target hamiltonian
     Simp = Simplifier(n_qubits=args.n_qubits)
+
+    #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates.
     killer = UnitaryMurder(n_qubits=args.n_qubits, g=1, J = args.J)
 
     info = "\n\n\n\nYou are using GENETIC-VANS: \n"
@@ -86,5 +95,5 @@ if __name__ == "__main__":
         print(vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
         print("\n")
 
-        
+
 ### [Note 1]: Even if the circuit gets simplified to the original one, it's harmless to compute the energy again since i) you give another try to the optimization, ii) we have the EarlyStopping and despite of the added noise, it's supossed the seeds are close to optima.
