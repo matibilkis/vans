@@ -28,14 +28,16 @@ if __name__ == "__main__":
     parser.add_argument("--reps", type=int, default=15)
     parser.add_argument("--names", type=str, default="obj")
     parser.add_argument("--folder_result", type=str, default="results")
+    parser.add_argument("--noise", type=float, default=0.0)
+    parser.add_argument("--verbose", type=int, default=0)
+    parser.add_argument("--qepochs", type=int, default=2000)
 
 
     args = parser.parse_args()
 
-
     begin = datetime.now()
     #VQE in charge of continuous optimization
-    vqe_handler = VQE(n_qubits=args.n_qubits, lr=0.01, epochs=2000, patience=100, random_perturbations=True, verbose=0, g=1, J = args.J)
+    vqe_handler = VQE(n_qubits=args.n_qubits, lr=0.01, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=1, J = args.J, noise=args.noise)
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
     evaluator = Evaluator(n_qubits=args.n_qubits)
@@ -46,12 +48,13 @@ if __name__ == "__main__":
     #Simplifier reduces gates number as much as possible while keeping same expected value of target hamiltonian
     Simp = Simplifier(n_qubits=args.n_qubits)
 
-    #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates.
-    killer = UnitaryMurder(n_qubits=args.n_qubits, g=1, J = args.J)
+    #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
+    killer = UnitaryMurder(vqe_handler)
 
     info = "\n\n\n\nYou are using GENETIC-VANS: \n"
     info += f"len(n_qubits): {vqe_handler.n_qubits}\n" \
                         f"g: {vqe_handler.g}, \n" \
+                        f"noise: {args.noise}\n"\
                         f"J: {vqe_handler.J}\n" \
                         f"qlr: {vqe_handler.lr}\n" \
                         f"qepochs: {vqe_handler.epochs}\n" \
@@ -91,9 +94,8 @@ if __name__ == "__main__":
 
             evaluator.add_step(indexed_circuit, symbol_to_value, energy)
 
-        print("current energy: ", energy)
-        print(vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
-        print("\n")
-
+        to_print="current energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
+        print(to_print)
+        info+=to_print
 
 ### [Note 1]: Even if the circuit gets simplified to the original one, it's harmless to compute the energy again since i) you give another try to the optimization, ii) we have the EarlyStopping and despite of the added noise, it's supossed the seeds are close to optima.

@@ -5,7 +5,7 @@ from circuit_basics import Basic
 import tensorflow as tf
 
 class VQE(Basic):
-    def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, g=1, J=0):
+    def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, g=1, J=0, noise=0.0):
         """
         lr: learning_rate for each iteration of gradient descent
         epochs: number of gradient descent iterations (in this project)
@@ -24,6 +24,8 @@ class VQE(Basic):
         self.random_perturbations = random_perturbations
         self.verbose=verbose
         self.observable = self.ising_obs(g=g, J=J)
+        self.noise = float(noise)
+
 
     def ising_obs(self, g=1, J=0):
         self.g=g
@@ -54,7 +56,10 @@ class VQE(Basic):
         """
         circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
         tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(circuit, symbols_to_values)])
-        tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]))
+        if self.noise > 0:
+            tfq_layer = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise)))(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]))
+        else:
+            tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]))
         energy = np.squeeze(tf.math.reduce_sum(tfq_layer, axis=-1))
         return energy
 
@@ -66,11 +71,18 @@ class VQE(Basic):
         """
 
         circuit_input = tf.keras.Input(shape=(), dtype=tf.string)
-        output = tfq.layers.Expectation()(
-                    circuit_input,
-                    symbol_names=symbols,
-                    operators=tfq.convert_to_tensor([self.observable]),
-                    initializer=tf.keras.initializers.RandomUniform(minval=-np.pi, maxval=np.pi))
+        if self.noise > 0:
+            output = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise)))(
+                        circuit_input,
+                        symbol_names=symbols,
+                        operators=tfq.convert_to_tensor([self.observable]),
+                        initializer=tf.keras.initializers.RandomUniform(minval=-np.pi, maxval=np.pi))
+        else:
+            output = tfq.layers.Expectation()(
+                        circuit_input,
+                        symbol_names=symbols,
+                        operators=tfq.convert_to_tensor([self.observable]),
+                        initializer=tf.keras.initializers.RandomUniform(minval=-np.pi, maxval=np.pi))
         model = tf.keras.Model(inputs=circuit_input, outputs=output)
         adam = tf.keras.optimizers.Adam(learning_rate=self.lr)
         model.compile(optimizer=adam, loss='mse')
@@ -99,6 +111,6 @@ class VQE(Basic):
 
         qoutput = tf.ones((1, 1))*self.lower_bound_Eg
         h=model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.epochs,
-                  verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min")])
+                  verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min", min_delta=10**-3)])
         energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
         return energy,h

@@ -6,22 +6,19 @@ import tensorflow_quantum as tfq
 import tensorflow as tf
 
 class UnitaryMurder(Basic):
-    def __init__(self, n_qubits=3,  g=1, J=0, testing=False):
+    def __init__(self, vqe_handler, testing=False):
         """
         Scans a circuit, evaluates mean value of observable and retrieves a shorter circuit if the energy is not increased too much.
-        """
-        super(UnitaryMurder, self).__init__(n_qubits=n_qubits, testing=testing)
-        self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
-        self.expectation_layer = tfq.layers.Expectation() #this computes hamiltonian's mean value
-        self.observable = self.ising_obs(g=g, J=J) #shared with vqe module...
 
-    def ising_obs(self, g=1, J=0):
-        self.g=g
-        self.J=J
-        observable = [-float(0.5*g)*cirq.Z.on(q) for q in self.qubits]
-        for q in range(len(self.qubits)):
-            observable.append(-float(0.5*J)*cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
-        return observable
+        Takes as input vqe_handler object inheriting its observable and expectation_layer.
+        """
+        super(UnitaryMurder, self).__init__(n_qubits=vqe_handler.n_qubits, testing=testing)
+        self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
+        self.observable = vqe_handler.observable
+        if vqe_handler.noise > 0:
+            self.expectation_layer = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(vqe_handler.noise)))
+        else:
+            self.expectation_layer = tfq.layers.Expectation()
 
     def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols):
         max_its = len(indexed_circuit)
