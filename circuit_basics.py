@@ -1,6 +1,9 @@
 import cirq
 import numpy as np
 import sympy
+import pickle
+import os
+from glob import glob
 
 class Basic:
     def __init__(self, n_qubits=3, testing=False):
@@ -89,11 +92,65 @@ class Basic:
 
 
 class Evaluator(Basic):
-    def __init__(self, n_qubits=3):
-        super(Evaluator, self).__init__(n_qubits=n_qubits)
+    def __init__(self, args, info=None, loading=False):
+        super(Evaluator, self).__init__(n_qubits=args.n_qubits)
         self.raw_history = {}
         self.evolution = {}
         self.lowest_energy = None
+        if loading is False:
+            self.directory = self.create_folder(args,info)
+        self.displaying = "\n hola, soy VANS :) \n"
+
+    def create_folder(self,args, info):
+        if not os.path.exists("TFIM"):
+            os.makedirs("TFIM")
+        name_folder = "TFIM/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
+        if not os.path.exists(name_folder):
+            os.makedirs(name_folder)
+            nrun=0
+            final_folder = name_folder+"/run_"+str(nrun)
+            with open(name_folder+"/runs.txt", "w+") as f:
+                f.write(info)
+                f.close()
+            os.makedirs(final_folder)
+        else:
+            folder = os.walk(name_folder)
+            nrun=0
+            for k in list(folder)[0][1]:
+                if k[0]!=".":
+                    nrun+=1
+            final_folder = name_folder+"/run_"+str(nrun)
+            with open(name_folder+"/runs.txt", "r") as f:
+                a = f.readlines()[0]
+                f.close()
+            with open(name_folder+"/runs.txt", "w") as f:
+                f.write(info)
+                f.close()
+            os.makedirs(final_folder)
+        return final_folder
+
+    def save_dicts_and_displaying(self):
+        output = open(self.directory+"/raw_history.pkl", "wb")
+        pickle.dump(self.raw_history, output)
+        output.close()
+        output = open(self.directory+"/evolution.pkl", "wb")
+        pickle.dump(self.evolution, output)
+        output.close()
+        with open(self.directory+"/evolution.txt","w") as f:
+            f.write(self.displaying)
+            f.close()
+        return
+
+    def load_dicts_and_displaying(self,folder):
+        opp = open(folder+"/raw_history.pkl" "rb")
+        self.raw_history = pickle.load(opp)
+        opp = open(folder+"/evolution.pkl", "rb")
+        self.evolution = pickle.load(opp)
+        with open(folder+"/evolution.txt", "r") as f:
+            a = f.readlines()[0]
+            f.close()
+        self.displaying = f
+        return self.displaying
 
     def accept_energy(self, E, noise=False):
         """
