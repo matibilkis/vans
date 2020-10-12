@@ -23,6 +23,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--J", type=float, default=0.0)
+    parser.add_argument("--g", type=float, default=1.0)
+
     parser.add_argument("--n_qubits", type=int, default=3)
 
     parser.add_argument("--reps", type=int, default=15)
@@ -39,18 +41,6 @@ if __name__ == "__main__":
     #VQE in charge of continuous optimization
     vqe_handler = VQE(n_qubits=args.n_qubits, lr=0.01, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=1, J = args.J, noise=args.noise)
 
-    #Evaluator keeps a record of the circuit and accepts or not certain configuration
-    evaluator = Evaluator(n_qubits=args.n_qubits)
-
-    #IdInserter appends to a given circuit an identity resolution
-    iid = IdInserter(n_qubits=args.n_qubits)
-
-    #Simplifier reduces gates number as much as possible while keeping same expected value of target hamiltonian
-    Simp = Simplifier(n_qubits=args.n_qubits)
-
-    #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
-    killer = UnitaryMurder(vqe_handler)
-
     info = "\n\n\n\nYou are using GENETIC-VANS: \n"
     info += f"len(n_qubits): {vqe_handler.n_qubits}\n" \
                         f"g: {vqe_handler.g}, \n" \
@@ -61,6 +51,19 @@ if __name__ == "__main__":
                         f"patience: {vqe_handler.patience}\n" \
                         f"genetic runs: {args.reps}\n"
     print(info)
+
+    #Evaluator keeps a record of the circuit and accepts or not certain configuration
+    evaluator = Evaluator(args, info=info)
+    evaluator.displaying +=info
+    #IdInserter appends to a given circuit an identity resolution
+    iid = IdInserter(n_qubits=args.n_qubits)
+
+    #Simplifier reduces gates number as much as possible while keeping same expected value of target hamiltonian
+    Simp = Simplifier(n_qubits=args.n_qubits)
+
+    #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
+    killer = UnitaryMurder(vqe_handler)
+
 
     ### begin with a product ansatz
     indexed_circuit=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
@@ -94,8 +97,10 @@ if __name__ == "__main__":
 
             evaluator.add_step(indexed_circuit, symbol_to_value, energy)
 
-        to_print="current energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
+        to_print="\n\n"+str(["*"]*20)+"\n"+str(str(["*"]*20))+"\ncurrent energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
+        to_print+="\n\n"
         print(to_print)
-        info+=to_print
-
+        evaluator.displaying +=to_print
+        print(to_print)
+    evaluator.save_dicts_and_displaying()
 ### [Note 1]: Even if the circuit gets simplified to the original one, it's harmless to compute the energy again since i) you give another try to the optimization, ii) we have the EarlyStopping and despite of the added noise, it's supossed the seeds are close to optima.
