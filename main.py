@@ -6,11 +6,12 @@ import tensorflow_quantum as tfq
 from tqdm import tqdm
 import tensorflow as tf
 
-from variational import VQE
-from circuit_basics import Evaluator
-from idinserter import IdInserter
-from simplifier import Simplifier
-from unitary_killer import UnitaryMurder
+
+from utilities.variational import VQE
+from utilities.circuit_basics import Evaluator
+from utilities.idinserter import IdInserter
+from utilities.simplifier import Simplifier
+from utilities.unitary_killer import UnitaryMurder
 
 
 import argparse
@@ -24,9 +25,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--J", type=float, default=0.0)
     parser.add_argument("--g", type=float, default=1.0)
-
     parser.add_argument("--n_qubits", type=int, default=3)
-
     parser.add_argument("--reps", type=int, default=15)
     parser.add_argument("--names", type=str, default="obj")
     parser.add_argument("--folder_result", type=str, default="results")
@@ -41,8 +40,8 @@ if __name__ == "__main__":
     #VQE in charge of continuous optimization
     vqe_handler = VQE(n_qubits=args.n_qubits, lr=0.01, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=args.g, J = args.J, noise=args.noise)
 
-    info = "\n\n\n\nYou are using GENETIC-VANS: \n"
-    info += f"len(n_qubits): {vqe_handler.n_qubits}\n" \
+    start = datetime.now()
+    info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
                         f"g: {vqe_handler.g}, \n" \
                         f"noise: {args.noise}\n"\
                         f"J: {vqe_handler.J}\n" \
@@ -97,7 +96,7 @@ if __name__ == "__main__":
 
             evaluator.add_step(indexed_circuit, symbol_to_value, energy)
 
-        to_print="\n\n"+str(["*"]*20)+"\n"+str(str(["*"]*20))+"\ncurrent energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
+        to_print="\nIteration #{}\nTime since beggining:{}\n ".format(iteration, datetime.now()-start)+str("**"*20)+"\n"+str(str("*"*20))+"\ncurrent energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
         to_print+="\n\n"
         print(to_print)
         evaluator.displaying +=to_print

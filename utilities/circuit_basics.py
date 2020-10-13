@@ -104,7 +104,12 @@ class Evaluator(Basic):
     def create_folder(self,args, info):
         if not os.path.exists("TFIM"):
             os.makedirs("TFIM")
-        name_folder = "TFIM/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
+        if float(args.noise) > 0:
+            if not os.path.exists("TFIM/noisy"):
+                os.makedirs("TFIM/noisy")
+            name_folder = "TFIM/noisy/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)+ " noise "+str(args.noise)
+        else:
+            name_folder = "TFIM/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
         if not os.path.exists(name_folder):
             os.makedirs(name_folder)
             nrun=0
@@ -124,7 +129,9 @@ class Evaluator(Basic):
                 a = f.readlines()[0]
                 f.close()
             with open(name_folder+"/runs.txt", "w") as f:
+                f.write(str(nrun)+"\n")
                 f.write(info)
+                f.write("\n")
                 f.close()
             os.makedirs(final_folder)
         return final_folder

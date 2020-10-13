@@ -1,7 +1,7 @@
 import numpy as np
 import cirq
 import tensorflow_quantum as tfq
-from circuit_basics import Basic
+from utilities.circuit_basics import Basic
 import tensorflow as tf
 
 class VQE(Basic):

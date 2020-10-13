@@ -1,4 +1,4 @@
-from circuit_basics import Basic
+from utilities.circuit_basics import Basic
 import numpy as np
 
 class IdInserter(Basic):
