@@ -7,7 +7,11 @@ for noise in [0, 0.01, 0.05, 0.1]:
             qeps = 500*nq
         else:
             qeps = 2000*nq
-        for J in np.arange(0, 1,.1):
+        for J in np.arange(.1, 1,.1):
             for g in np.arange(0,1,.1):
-                instruction = "python3 main.py --J "+str(J) + " --n_qubits "+str(nq)+" --reps "+str(10*nq)+ " --noise "+str(noise)+" --qepochs "+str(qeps)
-                os.system(instruction)
+                if J == .1 and g< 0.31:
+                    pass
+                else:
+
+                    instruction = "python3 main.py --J "+str(J) + " --n_qubits "+str(nq)+" --reps "+str(10*nq)+ " --noise "+str(noise)+" --qepochs "+str(qeps)+ " --g "+str(g)
+                    os.system(instruction)

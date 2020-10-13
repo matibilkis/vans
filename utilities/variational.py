@@ -3,10 +3,12 @@ import cirq
 import tensorflow_quantum as tfq
 from utilities.circuit_basics import Basic
 import tensorflow as tf
+import time
 
 class VQE(Basic):
     def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, g=1, J=0, noise=0.0):
         """
+
         lr: learning_rate for each iteration of gradient descent
         epochs: number of gradient descent iterations (in this project)
         patience: EarlyStopping parameter
@@ -14,6 +16,9 @@ class VQE(Basic):
         verbose: display progress or not
 
         &&ising model&& H = - g/2 \sum_i \Z_i - (J/2)*\sum_i X_i X_{i+1}
+
+
+        ** Some callbacks are used: EarlyStopping and TimeStopping, since tfq gets somehow stucked?
         """
 
         super(VQE, self).__init__(n_qubits=n_qubits)
@@ -25,6 +30,8 @@ class VQE(Basic):
         self.verbose=verbose
         self.observable = self.ising_obs(g=g, J=J)
         self.noise = float(noise)
+        self.max_time_training = 60*self.n_qubits
+
 
 
     def ising_obs(self, g=1, J=0):
@@ -111,6 +118,29 @@ class VQE(Basic):
 
         qoutput = tf.ones((1, 1))*self.lower_bound_Eg
         h=model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.epochs,
-                  verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min", min_delta=10**-3)])
+                  verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min", min_delta=10**-3), TimedStopping(seconds=self.max_time_training)])
         energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
         return energy,h
+
+
+class TimedStopping(tf.keras.callbacks.Callback):
+    '''Stop training when enough time has passed.
+    # Arguments
+        seconds: maximum time before stopping.
+        verbose: verbosity mode.
+    '''
+    def __init__(self, seconds=None, verbose=1):
+        super(TimedStopping, self).__init__()
+
+        self.start_time = 0
+        self.seconds = seconds
+        self.verbose = verbose
+
+    def on_train_begin(self, logs={}):
+        self.start_time = time.time()
+
+    def on_epoch_end(self, epoch, logs={}):
+        if time.time() - self.start_time > self.seconds:
+            self.model.stop_training = True
+            if self.verbose>0:
+                print('Stopping after %s seconds.' % self.seconds)
