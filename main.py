@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     begin = datetime.now()
     #VQE in charge of continuous optimization
-    vqe_handler = VQE(n_qubits=args.n_qubits, lr=0.01, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=1, J = args.J, noise=args.noise)
+    vqe_handler = VQE(n_qubits=args.n_qubits, lr=0.01, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=args.g, J = args.J, noise=args.noise)
 
     info = "\n\n\n\nYou are using GENETIC-VANS: \n"
     info += f"len(n_qubits): {vqe_handler.n_qubits}\n" \
