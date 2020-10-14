@@ -1,8 +1,11 @@
-from utilities.circuit_basics import Basic
+from utilities.circuit_basics import Basic, timeout
 import numpy as np
 import cirq
 import sympy
 from datetime import datetime
+
+
+
 class Simplifier(Basic):
     def __init__(self, n_qubits=3):
         """
@@ -454,6 +457,9 @@ class Simplifier(Basic):
                 [(-1j)*np.cos(alpha/2 - gamma/2)*np.sin(beta/2) + np.sin(beta/2)*np.sin(alpha/2 - gamma/2),
                  np.cos(beta/2)*np.cos(alpha/2 + gamma/2) + 1j*np.cos(beta/2)*np.sin(alpha/2 + gamma/2)]])
 
+    @timeout(1) #give only one second to solve..
+    def symp_solve(self,t,a,b,g):
+        return sympy.nsolve(t,[a,b,g],np.pi*np.array([np.random.random(),np.random.random(),np.random.random()]) ,maxsteps=3000, verify=True)
 
     def give_rz_rx_rz(self,u):
         """
@@ -481,38 +487,24 @@ class Simplifier(Basic):
         for eq, val in zip(eqs,s):
             t.append((eq)-np.round(val,5))
 
-        ### this while appears since the seed values may enter in vanishing gradients and through Matrix-zero error.
+        ### this while appears since the seed values may enter
+        # in vanishing gradients and through Matrix-zero error.
+        #it's not the most elegant method.
+        #Furthermore it the sympy solver sometimes gets stucked
+        #so we use signal to retrieve error after 1sec.
         error=True
         while error:
+            now = (datetime.now()-st).total_seconds()
             try:
-                if (datetime.now()-st).total_seconds()>10:
-                    print("trying with ",u)
-                    np.save("u",u)
-                solution = sympy.nsolve(t,[a,b,g],np.pi*np.array([np.random.random(),np.random.random(),np.random.random()]) ,maxsteps=3000, verify=True)
+                solution = self.symp_solve(t,a,b,g)
                 vals = np.array(solution.values()).astype(np.complex64)
                 error=False
             except Exception:
                 error=True
-                if (datetime.now()-st).total_seconds() > 10:
-                    print("i'm delaying in the rz_rx_rz!! like ",(datetime.now()-st).total_seconds() , " secs")
-                    print("\nunitary: ", u)
+
+                if now > 5:
                     np.random.seed(datetime.now().microsecond)
+                    if now > 100:
+                        print("i'm delaying in the rz_rx_rz!! like ",(datetime.now()-st).total_seconds() , " secs")
+                        print("\nunitary: ", u)
         return vals
-
-
-
-# the same (and equal to zero)#
-    #rx_next = False
-    #for ngs in path[ind+1:]:
-#        if ngs in ["rx"]:___#
-#        rx_next = True
-#        break
-#### if you run out of gates: add Rx at both control and target
-#if rx_next is False:#
-#    new_indexed_circuit[places_gates[str(q)][ind]] = self.number_of_cnots+self.n_qubits+int(q)#
-#    new_indexed_circuit[places_gates[str(others[0])][jind]] = self.number_of_cnots+self.n_qubits+int(others[0])
-    #for qub in [q, others[0]]:
-#        sname="th_"+str(len(list(NRE.keys())))
-#        NRE[sname] = 0
-#        symbols_on[str(qub)].append(sname)
-#break

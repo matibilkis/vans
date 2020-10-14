@@ -75,7 +75,7 @@ if __name__ == "__main__":
     for iteration in range(args.reps):
         relevant=False
         ### create a mutation M (maybe this word is too fancy)
-        M_indices, M_symbols_to_values, M_idx_to_symbols = iid.randomly_place_almost_identity(indexed_circuit, symbol_to_value)
+        M_indices, M_symbols_to_values, M_idx_to_symbols = iid.place_almost_identity(indexed_circuit, symbol_to_value)
 
         ### simplify the circuit as much as possible
         Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(M_indices, M_symbols_to_values, M_idx_to_symbols)

@@ -13,8 +13,9 @@ class IdInserter(Basic):
         self.init_params = initialization
 
 
-    def randomly_place_almost_identity(self, indexed_circuit, symbol_to_value):
-        block_to_insert, insertion_index = self.choose_block(indexed_circuit)
+    def place_almost_identity(self, indexed_circuit, symbol_to_value, random=True, block_to_insert=None, insertion_index=None):
+        if random:
+            block_to_insert, insertion_index = self.choose_block(indexed_circuit)
         Iindexed_circuit, Isymbol_to_value, Iindex_to_symbols = self.inserter(indexed_circuit, symbol_to_value, block_to_insert, insertion_index)
         return Iindexed_circuit, Isymbol_to_value, Iindex_to_symbols
 
