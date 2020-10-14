@@ -101,5 +101,7 @@ if __name__ == "__main__":
         print(to_print)
         evaluator.displaying +=to_print
         print(to_print)
-    evaluator.save_dicts_and_displaying()
+
+        ## save results of iteration.
+        evaluator.save_dicts_and_displaying()
 ### [Note 1]: Even if the circuit gets simplified to the original one, it's harmless to compute the energy again since i) you give another try to the optimization, ii) we have the EarlyStopping and despite of the added noise, it's supossed the seeds are close to optima.

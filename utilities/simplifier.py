@@ -2,7 +2,7 @@ from utilities.circuit_basics import Basic
 import numpy as np
 import cirq
 import sympy
-
+from datetime import datetime
 class Simplifier(Basic):
     def __init__(self, n_qubits=3):
         """
@@ -465,7 +465,7 @@ class Simplifier(Basic):
         a = sympy.Symbol("a")
         b = sympy.Symbol("b")
         g = sympy.Symbol("g")
-
+        st = datetime.now()
         eqs = [sympy.exp(-sympy.I*.5*(a+g))*sympy.cos(.5*b) ,
                -sympy.I*sympy.exp(-sympy.I*.5*(a-g))*sympy.sin(.5*b),
                 sympy.exp(sympy.I*.5*(a+g))*sympy.cos(.5*b)
@@ -490,6 +490,10 @@ class Simplifier(Basic):
                 error=False
             except Exception:
                 error=True
+                if (datetime.now()-st).total_seconds() > 10:
+                    print("i'm delaying in the rz_rx_rz!! like ",(datetime.now()-st).total_seconds() , " secs")
+                    print("\nunitary: ", u)
+                    np.random.seed(datetime.now().microsecond)
         return vals
 
 
