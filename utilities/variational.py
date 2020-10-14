@@ -15,7 +15,7 @@ class VQE(Basic):
         random_perturbations: if True adds to model's trainable variables random perturbations around (-pi/2, pi/2) with probability %10
         verbose: display progress or not
 
-        &&ising model&& H = - g/2 \sum_i \Z_i - (J/2)*\sum_i X_i X_{i+1}
+        &&ising model&& H = - g \sum_i \Z_i - (J) *\sum_i X_i X_{i+1}
 
 
         ** Some callbacks are used: EarlyStopping and TimeStopping, since tfq gets somehow stucked?
@@ -37,9 +37,9 @@ class VQE(Basic):
     def ising_obs(self, g=1, J=0):
         self.g=g
         self.J=J
-        observable = [-float(0.5*g)*cirq.Z.on(q) for q in self.qubits]
+        observable = [-float(g)*cirq.Z.on(q) for q in self.qubits]
         for q in range(len(self.qubits)):
-            observable.append(-float(0.5*J)*cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
+            observable.append(-float(J)*cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
         return observable
 
     def vqe(self, indexed_circuit, symbols_to_values=None):
