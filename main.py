@@ -73,7 +73,7 @@ if __name__ == "__main__":
     evaluator.lowest_energy = energy
 
     for iteration in range(args.reps):
-
+        relevant=False
         ### create a mutation M (maybe this word is too fancy)
         M_indices, M_symbols_to_values, M_idx_to_symbols = iid.randomly_place_almost_identity(indexed_circuit, symbol_to_value)
 
@@ -93,14 +93,13 @@ if __name__ == "__main__":
                 indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = killer.unitary_slaughter(indexed_circuit, symbol_to_value, index_to_symbols)
                 indexed_circuit, symbol_to_value, index_to_symbols = Simp.reduce_circuit(indexed_circuit, symbol_to_value, index_to_symbols)
                 cnt+=1
-
-            evaluator.add_step(indexed_circuit, symbol_to_value, energy)
+            relevant=True
+        evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=relevant)
 
         to_print="\nIteration #{}\nTime since beggining:{}\n ".format(iteration, datetime.now()-start)+str("**"*20)+"\n"+str(str("*"*20))+"\ncurrent energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
         to_print+="\n\n"
         print(to_print)
         evaluator.displaying +=to_print
-        print(to_print)
 
         ## save results of iteration.
         evaluator.save_dicts_and_displaying()

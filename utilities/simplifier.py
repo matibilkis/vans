@@ -485,6 +485,9 @@ class Simplifier(Basic):
         error=True
         while error:
             try:
+                if (datetime.now()-st).total_seconds()>10:
+                    print("trying with ",u)
+                    np.save("u",u)
                 solution = sympy.nsolve(t,[a,b,g],np.pi*np.array([np.random.random(),np.random.random(),np.random.random()]) ,maxsteps=3000, verify=True)
                 vals = np.array(solution.values()).astype(np.complex64)
                 error=False
