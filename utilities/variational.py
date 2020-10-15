@@ -6,13 +6,16 @@ import tensorflow as tf
 import time
 
 class VQE(Basic):
-    def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, g=1, J=0, noise=0.0):
+    def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, g=1, J=0, noise=0.0, problem="TFIM"):
         """
 
         lr: learning_rate for each iteration of gradient descent
         epochs: number of gradient descent iterations (in this project)
         patience: EarlyStopping parameter
-        random_perturbations: if True adds to model's trainable variables random perturbations around (-pi/2, pi/2) with probability %10
+        random_perturbations: if True adds to model's trainable variables random perturbations around (-pi/2, pi/
+        problem: "ising", "xxz"
+
+        2) with probability %10
         verbose: display progress or not
 
         &&ising model&& H = - g \sum_i \Z_i - (J) *\sum_i X_i X_{i+1}
@@ -28,13 +31,33 @@ class VQE(Basic):
         self.patience = patience
         self.random_perturbations = random_perturbations
         self.verbose=verbose
-        self.observable = self.ising_obs(g=g, J=J)
+        self.observable = self.give_observable(problem, g, J)
         self.noise = float(noise)
         self.max_time_training = 60*self.n_qubits
+        self.hams = ["xxz", "TFIM"]
 
+    def give_observable(self,problem, g,J):
+        if problem=="TFIM":
+            return self.TFIM(g,J)
+        elif problem=="xxz":
+            return self.xxz_obs(g,J)
+        else:
+            print("please specify your hamiltonian.\n Available ones: "+str(self.hams))
+            return
+    def xxz_obs(self, g=1, J=0):
+        """
+        H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}
+        """
+        self.g = g
+        self.J = J
+        observable = [float(g)*cirq.Z.on(q) for q in self.qubits]
+        for q in range(len(self.qubits)):
+            observable.append(cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
+            observable.append(cirq.Y.on(self.qubits[q])*cirq.Y.on(self.qubits[(q+1)%len(self.qubits)]))
+            observable.append(float(J)*cirq.Z.on(self.qubits[q])*cirq.Z.on(self.qubits[(q+1)%len(self.qubits)]))
+        return observable
 
-
-    def ising_obs(self, g=1, J=0):
+    def TFIM(self, g=1, J=0):
         self.g=g
         self.J=J
         observable = [-float(g)*cirq.Z.on(q) for q in self.qubits]

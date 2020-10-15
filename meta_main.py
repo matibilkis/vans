@@ -1,12 +1,9 @@
 import os
 import numpy as np
 
-for noise in [0, 0.01]:
-    for nq in [4]:
-        if noise>0:
-            qeps = 500*nq
-        else:
-            qeps = 2000*nq
-        for J in np.arange(0, 4,.25):
-            instruction = "python3 main.py --J "+str(J) + " --n_qubits "+str(nq)+" --reps "+str(20*nq)+ " --noise "+str(noise)+" --qepochs "+str(qeps)+ " --g "+str(1)
-            os.system(instruction)
+
+for nq in [4]:
+    qeps = 10**4
+    for J in np.linspace(-1.1, 1.1,20):
+        instruction = "python3 main.py --J "+str(J) + " --n_qubits "+str(nq)+" --reps "+str(80)+ " --noise "+str(0)+" --qepochs "+str(qeps)+ " --g "+str(0.75) + " --problem xxz --qlr 0.005" 
+        os.system(instruction)

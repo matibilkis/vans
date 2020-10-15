@@ -32,13 +32,15 @@ if __name__ == "__main__":
     parser.add_argument("--noise", type=float, default=0.0)
     parser.add_argument("--verbose", type=int, default=0)
     parser.add_argument("--qepochs", type=int, default=2000)
+    parser.add_argument("--qlr", type=float, default=0.01)
+    parser.add_argument("--problem", type=str, default="TFIM")
 
 
     args = parser.parse_args()
 
     begin = datetime.now()
     #VQE in charge of continuous optimization
-    vqe_handler = VQE(n_qubits=args.n_qubits, lr=0.01, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=args.g, J = args.J, noise=args.noise)
+    vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=args.g, J = args.J, noise=args.noise, problem=args.problem)
 
     start = datetime.now()
     info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \

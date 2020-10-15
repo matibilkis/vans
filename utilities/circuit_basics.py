@@ -131,14 +131,14 @@ class Evaluator(Basic):
 
 
     def create_folder(self,args, info):
-        if not os.path.exists("TFIM"):
-            os.makedirs("TFIM")
+        if not os.path.exists(args.problem):
+            os.makedirs(args.problem)
         if float(args.noise) > 0:
-            if not os.path.exists("TFIM/noisy"):
-                os.makedirs("TFIM/noisy")
-            name_folder = "TFIM/noisy/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)+ " noise "+str(args.noise)
+            if not os.path.exists(args.problem+"/noisy"):
+                os.makedirs(args.problem+"/noisy")
+            name_folder = args.problem+"/noisy/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)+ " noise "+str(args.noise)
         else:
-            name_folder = "TFIM/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
+            name_folder = args.problem+"/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
         if not os.path.exists(name_folder):
             os.makedirs(name_folder)
             nrun=0
@@ -167,9 +167,9 @@ class Evaluator(Basic):
 
     def load(self,args, nrun=0):
         if float(args["noise"]) > 0:
-            name_folder = "TFIM/noisy/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])+ " noise "+str(args["noise"])
+            name_folder = args.problem+"/noisy/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])+ " noise "+str(args["noise"])
         else:
-            name_folder = "TFIM/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])
+            name_folder = args.problem+"/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])
         self.load_dicts_and_displaying(name_folder+"/run_"+str(nrun))
         return
 
