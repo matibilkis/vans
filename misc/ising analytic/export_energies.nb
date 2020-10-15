@@ -1,0 +1,174 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.1' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      5179,        164]
+NotebookOptionsPosition[      4484,        143]
+NotebookOutlinePosition[      4878,        159]
+CellTagsIndexPosition[      4835,        156]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"g", ",", "L"}], "}"}], "=", 
+   RowBox[{"{", 
+    RowBox[{"1", ",", "4"}], "}"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{
+    RowBox[{"op", "[", 
+     RowBox[{"n_Integer", ",", "k_Integer", ",", 
+      RowBox[{"a_", "?", "MatrixQ"}]}], "]"}], "/;", 
+    RowBox[{
+     RowBox[{"1", "\[LessEqual]", "k", "\[LessEqual]", "n"}], "&&", 
+     RowBox[{
+      RowBox[{"Dimensions", "[", "a", "]"}], "\[Equal]", 
+      RowBox[{"{", 
+       RowBox[{"2", ",", "2"}], "}"}]}]}]}], ":=", 
+   RowBox[{"KroneckerProduct", "[", 
+    RowBox[{
+     RowBox[{"IdentityMatrix", "[", 
+      RowBox[{
+       RowBox[{"2", "^", 
+        RowBox[{"(", 
+         RowBox[{"k", "-", "1"}], ")"}]}], ",", "SparseArray"}], "]"}], ",", 
+     "a", ",", 
+     RowBox[{"IdentityMatrix", "[", 
+      RowBox[{
+       RowBox[{"2", "^", 
+        RowBox[{"(", 
+         RowBox[{"n", "-", "k"}], ")"}]}], ",", "SparseArray"}], "]"}]}], 
+    "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{
+    RowBox[{"sz", "[", 
+     RowBox[{"n_Integer", ",", "k_Integer"}], "]"}], "/;", 
+    RowBox[{"1", "\[LessEqual]", "k", "\[LessEqual]", "n"}]}], ":=", 
+   RowBox[{"op", "[", 
+    RowBox[{"n", ",", "k", ",", 
+     RowBox[{"PauliMatrix", "[", "3", "]"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{
+    RowBox[{"sx", "[", 
+     RowBox[{"n_Integer", ",", "k_Integer"}], "]"}], "/;", 
+    RowBox[{"1", "\[LessEqual]", "k", "\[LessEqual]", "n"}]}], ":=", 
+   RowBox[{"op", "[", 
+    RowBox[{"n", ",", "k", ",", 
+     RowBox[{"PauliMatrix", "[", "1", "]"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"HH", "[", 
+    RowBox[{
+     RowBox[{"n_Integer", "/;", 
+      RowBox[{"n", "\[GreaterEqual]", "3"}]}], ",", "g_", ",", "J_"}], "]"}], 
+   ":=", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"-", "g"}], "*", 
+     RowBox[{"Sum", "[", 
+      RowBox[{
+       RowBox[{"sz", "[", 
+        RowBox[{"n", ",", "k"}], "]"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"k", ",", "n"}], "}"}]}], "]"}]}], "-", 
+    RowBox[{"J", "*", 
+     RowBox[{"Sum", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"sx", "[", 
+         RowBox[{"n", ",", "k"}], "]"}], ".", 
+        RowBox[{"sx", "[", 
+         RowBox[{"n", ",", 
+          RowBox[{"Mod", "[", 
+           RowBox[{
+            RowBox[{"k", "+", "1"}], ",", "n", ",", "1"}], "]"}]}], "]"}]}], 
+       ",", 
+       RowBox[{"{", 
+        RowBox[{"k", ",", "n"}], "}"}]}], "]"}]}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"num", " ", "=", 
+   RowBox[{"Table", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"kk", "=", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"HH", "[", 
+          RowBox[{"L", ",", "g", ",", "J"}], "]"}], "//", "Eigenvalues"}], "//",
+         "Min"}]}], ";", "kk"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"J", ",", "0", ",", "3.75", ",", ".25"}], "}"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Export", "[", 
+  RowBox[{"\"\<TFIM4.csv\>\"", ",", "num"}], 
+  "]"}], "\[IndentingNewLine]"}], "Input",
+ CellChangeTimes->{{3.811747760116335*^9, 3.811747805854804*^9}},
+ CellLabel->"In[9]:=",ExpressionUUID->"b8ac5f54-2713-474a-a187-e7653b4d479c"],
+
+Cell[BoxData["\<\"TFIM4.csv\"\>"], "Output",
+ CellChangeTimes->{3.811747766375978*^9, 3.811747806226986*^9},
+ CellLabel->"Out[15]=",ExpressionUUID->"9c129d65-d2ed-434c-8446-80d06d6c7020"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Directory", "[", "]"}]], "Input",
+ CellChangeTimes->{{3.811747792586771*^9, 3.811747793669077*^9}},
+ CellLabel->"In[8]:=",ExpressionUUID->"07e63b0a-26e8-4606-88d2-5ab14c93a607"],
+
+Cell[BoxData["\<\"/home/cooper-cooper/Desktop/vans\"\>"], "Output",
+ CellChangeTimes->{3.811747793917767*^9},
+ CellLabel->"Out[8]=",ExpressionUUID->"aad7eb40-9f34-4378-bf59-728b4d3eb3ab"]
+}, Open  ]]
+},
+WindowSize->{1440., 768.75},
+WindowMargins->{{0, Automatic}, {0, Automatic}},
+FrontEndVersion->"12.1 for Linux x86 (64-bit) (March 18, 2020)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"c578d836-6525-4c63-9201-1bb12b3442d9"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 3270, 102, 195, "Input",ExpressionUUID->"b8ac5f54-2713-474a-a187-e7653b4d479c"],
+Cell[3853, 126, 187, 2, 33, "Output",ExpressionUUID->"9c129d65-d2ed-434c-8446-80d06d6c7020"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[4077, 133, 201, 3, 29, "Input",ExpressionUUID->"07e63b0a-26e8-4606-88d2-5ab14c93a607"],
+Cell[4281, 138, 187, 2, 33, "Output",ExpressionUUID->"aad7eb40-9f34-4378-bf59-728b4d3eb3ab"]
+}, Open  ]]
+}
+]
+*)
+
+(* End of internal cache information *)
+
