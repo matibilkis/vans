@@ -122,7 +122,7 @@ class Evaluator(Basic):
         else:
             super(Evaluator, self).__init__(n_qubits=args["n_qubits"])
             args_load={}
-            for str,default in zip(["n_qubits", "J", "g","noise"], [3,0.,1.,0.]):
+            for str,default in zip(["n_qubits", "J", "g","noise","problem"], [3,0.,1.,0.,"TFIM"]):
                 if str not in list(args.keys()):
                     args_load[str] = default
                 else:
@@ -167,9 +167,9 @@ class Evaluator(Basic):
 
     def load(self,args, nrun=0):
         if float(args["noise"]) > 0:
-            name_folder = args.problem+"/noisy/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])+ " noise "+str(args["noise"])
+            name_folder = args["problem"]+"/noisy/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])+ " noise "+str(args["noise"])
         else:
-            name_folder = args.problem+"/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])
+            name_folder = args["problem"]+"/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])
         self.load_dicts_and_displaying(name_folder+"/run_"+str(nrun))
         return
 
