@@ -218,6 +218,7 @@ class Evaluator(Basic):
         self.raw_history[len(list(self.raw_history.keys()))] = [self.give_unitary(indices, resolver), energy, indices, resolver]
         if relevant:
             self.evolution[len(list(self.evolution.keys()))] = [self.give_unitary(indices, resolver), energy, indices,resolver]
+            self.lowest_energy = energy
         if self.lowest_energy is None:
             self.lowest_energy = energy
         return
