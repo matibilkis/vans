@@ -501,9 +501,8 @@ class Simplifier(Basic):
                 error=False
             except Exception:
                 error=True
-
                 if now > 5:
-                    np.random.seed(datetime.now().microsecond)
+                    np.random.seed(datetime.now().microsecond + datetime.now().second)
                     if now > 100:
                         print("i'm delaying in the rz_rx_rz!! like ",(datetime.now()-st).total_seconds() , " secs")
                         print("\nunitary: ", u)

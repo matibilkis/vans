@@ -92,8 +92,9 @@ class UnitaryMurder(Basic):
     def accepting_criteria(self, e_new, e_old):
         """
         we give %1 in exchange of killing an unitary.
-        """
-        return np.abs(e_new/e_old) > .99
+        # """
+        # return np.abs(e_new/e_old) > .99
+        return (e_new-e_old)/np.abs(e_old) < 0.01
 
 
     def create_proposal_without_gate(self, info_gate):

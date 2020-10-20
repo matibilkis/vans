@@ -203,10 +203,16 @@ class Evaluator(Basic):
 
         E: energy after some optimization (to be accepted or not)
         """
-        if noise:
-            return E < self.lowest_energy
+        if self.lowest_energy is None:
+            return True
         else:
+            # return E < self.lowest_energy
             return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
+
+        # if noise:
+            # return E < self.lowest_energy
+        # else:
+            # return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
 
     def add_step(self,indices, resolver, energy, relevant=True):
         """
@@ -215,10 +221,13 @@ class Evaluator(Basic):
         energy: expected value of target hamiltonian on prepared circuit.
         relevant: if energy was minimized on that step
         """
-        self.raw_history[len(list(self.raw_history.keys()))] = [self.give_unitary(indices, resolver), energy, indices, resolver]
-        if relevant:
-            self.evolution[len(list(self.evolution.keys()))] = [self.give_unitary(indices, resolver), energy, indices,resolver]
-            self.lowest_energy = energy
+        self.raw_history[len(list(self.raw_history.keys()))] = [self.give_unitary(indices, resolver), energy, indices, resolver, self.lowest_energy]
+        if relevant == True:
+            self.evolution[len(list(self.evolution.keys()))] = [self.give_unitary(indices, resolver), energy, indices,resolver, self.lowest_energy]
+            if self.lowest_energy is None:
+                self.lowest_energy = energy
+            elif energy < self.lowest_energy:
+                self.lowest_energy = energy
         if self.lowest_energy is None:
             self.lowest_energy = energy
         return
@@ -232,6 +241,7 @@ def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
     def decorator(func):
         def _handle_timeout(signum, frame):
             print("hey")
+            np.seed(datetime.now().microsecond + datetime.now().second)
             raise TimeoutError(error_message)
 
         def wrapper(*args, **kwargs):
