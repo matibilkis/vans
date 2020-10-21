@@ -221,15 +221,14 @@ class Evaluator(Basic):
         energy: expected value of target hamiltonian on prepared circuit.
         relevant: if energy was minimized on that step
         """
+        if self.lowest_energy is None:
+            self.lowest_energy = energy
+        elif energy < self.lowest_energy:
+            self.lowest_energy = energy
+
         self.raw_history[len(list(self.raw_history.keys()))] = [self.give_unitary(indices, resolver), energy, indices, resolver, self.lowest_energy]
         if relevant == True:
             self.evolution[len(list(self.evolution.keys()))] = [self.give_unitary(indices, resolver), energy, indices,resolver, self.lowest_energy]
-            if self.lowest_energy is None:
-                self.lowest_energy = energy
-            elif energy < self.lowest_energy:
-                self.lowest_energy = energy
-        if self.lowest_energy is None:
-            self.lowest_energy = energy
         return
 
 
