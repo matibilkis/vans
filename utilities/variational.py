@@ -6,25 +6,33 @@ import tensorflow as tf
 import time
 
 class VQE(Basic):
-    def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, g=1, J=0, noise=0.0, problem="TFIM"):
+    def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, g=1, J=0, problem="TFIM", noise_model=None):
         """
 
         lr: learning_rate for each iteration of gradient descent
+
         epochs: number of gradient descent iterations (in this project)
+
         patience: EarlyStopping parameter
+
         random_perturbations: if True adds to model's trainable variables random perturbations around (-pi/2, pi/
         problem: "ising", "xxz"
 
-        2) with probability %10
+        noise_model: implemented in batches.
+            if None: self.noise_model = False
+            else: passed thorugh the Basic, to inherit the circuit_with_noise
+                if should be in the form of {"channel":"depolarizing", "p":float, "q_batch_size":int}
+
+        Notes: with probability %10
         verbose: display progress or not
 
         &&ising model&& H = - g \sum_i \Z_i - (J) *\sum_i X_i X_{i+1}
-
+        &&xxz model$&&  H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}
 
         ** Some callbacks are used: EarlyStopping and TimeStopping, since tfq gets somehow stucked?
         """
 
-        super(VQE, self).__init__(n_qubits=n_qubits)
+        super(VQE, self).__init__(n_qubits=n_qubits, noise_model=noise_model)
 
         self.lr = lr
         self.epochs = epochs
@@ -32,9 +40,12 @@ class VQE(Basic):
         self.random_perturbations = random_perturbations
         self.verbose=verbose
         self.observable = self.give_observable(problem, g, J)
-        self.noise = float(noise)
         self.max_time_training = 60*self.n_qubits
         self.hams = ["xxz", "TFIM"]
+        if noise_model is None:
+            self.noise=False
+        else:
+            self.noise=True
 
     def give_observable(self,problem, g,J):
         if problem=="TFIM":
@@ -70,8 +81,14 @@ class VQE(Basic):
         indexed_circuit: list with integers that correspond to unitaries (target qubit deduced from the value)
 
         symbols_to_values: dictionary with the values of each symbol. Importantly, they should respect the order of indexed_circuit, i.e. list(symbols_to_values.keys()) = self.give_circuit(indexed_circuit)[1]
+
+        if self.noise is True, we've a noise model!
+        Every detail of the noise model is inherited from circuit_basics
         """
-        circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
+        if self.noise is True:
+            circuit, symbols, index_to_symbol = self.give_circuit_with_noise(indexed_circuit)
+        else:
+            circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
         model = self.TFQ_model(symbols, symbols_to_values=symbols_to_values)
         energy, training_history = self.train_model(circuit, model)
         final_params = model.trainable_variables[0].numpy()
@@ -81,15 +98,19 @@ class VQE(Basic):
     def give_energy(self, indexed_circuit, symbols_to_values):
         """
         indexed_circuit: list with integers that correspond to unitaries (target qubit deduced from the value)
-
         symbols_to_values: dictionary with the values of each symbol. Importantly, they should respect the order of indexed_circuit, i.e. list(symbols_to_values.keys()) = self.give_circuit(indexed_circuit)[1]
+
+        if self.noise is True, we've a noise model!
+        Every detail of the noise model is inherited from circuit_basics
         """
-        circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
-        tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(circuit, symbols_to_values)])
-        if self.noise > 0:
-            tfq_layer = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise)))(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]))
+
+        if self.noise is True:
+            circuit, symbols, index_to_symbol = self.give_circuit_with_noise(indexed_circuit)
         else:
-            tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]))
+            circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
+
+        tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(circuit, symbols_to_values)])
+        tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]))
         energy = np.squeeze(tf.math.reduce_sum(tfq_layer, axis=-1))
         return energy
 
@@ -98,21 +119,16 @@ class VQE(Basic):
         """
         symbols: continuous parameters to optimize on
         symbol_to_value: if not None, dictionary with initial seeds
+
+        notice if self.noise is False self.q_batch_size=1
         """
 
         circuit_input = tf.keras.Input(shape=(), dtype=tf.string)
-        if self.noise > 0:
-            output = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(self.noise)))(
-                        circuit_input,
-                        symbol_names=symbols,
-                        operators=tfq.convert_to_tensor([self.observable]),
-                        initializer=tf.keras.initializers.RandomUniform(minval=-np.pi, maxval=np.pi))
-        else:
-            output = tfq.layers.Expectation()(
-                        circuit_input,
-                        symbol_names=symbols,
-                        operators=tfq.convert_to_tensor([self.observable]),
-                        initializer=tf.keras.initializers.RandomUniform(minval=-np.pi, maxval=np.pi))
+        output = tfq.layers.Expectation()(
+                circuit_input,
+                symbol_names=symbols,
+                operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size),
+                initializer=tf.keras.initializers.RandomUniform(minval=-np.pi, maxval=np.pi))
         model = tf.keras.Model(inputs=circuit_input, outputs=output)
         adam = tf.keras.optimizers.Adam(learning_rate=self.lr)
         model.compile(optimizer=adam, loss='mse')
@@ -120,14 +136,18 @@ class VQE(Basic):
         if symbols_to_values:
             model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32)))
         if self.random_perturbations:
-            ### actually add noise only %10 of the times.
+            ### add noise only %10 of the times.
             if np.random.uniform()<.1:
                 model.trainable_variables[0].assign( model.trainable_variables[0] + tf.random.uniform(model.trainable_variables[0].shape.as_list())*np.pi/2 )
         return model
 
     def train_model(self, circuit, model):
         """
-        circuit: cirq object with the parametrized unitaries unresolved (sympy symbols)
+        circuit:
+            if self.noise:
+                circuit is a list of cirq.Circuit (parametrized with the symbols), with len(circuit)=self.q_batch_size
+            else:
+                cirq object with the parametrized unitaries unresolved (sympy symbols)
         model: TFQ_model output
         """
 
@@ -137,49 +157,17 @@ class VQE(Basic):
             if k not in effective_qubits:
                 raise Error("NOT ALL QUBITS AFFECTED")
 
-        tfqcircuit = tfq.convert_to_tensor([circuit])
+        if self.noise is True:
+            tfqcircuit = tfq.convert_to_tensor([circuit])
+        else:
+            tfqcircuit = tfq.convert_to_tensor(circuit)
 
         qoutput = tf.ones((1, 1))*self.lower_bound_Eg
-        h=model.fit(x=tfqcircuit, y=qoutput, batch_size=1, epochs=self.epochs,
+        h=model.fit(x=tfqcircuit, y=qoutput, batch_size=self.q_batch_size, epochs=self.epochs,
                   verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min", min_delta=10**-3), TimedStopping(seconds=self.max_time_training)])
         energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
         return energy,h
 
-
-    def scan_qubits(self, indexed_circuit):
-        """
-        (borrowed from simplifier)
-
-        this function scans the circuit as described by {self.indexed_circuit}
-        and returns a dictionary with the gates acting on each qubit and the order of appearence on the original circuit
-        """
-        connections={str(q):[] for q in range(self.n_qubits)} #this saves the gates at each qubit. It does not respects the order.
-        places_gates = {str(q):[] for q in range(self.n_qubits)} #this saves, for each gate on each qubit, the position in the original indexed_circuit
-        flagged = [False]*len(indexed_circuit) #used to check if you have seen a cnot already, so not to append it twice to the qubit's dictionary
-
-        for nn,idq in enumerate(indexed_circuit): #sweep over all gates in original circuit's list
-            for q in range(self.n_qubits): #sweep over all qubits
-                if idq<self.number_of_cnots: #if the gate it's a CNOT or not
-                    control, target = indexed_cnots[str(idq)] #give control and target qubit
-                    if q in [control, target] and not flagged[nn]: #if the qubit we are looking at is affected by this CNOT, and we haven't add this CNOT to the dictionary yet
-                        connections[str(control)].append(idq)
-                        connections[str(target)].append(idq)
-                        places_gates[str(control)].append(nn)
-                        places_gates[str(target)].append(nn)
-                        flagged[nn] = True #so you don't add the other
-                else:
-                    if (idq-self.number_of_cnots)%self.n_qubits == q: #check if the unitary is applied to the qubit we are looking at
-                        if 0 <= idq - self.number_of_cnots< self.n_qubits:
-                            connections[str(q)].append("rz")
-                        elif self.n_qubits <= idq-self.number_of_cnots <  2*self.n_qubits:
-                            connections[str(q)].append("rx")
-                        places_gates[str(q)].append(nn)
-                    flagged[nn] = True #to check that all gates have been flagged
-        ####quick test
-        for k in flagged:
-            if k is False:
-                raise Error("not all flags in flagged are True!")
-        return connections, places_gates
 
 
 class TimedStopping(tf.keras.callbacks.Callback):

@@ -12,10 +12,15 @@ import signal
 
 
 class Basic:
-    def __init__(self, n_qubits=3, testing=False):
+    def __init__(self, n_qubits=3, testing=False, noise_model=None):
         """
         n_qubits: number of qubits on your ansatz
         testing: this is inherited by other classes to ease the debugging.
+        noise_model: implemented in batches.
+            if None: self.noise_model = False
+            else: passed thorugh the Basic, to inherit the circuit_with_noise
+                if should be in the form of {"channel":"depolarizing", "channel_params":array, "q_batch_size":int}
+
         """
         self.n_qubits = n_qubits
         self.qubits = cirq.GridQubit.rect(1, n_qubits)
@@ -35,6 +40,16 @@ class Basic:
 
         self.testing=testing
 
+        if noise_model is None:
+            self.q_batch_size = 1
+            self.noise=False
+        elif not isinstance(noise_model, dict):
+            print("noise_model should be passed as dict, readthedocs")
+        else:
+            self.noise = True
+            self.channel = noise_model["channel"]
+            self.channel_params = noise_model["channel_params"]
+            self.q_batch_size = noise_model["q_batch_size"]
 
     def append_to_circuit(self, ind, circuit, params, index_to_symbols):
         """
@@ -74,15 +89,6 @@ class Basic:
                 index_to_symbols[len(list(index_to_symbols.keys()))] = new_param
             return circuit, params, index_to_symbols
 
-    def give_qubit(self, ind):
-        """
-        returns a list of qubits affected by gate indexed via ind
-        used for cirq.insert_batch in the noise
-        """
-        if ind < self.number_of_cnots:
-            return self.indexed_cnots[str(ind)]
-        else:
-            return [(ind-self.number_of_cnots)%self.n_qubits]
 
     def give_circuit(self, lista):
         """
@@ -96,6 +102,26 @@ class Basic:
         circuit = cirq.Circuit(circuit)
         return circuit, symbols, index_to_symbols
 
+    def give_circuit_with_noise(self, lista):
+        """
+        noisy version of self.give_circuit(list).
+        It retrieves a batch of circuits, each one deterministically evolved under the channel (assuming the channel applyies unitary trasnformations with a given probability, given by self.channel_params).
+
+        retrieves (batch of) circuits (cirq object), of len(self.q_batch_size), with a list of each continuous parameter (symbols) and dictionary index_to_symbols giving the symbols for each position (useful for simplifier).
+
+        lista: list of integers in [0, 2*n + n(n-1)), with n = self.number_qubits. Each integer describes a possible unitary (CNOT, rx, rz).
+        """
+        qbatch=[]
+        for cind in range(self.q_batch_size):
+            circuit, symbols, index_to_symbols = [], [], {}
+            for k in lista:
+                circuit, symbols, index_to_symbols = self.append_to_circuit(k,circuit,symbols, index_to_symbols)
+                #### HERE YOU SHOULD PUT THE NOISE WITH SOME PROBABILITY (OR MAYBE IN APPEND_TO_CIRCUIT)
+            circuit = cirq.Circuit(circuit)
+        return circuit, symbols, index_to_symbols
+
+
+
     def give_unitary(self,idx, res):
         """
         a shortcut to resolve parameters.
@@ -105,6 +131,15 @@ class Basic:
         """
         return cirq.resolve_parameters(self.give_circuit(idx)[0], res)
 
+    def give_qubit(self, ind):
+        """
+        returns a list of qubits affected by gate indexed via ind
+        used for cirq.insert_batch in the noise
+        """
+        if ind < self.number_of_cnots:
+            return self.indexed_cnots[str(ind)]
+        else:
+            return [(ind-self.number_of_cnots)%self.n_qubits]
 
 class Evaluator(Basic):
     def __init__(self, args, info=None, loading=False, nrun_load=0):
