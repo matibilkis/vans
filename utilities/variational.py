@@ -146,6 +146,42 @@ class VQE(Basic):
         return energy,h
 
 
+    def scan_qubits(self, indexed_circuit):
+        """
+        (borrowed from simplifier)
+
+        this function scans the circuit as described by {self.indexed_circuit}
+        and returns a dictionary with the gates acting on each qubit and the order of appearence on the original circuit
+        """
+        connections={str(q):[] for q in range(self.n_qubits)} #this saves the gates at each qubit. It does not respects the order.
+        places_gates = {str(q):[] for q in range(self.n_qubits)} #this saves, for each gate on each qubit, the position in the original indexed_circuit
+        flagged = [False]*len(indexed_circuit) #used to check if you have seen a cnot already, so not to append it twice to the qubit's dictionary
+
+        for nn,idq in enumerate(indexed_circuit): #sweep over all gates in original circuit's list
+            for q in range(self.n_qubits): #sweep over all qubits
+                if idq<self.number_of_cnots: #if the gate it's a CNOT or not
+                    control, target = indexed_cnots[str(idq)] #give control and target qubit
+                    if q in [control, target] and not flagged[nn]: #if the qubit we are looking at is affected by this CNOT, and we haven't add this CNOT to the dictionary yet
+                        connections[str(control)].append(idq)
+                        connections[str(target)].append(idq)
+                        places_gates[str(control)].append(nn)
+                        places_gates[str(target)].append(nn)
+                        flagged[nn] = True #so you don't add the other
+                else:
+                    if (idq-self.number_of_cnots)%self.n_qubits == q: #check if the unitary is applied to the qubit we are looking at
+                        if 0 <= idq - self.number_of_cnots< self.n_qubits:
+                            connections[str(q)].append("rz")
+                        elif self.n_qubits <= idq-self.number_of_cnots <  2*self.n_qubits:
+                            connections[str(q)].append("rx")
+                        places_gates[str(q)].append(nn)
+                    flagged[nn] = True #to check that all gates have been flagged
+        ####quick test
+        for k in flagged:
+            if k is False:
+                raise Error("not all flags in flagged are True!")
+        return connections, places_gates
+
+
 class TimedStopping(tf.keras.callbacks.Callback):
     '''Stop training when enough time has passed.
     # Arguments

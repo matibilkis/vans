@@ -74,6 +74,15 @@ class Basic:
                 index_to_symbols[len(list(index_to_symbols.keys()))] = new_param
             return circuit, params, index_to_symbols
 
+    def give_qubit(self, ind):
+        """
+        returns a list of qubits affected by gate indexed via ind
+        used for cirq.insert_batch in the noise
+        """
+        if ind < self.number_of_cnots:
+            return self.indexed_cnots[str(ind)]
+        else:
+            return [(ind-self.number_of_cnots)%self.n_qubits]
 
     def give_circuit(self, lista):
         """
