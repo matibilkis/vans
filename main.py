@@ -6,11 +6,12 @@ import tensorflow_quantum as tfq
 from tqdm import tqdm
 import tensorflow as tf
 
-from variational import VQE
-from circuit_basics import Evaluator
-from idinserter import IdInserter
-from simplifier import Simplifier
-from unitary_killer import UnitaryMurder
+
+from utilities.variational import VQE
+from utilities.circuit_basics import Evaluator
+from utilities.idinserter import IdInserter
+from utilities.simplifier import Simplifier
+from utilities.unitary_killer import UnitaryMurder
 
 
 import argparse
@@ -24,25 +25,25 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--J", type=float, default=0.0)
     parser.add_argument("--g", type=float, default=1.0)
-
     parser.add_argument("--n_qubits", type=int, default=3)
-
     parser.add_argument("--reps", type=int, default=15)
     parser.add_argument("--names", type=str, default="obj")
     parser.add_argument("--folder_result", type=str, default="results")
     parser.add_argument("--noise", type=float, default=0.0)
     parser.add_argument("--verbose", type=int, default=0)
     parser.add_argument("--qepochs", type=int, default=2000)
+    parser.add_argument("--qlr", type=float, default=0.01)
+    parser.add_argument("--problem", type=str, default="TFIM")
 
 
     args = parser.parse_args()
 
     begin = datetime.now()
     #VQE in charge of continuous optimization
-    vqe_handler = VQE(n_qubits=args.n_qubits, lr=0.01, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=1, J = args.J, noise=args.noise)
+    vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=args.g, J = args.J, noise=args.noise, problem=args.problem)
 
-    info = "\n\n\n\nYou are using GENETIC-VANS: \n"
-    info += f"len(n_qubits): {vqe_handler.n_qubits}\n" \
+    start = datetime.now()
+    info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
                         f"g: {vqe_handler.g}, \n" \
                         f"noise: {args.noise}\n"\
                         f"J: {vqe_handler.J}\n" \
@@ -74,9 +75,9 @@ if __name__ == "__main__":
     evaluator.lowest_energy = energy
 
     for iteration in range(args.reps):
-
+        relevant=False
         ### create a mutation M (maybe this word is too fancy)
-        M_indices, M_symbols_to_values, M_idx_to_symbols = iid.randomly_place_almost_identity(indexed_circuit, symbol_to_value)
+        M_indices, M_symbols_to_values, M_idx_to_symbols = iid.place_almost_identity(indexed_circuit, symbol_to_value)
 
         ### simplify the circuit as much as possible
         Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(M_indices, M_symbols_to_values, M_idx_to_symbols)
@@ -94,13 +95,14 @@ if __name__ == "__main__":
                 indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = killer.unitary_slaughter(indexed_circuit, symbol_to_value, index_to_symbols)
                 indexed_circuit, symbol_to_value, index_to_symbols = Simp.reduce_circuit(indexed_circuit, symbol_to_value, index_to_symbols)
                 cnt+=1
+            relevant=True
+        evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=relevant)
 
-            evaluator.add_step(indexed_circuit, symbol_to_value, energy)
-
-        to_print="\n\n"+str(["*"]*20)+"\n"+str(str(["*"]*20))+"\ncurrent energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
+        to_print="\nIteration #{}\nTime since beggining:{}\n ".format(iteration, datetime.now()-start)+str("**"*20)+"\n"+str(str("*"*20))+"\ncurrent energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
         to_print+="\n\n"
         print(to_print)
         evaluator.displaying +=to_print
-        print(to_print)
-    evaluator.save_dicts_and_displaying()
+
+        ## save results of iteration.
+        evaluator.save_dicts_and_displaying()
 ### [Note 1]: Even if the circuit gets simplified to the original one, it's harmless to compute the energy again since i) you give another try to the optimization, ii) we have the EarlyStopping and despite of the added noise, it's supossed the seeds are close to optima.

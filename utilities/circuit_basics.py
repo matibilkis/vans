@@ -3,7 +3,13 @@ import numpy as np
 import sympy
 import pickle
 import os
+from datetime import datetime
 from glob import glob
+from functools import wraps
+import errno
+import os
+import signal
+
 
 class Basic:
     def __init__(self, n_qubits=3, testing=False):
@@ -92,19 +98,47 @@ class Basic:
 
 
 class Evaluator(Basic):
-    def __init__(self, args, info=None, loading=False):
-        super(Evaluator, self).__init__(n_qubits=args.n_qubits)
-        self.raw_history = {}
-        self.evolution = {}
-        self.lowest_energy = None
-        if loading is False:
+    def __init__(self, args, info=None, loading=False, nrun_load=0):
+        """
+
+        This class serves as evaluating the energy, admiting the new circuit or not. Also stores the results either if there's a relevant modification or not. Finally, it allows for the possibilty of loading previous results, an example for the TFIM is:
+
+            %load_ext autoreload
+            %autoreload 2
+            from utilities.circuit_basics import Evaluator
+            evaluator = Evaluator(loading=True, args={"n_qubits":3, "J":4.5})
+            unitary, energy, indices, resolver = evaluator.raw_history[47]
+
+
+        """
+        if not loading:
+            super(Evaluator, self).__init__(n_qubits=args.n_qubits)
+            self.raw_history = {}
+            self.evolution = {}
+            self.lowest_energy = None
             self.directory = self.create_folder(args,info)
-        self.displaying = "\n hola, soy VANS :) \n"
+            self.displaying = "\n hola, soy VANS :), and it's {} \n".format(datetime.now())
+
+        else:
+            super(Evaluator, self).__init__(n_qubits=args["n_qubits"])
+            args_load={}
+            for str,default in zip(["n_qubits", "J", "g","noise","problem"], [3,0.,1.,0.,"TFIM"]):
+                if str not in list(args.keys()):
+                    args_load[str] = default
+                else:
+                    args_load[str] = args[str]
+            self.load(args_load,nrun=nrun_load)
+
 
     def create_folder(self,args, info):
-        if not os.path.exists("TFIM"):
-            os.makedirs("TFIM")
-        name_folder = "TFIM/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
+        if not os.path.exists(args.problem):
+            os.makedirs(args.problem)
+        if float(args.noise) > 0:
+            if not os.path.exists(args.problem+"/noisy"):
+                os.makedirs(args.problem+"/noisy")
+            name_folder = args.problem+"/noisy/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)+ " noise "+str(args.noise)
+        else:
+            name_folder = args.problem+"/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
         if not os.path.exists(name_folder):
             os.makedirs(name_folder)
             nrun=0
@@ -124,10 +158,20 @@ class Evaluator(Basic):
                 a = f.readlines()[0]
                 f.close()
             with open(name_folder+"/runs.txt", "w") as f:
+                f.write(str(nrun)+"\n")
                 f.write(info)
+                f.write("\n")
                 f.close()
             os.makedirs(final_folder)
         return final_folder
+
+    def load(self,args, nrun=0):
+        if float(args["noise"]) > 0:
+            name_folder = args["problem"]+"/noisy/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])+ " noise "+str(args["noise"])
+        else:
+            name_folder = args["problem"]+"/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])
+        self.load_dicts_and_displaying(name_folder+"/run_"+str(nrun))
+        return
 
     def save_dicts_and_displaying(self):
         output = open(self.directory+"/raw_history.pkl", "wb")
@@ -142,14 +186,15 @@ class Evaluator(Basic):
         return
 
     def load_dicts_and_displaying(self,folder):
-        opp = open(folder+"/raw_history.pkl" "rb")
-        self.raw_history = pickle.load(opp)
-        opp = open(folder+"/evolution.pkl", "rb")
-        self.evolution = pickle.load(opp)
+
+        with open(folder+"/raw_history.pkl" ,"rb") as h:
+            self.raw_history = pickle.load(h)
+        with open(folder+"/evolution.pkl", "rb") as hh:
+            self.evolution = pickle.load(hh)
         with open(folder+"/evolution.txt", "r") as f:
-            a = f.readlines()[0]
+            a = f.readlines()
             f.close()
-        self.displaying = f
+        self.displaying = a
         return self.displaying
 
     def accept_energy(self, E, noise=False):
@@ -158,10 +203,16 @@ class Evaluator(Basic):
 
         E: energy after some optimization (to be accepted or not)
         """
-        if noise:
-            return E < self.lowest_energy
+        if self.lowest_energy is None:
+            return True
         else:
+            # return E < self.lowest_energy
             return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
+
+        # if noise:
+            # return E < self.lowest_energy
+        # else:
+            # return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
 
     def add_step(self,indices, resolver, energy, relevant=True):
         """
@@ -170,9 +221,35 @@ class Evaluator(Basic):
         energy: expected value of target hamiltonian on prepared circuit.
         relevant: if energy was minimized on that step
         """
-        self.raw_history[len(list(self.raw_history.keys()))] = [self.give_unitary(indices, resolver), energy]
-        if relevant:
-            self.evolution[len(list(self.evolution.keys()))] = [self.give_unitary(indices, resolver), energy]
         if self.lowest_energy is None:
             self.lowest_energy = energy
+        elif energy < self.lowest_energy:
+            self.lowest_energy = energy
+
+        self.raw_history[len(list(self.raw_history.keys()))] = [self.give_unitary(indices, resolver), energy, indices, resolver, self.lowest_energy]
+        if relevant == True:
+            self.evolution[len(list(self.evolution.keys()))] = [self.give_unitary(indices, resolver), energy, indices,resolver, self.lowest_energy]
         return
+
+
+
+class TimeoutError(Exception):
+    pass
+
+def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
+    def decorator(func):
+        def _handle_timeout(signum, frame):
+            print("hey")
+            np.seed(datetime.now().microsecond + datetime.now().second)
+            raise TimeoutError(error_message)
+
+        def wrapper(*args, **kwargs):
+            signal.signal(signal.SIGALRM, _handle_timeout)
+            signal.alarm(seconds)
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                signal.alarm(0)
+            return result
+        return wraps(func)(wrapper)
+    return decorator

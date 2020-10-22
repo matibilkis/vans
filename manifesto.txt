@@ -1,7 +1,0 @@
-Instead of evaluating the cost in the noisy environment (which is the best we can do), evaluate it without noise but bias the search towards solutions with small number of gates
-
-associate a number to every gate. One qubit gate (combined all rotations) gets a score of 1 and CNOT gets 10. This reflects the fact that cnots are roughly 10 times noisier than 1 qubit gates. Then you can associate “score” to the entire circuit by summing those numbers
-
-If you work with individual 1 qubit rotations, they should get a score of 1/3. Now you can minimize the energy with additional requirement that you want to keep score small.
-
-For example, you can minimize C = Energy + Lambda*Score, where Lambda>0 is a constant. One should experiment with the actual value of Lambda. to do that: you could run the simulation multiple times for different Lambda. Once the optimization is done, compute the energy with an actual noisy simulator. Analyze the results and see which value of Lambda is giving you the best (noisy) result
