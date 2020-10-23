@@ -118,7 +118,7 @@ class VQE(Basic):
     def TFQ_model(self, symbols, symbols_to_values=None):
         """
         symbols: continuous parameters to optimize on
-        symbol_to_value: if not None, dictionary with initial seeds
+        symbol_to_value: dictionary with initial seeds (if provided, not used at first run for instance)
 
         notice if self.noise is False self.q_batch_size=1
         """
@@ -141,6 +141,22 @@ class VQE(Basic):
                 model.trainable_variables[0].assign( model.trainable_variables[0] + tf.random.uniform(model.trainable_variables[0].shape.as_list())*np.pi/2 )
         return model
 
+    def test_circuit_qubits(self,circuit):
+        """
+        testing: if there's not parametrized unitary on every qubit, raise error (otherwise TFQ runs into trouble).
+        """
+        if self.noise is True:
+            effective_qubits = list(circuit[0].all_qubits())
+            for k in self.qubits:
+                if k not in effective_qubits:
+                    raise Error("NOT ALL QUBITS AFFECTED")
+        else:
+            effective_qubits = list(circuit[0].all_qubits())
+            for k in self.qubits:
+                if k not in effective_qubits:
+                    raise Error("NOT ALL QUBITS AFFECTED")
+
+
     def train_model(self, circuit, model):
         """
         circuit:
@@ -151,21 +167,23 @@ class VQE(Basic):
         model: TFQ_model output
         """
 
-        ## testing: if there's not parametrized unitary on every qubit, raise error.
-        effective_qubits = list(circuit.all_qubits())
-        for k in self.qubits:
-            if k not in effective_qubits:
-                raise Error("NOT ALL QUBITS AFFECTED")
+        if self.testing:
+            self.test_circuit_qubits(circuit)
 
         if self.noise is True:
-            tfqcircuit = tfq.convert_to_tensor([circuit])
-        else:
             tfqcircuit = tfq.convert_to_tensor(circuit)
+        else:
+            tfqcircuit = tfq.convert_to_tensor([circuit])
 
-        qoutput = tf.ones((1, 1))*self.lower_bound_Eg
+        qoutput = tf.ones((self.q_batch_size, 1))*self.lower_bound_Eg
         h=model.fit(x=tfqcircuit, y=qoutput, batch_size=self.q_batch_size, epochs=self.epochs,
                   verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min", min_delta=10**-3), TimedStopping(seconds=self.max_time_training)])
-        energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
+        if self.noise is True:
+            preds = model(tfqcircuit)
+            averaged_unitaries = tf.math.reduce_mean(preds, axis=0)
+            energy = np.squeeze(tf.math.reduce_sum(averaged_unitaries, axis=-1))
+        else:
+            energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
         return energy,h
 
 

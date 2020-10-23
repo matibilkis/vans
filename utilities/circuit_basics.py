@@ -15,7 +15,9 @@ class Basic:
     def __init__(self, n_qubits=3, testing=False, noise_model=None):
         """
         n_qubits: number of qubits on your ansatz
+
         testing: this is inherited by other classes to ease the debugging.
+
         noise_model: implemented in batches.
             if None: self.noise_model = False
             else: passed thorugh the Basic, to inherit the circuit_with_noise
@@ -44,12 +46,25 @@ class Basic:
             self.q_batch_size = 1
             self.noise=False
         elif not isinstance(noise_model, dict):
-            print("noise_model should be passed as dict, readthedocs")
+            print("noise_model should be passed as dict, in a form of, see docs")
         else:
-            self.noise = True
-            self.channel = noise_model["channel"]
-            self.channel_params = noise_model["channel_params"]
-            self.q_batch_size = noise_model["q_batch_size"]
+            self.define_channel_things(noise_model)
+
+
+    def define_channel_things(self, noise_model):
+        """
+        options: "depolarizing" (symetric depolarizing channel) {"channel":"depolarizing", "channel_params":[p], "q_batch_size":10**3}
+        """
+        self.noise = True
+        self.channel = noise_model["channel"]
+        self.channel_params = noise_model["channel_params"]
+        self.q_batch_size = noise_model["q_batch_size"]
+        if self.channel == "depolarizing":
+            self.channel_unitaries = [cirq.I, cirq.X, cirq.Y, cirq.Z]
+            self.number_noisy_unitaries = len(self.channel_unitaries)
+            p = self.channel_params[0]
+            self.channel_params = [1-p, p/3, p/3, p/3]
+            self.number_noisy_unitaries, self.channel_unitaries, self.channel_params
 
     def append_to_circuit(self, ind, circuit, params, index_to_symbols):
         """
@@ -58,7 +73,6 @@ class Basic:
         params: a list containing the symbols appearing in the circuit so far
         index_to_sybols: tells which symbol corresponds to i^{th} item in the circuit (useful for simplifier)
         """
-
         #### add CNOT
         if ind < self.number_of_cnots:
             control, target = self.indexed_cnots[str(ind)]
@@ -89,6 +103,61 @@ class Basic:
                 index_to_symbols[len(list(index_to_symbols.keys()))] = new_param
             return circuit, params, index_to_symbols
 
+    def append_to_circuit_with_noise(self, ind, circuit, params, index_to_symbols):
+        """
+        ind: integer describing the gate to append to circuit
+        circuit: cirq object that describes the quantum circuit
+        params: a list containing the symbols appearing in the circuit so far
+        index_to_sybols: tells which symbol corresponds to i^{th} item in the circuit (useful for simplifier)
+
+        Note. This is the noisy version, in randomly choose unitaries before each gate is placed (if a CNOT is placed we add gate on both
+        control and target). self.channel_unitaries is a list with the unitary transf into which the channel is decomposed, of length self.number_noisy_unitaries.
+        """
+
+        #### add CNOT
+        if ind < self.number_of_cnots:
+            control, target = self.indexed_cnots[str(ind)]
+            #adding noise
+            ngates = np.random.choice(self.channel_unitaries, 2,p=self.channel_params)
+            for ng,nq in zip(ngates,[control,target]):
+                circuit.append(ng.on(self.qubits[nq]))
+
+            circuit.append(cirq.CNOT.on(self.qubits[control], self.qubits[target]))
+            if isinstance(index_to_symbols,dict):
+                index_to_symbols[len(list(index_to_symbols.keys()))] = []
+                return circuit, params, index_to_symbols
+            else:
+                return circuit, params
+
+        #### add rz #####
+        elif 0 <= ind - self.number_of_cnots  < self.n_qubits:
+            qubit = self.qubits[(ind-self.number_of_cnots)%self.n_qubits]
+            for par, gate in zip(range(1),[cirq.rz]):
+                new_param = "th_"+str(len(params))
+                params.append(new_param)
+
+                #adding noise
+                ng = np.random.choice(self.channel_unitaries,1, p=self.channel_params)[0]
+                circuit.append(ng.on(qubit))
+
+                circuit.append(gate(sympy.Symbol(new_param)).on(qubit))
+                index_to_symbols[len(list(index_to_symbols.keys()))] = new_param
+                return circuit, params, index_to_symbols
+
+        #### add rx #####
+        elif self.n_qubits <= ind - self.number_of_cnots  < 2*self.n_qubits:
+            qubit = self.qubits[(ind-self.number_of_cnots)%self.n_qubits]
+            for par, gate in zip(range(1),[cirq.rx]):
+                new_param = "th_"+str(len(params))
+                params.append(new_param)
+
+                #adding noise
+                ng = np.random.choice(self.channel_unitaries,1, p=self.channel_params)[0]
+                circuit.append(ng.on(qubit))
+
+                circuit.append(gate(sympy.Symbol(new_param)).on(qubit))
+                index_to_symbols[len(list(index_to_symbols.keys()))] = new_param
+            return circuit, params, index_to_symbols
 
     def give_circuit(self, lista):
         """
@@ -115,10 +184,10 @@ class Basic:
         for cind in range(self.q_batch_size):
             circuit, symbols, index_to_symbols = [], [], {}
             for k in lista:
-                circuit, symbols, index_to_symbols = self.append_to_circuit(k,circuit,symbols, index_to_symbols)
-                #### HERE YOU SHOULD PUT THE NOISE WITH SOME PROBABILITY (OR MAYBE IN APPEND_TO_CIRCUIT)
+                circuit, symbols, index_to_symbols = self.append_to_circuit_with_noise(k,circuit,symbols, index_to_symbols)
             circuit = cirq.Circuit(circuit)
-        return circuit, symbols, index_to_symbols
+            qbatch.append(circuit)
+        return qbatch, symbols, index_to_symbols
 
 
 
