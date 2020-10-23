@@ -17,7 +17,38 @@ class UnitaryMurder(Basic):
         """
         super(UnitaryMurder, self).__init__(n_qubits=vqe_handler.n_qubits, testing=testing)
         self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
-        self.observable = vqe_handler.observable
+        self.noise = vqe_handler.noise
+        self.q_batch_size = vqe_handler.q_batch_size
+
+    def give_energy(self, indexed_circuit, symbols_to_values):
+        """
+        ((borrowed from vqe_handler))
+
+        indexed_circuit: list with integers that correspond to unitaries (target qubit deduced from the value)
+        symbols_to_values: dictionary with the values of each symbol. Importantly, they should respect the order of indexed_circuit, i.e. list(symbols_to_values.keys()) = self.give_circuit(indexed_circuit)[1]
+
+        if self.noise is True, we've a noise model!
+        Every detail of the noise model is inherited from circuit_basics
+        """
+
+        if self.noise is True:
+            circuit, symbols, index_to_symbol = self.give_circuit_with_noise(indexed_circuit)
+            tt = []
+            for c in circuit:
+                tt.append(cirq.resolve_parameters(c, symbols_to_values))
+            tfqcircuit = tfq.convert_to_tensor(c)
+            tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size))
+            averaged_unitaries = tf.math.reduce_mean(tfq_layer, axis=0)
+            energy = np.squeeze(tf.math.reduce_sum(averaged_unitaries, axis=-1))
+
+        else:
+            circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
+            tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(circuit, symbols_to_values)])
+            tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size))
+            energy = np.squeeze(tf.math.reduce_sum(tfq_layer, axis=-1))
+        return energy
+
+
 
     def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols):
         max_its = len(indexed_circuit)
@@ -37,7 +68,7 @@ class UnitaryMurder(Basic):
         """
 
         ###### STEP 1: COMPUTE ORIGINAL ENERGY ####
-        original_energy = vqe_handler.give_energy(indexed_circuit, symbol_to_value)
+        original_energy = self.give_energy(indexed_circuit, symbol_to_value)
 
         circuit_proposals=[]
         circuit_proposals_energies=[]
@@ -54,7 +85,7 @@ class UnitaryMurder(Basic):
                 info_gate = [index_victim, victim]
                 valid, proposal_circuit, proposal_symbols_to_values, prop_cirq_circuit = self.create_proposal_without_gate(info_gate) #notice prop_cirq_circuit beomes useless if noise.-
                 if valid:
-                    proposal_energy = vqe_handler.give_energy(proposal_circuit, proposal_symbols_to_values)
+                    proposal_energy = self.give_energy(proposal_circuit, proposal_symbols_to_values)
 
                     if self.accepting_criteria(proposal_energy, original_energy):
                         circuit_proposals.append([proposal_circuit, proposal_symbols_to_values,proposal_energy])

@@ -47,7 +47,7 @@ class VQE(Basic):
         self.observable = self.give_observable(problem, g, J)
         self.max_time_training = 60*self.n_qubits
         self.hams = ["xxz", "TFIM"]
-        
+
         if len(noise_model.keys()) >0 :
             self.noise=True
         else:
@@ -113,8 +113,10 @@ class VQE(Basic):
 
         if self.noise is True:
             circuit, symbols, index_to_symbol = self.give_circuit_with_noise(indexed_circuit)
-            tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(c, symbols_to_values)] for c in circuit)
-            tfqcircuit = tf.squeeze(tfqcircuit)
+            tt = []
+            for c in circuit:
+                tt.append(cirq.resolve_parameters(c, symbols_to_values))
+            tfqcircuit = tfq.convert_to_tensor(c)
             tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size))
             averaged_unitaries = tf.math.reduce_mean(tfq_layer, axis=0)
             energy = np.squeeze(tf.math.reduce_sum(averaged_unitaries, axis=-1))

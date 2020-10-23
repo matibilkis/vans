@@ -73,6 +73,13 @@ if __name__ == "__main__":
     energy, symbol_to_value, training_evolution = vqe_handler.vqe(indexed_circuit) #compute energy
 
     #add initial info to evaluator
+
+    to_print="\nIteration #{}\nTime since beggining:{}\n ".format(0, datetime.now()-start)+str("**"*20)+"\n"+str(str("*"*20))+"\ncurrent energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
+    to_print+="\n\n"
+    print(to_print)
+    evaluator.displaying+=to_print
+
+
     evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=True)
     evaluator.lowest_energy = energy
 
