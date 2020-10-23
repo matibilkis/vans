@@ -1,3 +1,4 @@
+import os
 import gc
 import numpy as np
 import sympy
@@ -5,6 +6,10 @@ import cirq
 import tensorflow_quantum as tfq
 from tqdm import tqdm
 import tensorflow as tf
+import json
+import argparse
+import pickle
+from datetime import datetime
 
 
 from utilities.variational import VQE
@@ -13,11 +18,6 @@ from utilities.idinserter import IdInserter
 from utilities.simplifier import Simplifier
 from utilities.unitary_killer import UnitaryMurder
 
-
-import argparse
-import os
-import pickle
-from datetime import datetime
 
 
 if __name__ == "__main__":
@@ -29,12 +29,15 @@ if __name__ == "__main__":
     parser.add_argument("--reps", type=int, default=15)
     parser.add_argument("--names", type=str, default="obj")
     parser.add_argument("--folder_result", type=str, default="results")
-    parser.add_argument("--noise", type=float, default=0.0)
     parser.add_argument("--verbose", type=int, default=0)
-    parser.add_argument("--qepochs", type=int, default=2000)
+    parser.add_argument("--qepochs", type=int, default=10**4)
     parser.add_argument("--qlr", type=float, default=0.01)
     parser.add_argument("--problem", type=str, default="TFIM")
+    parser.add_argument('--noise_model', '--my-dict', type=json.loads)
 
+    args = parse.parse_args()
+
+    mydict = args.my_dict  # Will return a dictionary
 
     args = parser.parse_args()
 

@@ -47,10 +47,10 @@ class VQE(Basic):
         self.observable = self.give_observable(problem, g, J)
         self.max_time_training = 60*self.n_qubits
         self.hams = ["xxz", "TFIM"]
-        if noise_model is None:
-            self.noise=False
-        else:
+        if len(noise_model.keys()) >0 :
             self.noise=True
+        else:
+            self.noise=False
         self.gpus=tf.config.list_physical_devices("GPU")
 
     def give_observable(self,problem, g,J):

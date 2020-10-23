@@ -11,17 +11,13 @@ class UnitaryMurder(Basic):
         Scans a circuit, evaluates mean value of observable and retrieves a shorter circuit if the energy is not increased too much.
 
         Takes as input vqe_handler object inheriting its observable and noise attributes.
-        
+
         The expected value of hamiltonian is computed via vqe_handler.give_energy(indexed_circuit, resolver). Importantly, for noisy channels that are decomposed as sum of unitary transf, the accuracy of this expectation will depend on the q_batch_size (how many circuits we are considering, each suffering from each unitary transf with the corresponding probability)
 
         """
         super(UnitaryMurder, self).__init__(n_qubits=vqe_handler.n_qubits, testing=testing)
         self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
         self.observable = vqe_handler.observable
-    #    if vqe_handler.noise > 0:
-    #        self.expectation_layer = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(vqe_handler.noise)))
-    #    else:
-            #self.expectation_layer = tfq.layers.Expectation()
 
     def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols):
         max_its = len(indexed_circuit)

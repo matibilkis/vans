@@ -42,11 +42,11 @@ class Basic:
 
         self.testing=testing
 
-        if noise_model is None:
-            self.q_batch_size = 1
-            self.noise=False
-        elif not isinstance(noise_model, dict):
+        if isinstance(noise_model, dict):
             print("noise_model should be passed as dict, in a form of, see docs")
+        elif len(noise_model.keys()) == 0 :
+                self.q_batch_size = 1
+                self.noise=False
         else:
             self.define_channel_things(noise_model)
 
