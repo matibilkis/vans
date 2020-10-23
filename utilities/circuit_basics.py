@@ -19,7 +19,7 @@ class Basic:
         testing: this is inherited by other classes to ease the debugging.
 
         noise_model: implemented in batches.
-            if None: self.noise_model = False
+            if self.noise_model = {} ---> no noise
             else: passed thorugh the Basic, to inherit the circuit_with_noise
                 if should be in the form of {"channel":"depolarizing", "channel_params":array, "q_batch_size":int}
 
@@ -235,7 +235,7 @@ class Evaluator(Basic):
         else:
             super(Evaluator, self).__init__(n_qubits=args["n_qubits"])
             args_load={}
-            for str,default in zip(["n_qubits", "J", "g","noise","problem"], [3,0.,1.,0.,"TFIM"]):
+            for str,default in zip(["n_qubits", "J", "g","noise_model","problem"], [3,0.,1.,{},"TFIM"]):
                 if str not in list(args.keys()):
                     args_load[str] = default
                 else:
@@ -246,10 +246,11 @@ class Evaluator(Basic):
     def create_folder(self,args, info):
         if not os.path.exists(args.problem):
             os.makedirs(args.problem)
-        if float(args.noise) > 0:
-            if not os.path.exists(args.problem+"/noisy"):
-                os.makedirs(args.problem+"/noisy")
-            name_folder = args.problem+"/noisy/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)+ " noise "+str(args.noise)
+        if len(args.noise_model.keys())>0:
+            noisy_folder = args.problem+"/{}_{}".format(args.noise_model["channel"],args.noise_model["channel_params"] )
+            if not os.path.exists(noisy_folder):
+                os.makedirs(noisy_folder)
+            name_folder = noisy_folder+"/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
         else:
             name_folder = args.problem+"/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
         if not os.path.exists(name_folder):
@@ -279,8 +280,9 @@ class Evaluator(Basic):
         return final_folder
 
     def load(self,args, nrun=0):
-        if float(args["noise"]) > 0:
-            name_folder = args["problem"]+"/noisy/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])+ " noise "+str(args["noise"])
+        if len(args["noise_model"].keys())>0:
+            noisy_folder = args["problem"]+"/{}_{}".format(args["noise_model"]["channel"],args["noise_model"]["channel_params"] )
+            name_folder = noisy_folder+"/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])
         else:
             name_folder = args["problem"]+"/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])
         self.load_dicts_and_displaying(name_folder+"/run_"+str(nrun))
@@ -314,18 +316,15 @@ class Evaluator(Basic):
         """
         in the presence of noise, don't give gates for free!
 
-        E: energy after some optimization (to be accepted or not)
+        E: energy after some optimization (to be accepted or not).
+
+        For the moment we leave the same criteria for the noisy scenario also.
         """
         if self.lowest_energy is None:
             return True
         else:
-            # return E < self.lowest_energy
             return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
 
-        # if noise:
-            # return E < self.lowest_energy
-        # else:
-            # return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
 
     def add_step(self,indices, resolver, energy, relevant=True):
         """
