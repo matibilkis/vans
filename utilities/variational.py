@@ -23,13 +23,18 @@ class VQE(Basic):
             else: passed thorugh the Basic, to inherit the circuit_with_noise
                 if should be in the form of {"channel":"depolarizing", "p":float, "q_batch_size":int}
 
-        Notes: with probability %10
         verbose: display progress or not
 
-        &&ising model&& H = - g \sum_i \Z_i - (J) *\sum_i X_i X_{i+1}
-        &&xxz model$&&  H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}
+        Notes:
 
-        ** Some callbacks are used: EarlyStopping and TimeStopping, since tfq gets somehow stucked?
+               (1) we add noise with probability %10
+
+               (2) Hamiltonians:
+               (2.1) &&ising model&& H = - g \sum_i \Z_i - (J) *\sum_i X_i X_{i+1}
+               (2.2) &&xxz model$&&  H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}
+               (2.3) -- TODO --- import hamiltonian from .xyz file
+
+               (3) Some callbacks are used: EarlyStopping and TimeStopping, which is set to 60*self.n_qubits (we can change this!)
         """
 
         super(VQE, self).__init__(n_qubits=n_qubits, noise_model=noise_model)
@@ -46,6 +51,7 @@ class VQE(Basic):
             self.noise=False
         else:
             self.noise=True
+        self.gpus=tf.config.list_physical_devices("GPU")
 
     def give_observable(self,problem, g,J):
         if problem=="TFIM":
@@ -106,12 +112,17 @@ class VQE(Basic):
 
         if self.noise is True:
             circuit, symbols, index_to_symbol = self.give_circuit_with_noise(indexed_circuit)
+            tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(c, symbols_to_values)] for c in circuit)
+            tfqcircuit = tf.squeeze(tfqcircuit)
+            tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size))
+            averaged_unitaries = tf.math.reduce_mean(tfq_layer, axis=0)
+            energy = np.squeeze(tf.math.reduce_sum(averaged_unitaries, axis=-1))
+
         else:
             circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
-
-        tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(circuit, symbols_to_values)])
-        tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]))
-        energy = np.squeeze(tf.math.reduce_sum(tfq_layer, axis=-1))
+            tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(circuit, symbols_to_values)])
+            tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size))
+            energy = np.squeeze(tf.math.reduce_sum(tfq_layer, axis=-1))
         return energy
 
 
@@ -176,8 +187,15 @@ class VQE(Basic):
             tfqcircuit = tfq.convert_to_tensor([circuit])
 
         qoutput = tf.ones((self.q_batch_size, 1))*self.lower_bound_Eg
-        h=model.fit(x=tfqcircuit, y=qoutput, batch_size=self.q_batch_size, epochs=self.epochs,
-                  verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min", min_delta=10**-3), TimedStopping(seconds=self.max_time_training)])
+
+        #### use a gpu if available (when running in colab for instace) ###
+        if len(self.gpus)>0:
+            with tf.device(self.gpus[0]):
+                h=model.fit(x=tfqcircuit, y=qoutput, batch_size=self.q_batch_size, epochs=self.epochs,
+                      verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min", min_delta=10**-3), TimedStopping(seconds=self.max_time_training)])
+        else:
+            h=model.fit(x=tfqcircuit, y=qoutput, batch_size=self.q_batch_size, epochs=self.epochs,
+                      verbose=self.verbose, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=self.patience, mode="min", min_delta=10**-3), TimedStopping(seconds=self.max_time_training)])
         if self.noise is True:
             preds = model(tfqcircuit)
             averaged_unitaries = tf.math.reduce_mean(preds, axis=0)
@@ -190,7 +208,8 @@ class VQE(Basic):
 
 class TimedStopping(tf.keras.callbacks.Callback):
     '''Stop training when enough time has passed.
-    # Arguments
+
+        # Arguments
         seconds: maximum time before stopping.
         verbose: verbosity mode.
     '''
