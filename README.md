@@ -1,5 +1,8 @@
 # VANS
-Simulation of noisy is thought to be included. Considering 
+Simulation of noisy is thought to be included. Considering
+
+## history of changes:
+### model(circuit) instead of model.predict(circuit)... Maybe we can report this as an issue/bug ?
 
  ## Things that are patched and better solutions are welcome
 Rule 5 of utilities.simplifier, we use sympy.solve to reduce many consecutive 1-qubit unitary gates to Rz Rx Rz, but this solution is not very elegant.
