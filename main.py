@@ -33,29 +33,27 @@ if __name__ == "__main__":
     parser.add_argument("--qepochs", type=int, default=10**4)
     parser.add_argument("--qlr", type=float, default=0.01)
     parser.add_argument("--problem", type=str, default="TFIM")
-    parser.add_argument('--noise_model', '{}', type=json.loads)
+    parser.add_argument('--noise_model', type=json.loads, default='--{}')
 
-    args = parse.parse_args()
-
-    mydict = args.my_dict  # Will return a dictionary
+    args = parser.parse_args()
 
     args = parser.parse_args()
 
     begin = datetime.now()
     #VQE in charge of continuous optimization
-    vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=args.g, J = args.J,
-     noise=args.noise, problem=args.problem)
+
+    vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=args.g, J = args.J, noise_model=args.noise_model, problem=args.problem)
 
     start = datetime.now()
     info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
                         f"g: {vqe_handler.g}, \n" \
+                        f"noise: {args.noise_model}\n"\
                         f"J: {vqe_handler.J}\n" \
                         f"qlr: {vqe_handler.lr}\n" \
                         f"qepochs: {vqe_handler.epochs}\n" \
                         f"patience: {vqe_handler.patience}\n" \
                         f"genetic runs: {args.reps}\n"
-                        f"noise: {args.noise}\n"\
-    print(info)
+    print("\n"*3+info)
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
     evaluator = Evaluator(args, info=info)

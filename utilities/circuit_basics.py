@@ -12,7 +12,7 @@ import signal
 
 
 class Basic:
-    def __init__(self, n_qubits=3, testing=False, noise_model=None):
+    def __init__(self, n_qubits=3, testing=False, noise_model={}):
         """
         n_qubits: number of qubits on your ansatz
 
@@ -42,7 +42,7 @@ class Basic:
 
         self.testing=testing
 
-        if isinstance(noise_model, dict):
+        if not isinstance(noise_model, dict):
             print("noise_model should be passed as dict, in a form of, see docs")
         elif len(noise_model.keys()) == 0 :
                 self.q_batch_size = 1

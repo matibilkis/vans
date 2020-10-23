@@ -6,7 +6,7 @@ import tensorflow as tf
 import time
 
 class VQE(Basic):
-    def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, g=1, J=0, problem="TFIM", noise_model=None):
+    def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, g=1, J=0, problem="TFIM", noise_model={}):
         """
 
         lr: learning_rate for each iteration of gradient descent
@@ -47,6 +47,7 @@ class VQE(Basic):
         self.observable = self.give_observable(problem, g, J)
         self.max_time_training = 60*self.n_qubits
         self.hams = ["xxz", "TFIM"]
+        
         if len(noise_model.keys()) >0 :
             self.noise=True
         else:
