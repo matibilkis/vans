@@ -65,7 +65,7 @@ if __name__ == "__main__":
     Simp = Simplifier(n_qubits=args.n_qubits)
 
     #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
-    killer = UnitaryMurder(vqe_handler)
+    killer = UnitaryMurder(vqe_handler, noise_model=args.noise_model)
 
 
     ### begin with a product ansatz

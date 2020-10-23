@@ -6,7 +6,7 @@ import tensorflow_quantum as tfq
 import tensorflow as tf
 
 class UnitaryMurder(Basic):
-    def __init__(self, vqe_handler, testing=False):
+    def __init__(self, vqe_handler, noise_model,testing=False):
         """
         Scans a circuit, evaluates mean value of observable and retrieves a shorter circuit if the energy is not increased too much.
 
@@ -15,10 +15,9 @@ class UnitaryMurder(Basic):
         The expected value of hamiltonian is computed via vqe_handler.give_energy(indexed_circuit, resolver). Importantly, for noisy channels that are decomposed as sum of unitary transf, the accuracy of this expectation will depend on the q_batch_size (how many circuits we are considering, each suffering from each unitary transf with the corresponding probability)
 
         """
-        super(UnitaryMurder, self).__init__(n_qubits=vqe_handler.n_qubits, testing=testing)
+        super(UnitaryMurder, self).__init__(n_qubits=vqe_handler.n_qubits, testing=testing, noise_model=noise_model)
         self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
-        self.noise = vqe_handler.noise
-        self.q_batch_size = vqe_handler.q_batch_size
+        self.observable = vqe_handler.observable
 
     def give_energy(self, indexed_circuit, symbols_to_values):
         """
@@ -36,7 +35,7 @@ class UnitaryMurder(Basic):
             tt = []
             for c in circuit:
                 tt.append(cirq.resolve_parameters(c, symbols_to_values))
-            tfqcircuit = tfq.convert_to_tensor(c)
+            tfqcircuit = tfq.convert_to_tensor(tt)
             tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size))
             averaged_unitaries = tf.math.reduce_mean(tfq_layer, axis=0)
             energy = np.squeeze(tf.math.reduce_sum(averaged_unitaries, axis=-1))
