@@ -1,0 +1,8 @@
+len(n_qubits): 3
+g: 1.0, 
+noise: {'channel': 'depolarizing', 'channel_params': [1e-05], 'q_batch_size': 1000}
+J: 4.2105263157894735
+qlr: 0.005
+qepochs: 10
+patience: 100
+genetic runs: 50
