@@ -216,12 +216,13 @@ class Evaluator(Basic):
 
         This class serves as evaluating the energy, admiting the new circuit or not. Also stores the results either if there's a relevant modification or not. Finally, it allows for the possibilty of loading previous results, an example for the TFIM is:
 
+        (cheat-sheet for jupyter notebook):
             %load_ext autoreload
             %autoreload 2
             from utilities.circuit_basics import Evaluator
             evaluator = Evaluator(loading=True, args={"n_qubits":3, "J":4.5})
             unitary, energy, indices, resolver = evaluator.raw_history[47]
-
+            {"channel":"depolarizing", "channel_params":[p], "q_batch_size":10**3}
 
         """
         if not loading:
@@ -325,6 +326,18 @@ class Evaluator(Basic):
         else:
             return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
 
+    def get_best_iteration(self):
+        """
+        returns minimum in evolution.
+        """
+        return list(np.where(np.array(list(self.evolution.values()))[:,1] == np.min(np.array(list(self.raw_history.values()))[:,-1]))[0])
+
+    def number_cnots_best(self):
+        cn=0
+        for k in self.evolution[self.get_best_iteration()[0]][2]: #get the indices
+            if k < self.number_of_cnots:
+                cn+=1
+        return cn
 
     def add_step(self,indices, resolver, energy, relevant=True):
         """
