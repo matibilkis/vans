@@ -1,3 +1,4 @@
+import os
 import gc
 import numpy as np
 import sympy
@@ -5,6 +6,10 @@ import cirq
 import tensorflow_quantum as tfq
 from tqdm import tqdm
 import tensorflow as tf
+import json
+import argparse
+import pickle
+from datetime import datetime
 
 
 from utilities.variational import VQE
@@ -13,11 +18,6 @@ from utilities.idinserter import IdInserter
 from utilities.simplifier import Simplifier
 from utilities.unitary_killer import UnitaryMurder
 
-
-import argparse
-import os
-import pickle
-from datetime import datetime
 
 
 if __name__ == "__main__":
@@ -29,29 +29,31 @@ if __name__ == "__main__":
     parser.add_argument("--reps", type=int, default=15)
     parser.add_argument("--names", type=str, default="obj")
     parser.add_argument("--folder_result", type=str, default="results")
-    parser.add_argument("--noise", type=float, default=0.0)
     parser.add_argument("--verbose", type=int, default=0)
-    parser.add_argument("--qepochs", type=int, default=2000)
+    parser.add_argument("--qepochs", type=int, default=10**4)
     parser.add_argument("--qlr", type=float, default=0.01)
     parser.add_argument("--problem", type=str, default="TFIM")
+    parser.add_argument("--noise_model", type=json.loads, default='{}')
 
+    args = parser.parse_args()
 
     args = parser.parse_args()
 
     begin = datetime.now()
     #VQE in charge of continuous optimization
-    vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=args.g, J = args.J, noise=args.noise, problem=args.problem)
+
+    vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=args.g, J = args.J, noise_model=args.noise_model, problem=args.problem)
 
     start = datetime.now()
     info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
                         f"g: {vqe_handler.g}, \n" \
-                        f"noise: {args.noise}\n"\
+                        f"noise: {args.noise_model}\n"\
                         f"J: {vqe_handler.J}\n" \
                         f"qlr: {vqe_handler.lr}\n" \
                         f"qepochs: {vqe_handler.epochs}\n" \
                         f"patience: {vqe_handler.patience}\n" \
                         f"genetic runs: {args.reps}\n"
-    print(info)
+    print("\n"*3+info)
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
     evaluator = Evaluator(args, info=info)
@@ -63,7 +65,7 @@ if __name__ == "__main__":
     Simp = Simplifier(n_qubits=args.n_qubits)
 
     #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
-    killer = UnitaryMurder(vqe_handler)
+    killer = UnitaryMurder(vqe_handler, noise_model=args.noise_model)
 
 
     ### begin with a product ansatz
@@ -71,6 +73,13 @@ if __name__ == "__main__":
     energy, symbol_to_value, training_evolution = vqe_handler.vqe(indexed_circuit) #compute energy
 
     #add initial info to evaluator
+
+    to_print="\nIteration #{}\nTime since beggining:{}\n ".format(0, datetime.now()-start)+str("**"*20)+"\n"+str(str("*"*20))+"\ncurrent energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
+    to_print+="\n\n"
+    print(to_print)
+    evaluator.displaying+=to_print
+
+
     evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=True)
     evaluator.lowest_energy = energy
 

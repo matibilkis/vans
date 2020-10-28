@@ -6,19 +6,48 @@ import tensorflow_quantum as tfq
 import tensorflow as tf
 
 class UnitaryMurder(Basic):
-    def __init__(self, vqe_handler, testing=False):
+    def __init__(self, vqe_handler, noise_model,testing=False):
         """
         Scans a circuit, evaluates mean value of observable and retrieves a shorter circuit if the energy is not increased too much.
 
-        Takes as input vqe_handler object inheriting its observable and expectation_layer.
+        Takes as input vqe_handler object inheriting its observable and noise attributes.
+
+        The expected value of hamiltonian is computed via vqe_handler.give_energy(indexed_circuit, resolver). Importantly, for noisy channels that are decomposed as sum of unitary transf, the accuracy of this expectation will depend on the q_batch_size (how many circuits we are considering, each suffering from each unitary transf with the corresponding probability)
+
         """
-        super(UnitaryMurder, self).__init__(n_qubits=vqe_handler.n_qubits, testing=testing)
+        super(UnitaryMurder, self).__init__(n_qubits=vqe_handler.n_qubits, testing=testing, noise_model=noise_model)
         self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
         self.observable = vqe_handler.observable
-        if vqe_handler.noise > 0:
-            self.expectation_layer = tfq.layers.Expectation(backend=cirq.DensityMatrixSimulator(noise=cirq.depolarize(vqe_handler.noise)))
+
+    def give_energy(self, indexed_circuit, symbols_to_values):
+        """
+        ((borrowed from vqe_handler))
+
+        indexed_circuit: list with integers that correspond to unitaries (target qubit deduced from the value)
+        symbols_to_values: dictionary with the values of each symbol. Importantly, they should respect the order of indexed_circuit, i.e. list(symbols_to_values.keys()) = self.give_circuit(indexed_circuit)[1]
+
+        if self.noise is True, we've a noise model!
+        Every detail of the noise model is inherited from circuit_basics
+        """
+
+        if self.noise is True:
+            circuit, symbols, index_to_symbol = self.give_circuit_with_noise(indexed_circuit)
+            tt = []
+            for c in circuit:
+                tt.append(cirq.resolve_parameters(c, symbols_to_values))
+            tfqcircuit = tfq.convert_to_tensor(tt)
+            tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size))
+            averaged_unitaries = tf.math.reduce_mean(tfq_layer, axis=0)
+            energy = np.squeeze(tf.math.reduce_sum(averaged_unitaries, axis=-1))
+
         else:
-            self.expectation_layer = tfq.layers.Expectation()
+            circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
+            tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(circuit, symbols_to_values)])
+            tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size))
+            energy = np.squeeze(tf.math.reduce_sum(tfq_layer, axis=-1))
+        return energy
+
+
 
     def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols):
         max_its = len(indexed_circuit)
@@ -38,21 +67,14 @@ class UnitaryMurder(Basic):
         """
 
         ###### STEP 1: COMPUTE ORIGINAL ENERGY ####
-        cirquit = self.give_circuit(indexed_circuit)[0]
-        tfq_original_circuit = tfq.convert_to_tensor([cirq.resolve_parameters(cirquit, symbol_to_value)])
-        ftq_original_energy = self.expectation_layer( tfq_original_circuit,
-                                operators=tfq.convert_to_tensor([self.observable]))
-        original_energy = np.float32(np.squeeze(tf.math.reduce_sum(ftq_original_energy, axis=-1, keepdims=True)))
+        original_energy = self.give_energy(indexed_circuit, symbol_to_value)
 
-        if self.testing:
-            print("ORIGINAL ENERGY", original_energy, ftq_original_energy)
-            print(symbol_to_value)
-            print("----")
         circuit_proposals=[]
         circuit_proposals_energies=[]
 
         self.indexed_circuit = indexed_circuit
         self.symbol_to_value = symbol_to_value
+
         ###### STEP 2: Loop over original circuit. #####
         for index_victim, victim in enumerate(indexed_circuit):
             #this first index will be the one that - potentially - will be deleted
@@ -60,20 +82,9 @@ class UnitaryMurder(Basic):
                 pass
             else:
                 info_gate = [index_victim, victim]
-                valid, proposal_circuit, proposal_symbols_to_values, prop_cirq_circuit = self.create_proposal_without_gate(info_gate)
+                valid, proposal_circuit, proposal_symbols_to_values, prop_cirq_circuit = self.create_proposal_without_gate(info_gate) #notice prop_cirq_circuit beomes useless if noise.-
                 if valid:
-
-                    tfqcircuit_proposal = tfq.convert_to_tensor([cirq.resolve_parameters(prop_cirq_circuit, proposal_symbols_to_values)])
-                    expval_proposal = self.expectation_layer(tfqcircuit_proposal,
-                                            operators=tfq.convert_to_tensor([self.observable]))
-                    proposal_energy = np.float32(np.squeeze(tf.math.reduce_sum(expval_proposal, axis=-1, keepdims=True)))
-
-                    if self.testing:
-                        print("\n")
-                        print("PROPOSAL ENERGY: ", proposal_energy)
-                        print(proposal_symbols_to_values)
-                        print(cirq.resolve_parameters(prop_cirq_circuit, proposal_symbols_to_values))
-                        print("\n")
+                    proposal_energy = self.give_energy(proposal_circuit, proposal_symbols_to_values)
 
                     if self.accepting_criteria(proposal_energy, original_energy):
                         circuit_proposals.append([proposal_circuit, proposal_symbols_to_values,proposal_energy])
@@ -93,7 +104,6 @@ class UnitaryMurder(Basic):
         """
         we give %1 in exchange of killing an unitary.
         # """
-        # return np.abs(e_new/e_old) > .99
         return (e_new-e_old)/np.abs(e_old) < 0.01
 
 
