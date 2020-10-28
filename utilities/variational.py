@@ -45,12 +45,14 @@ class VQE(Basic):
         self.random_perturbations = random_perturbations
         self.verbose=verbose
         self.observable = self.give_observable(problem, g, J)
-        self.max_time_training = 60*self.n_qubits
+
         self.hams = ["xxz", "TFIM"]
 
         if len(noise_model.keys()) >0 :
             self.noise=True
+            self.max_time_training = 10*60*self.n_qubits #30 mins in case 
         else:
+            self.max_time_training = self.n_qubits*60
             self.noise=False
         self.gpus=tf.config.list_physical_devices("GPU")
 

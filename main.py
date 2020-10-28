@@ -33,7 +33,7 @@ if __name__ == "__main__":
     parser.add_argument("--qepochs", type=int, default=10**4)
     parser.add_argument("--qlr", type=float, default=0.01)
     parser.add_argument("--problem", type=str, default="TFIM")
-    parser.add_argument('--noise_model', type=json.loads, default='--{}')
+    parser.add_argument("--noise_model", type=json.loads, default='{}')
 
     args = parser.parse_args()
 
