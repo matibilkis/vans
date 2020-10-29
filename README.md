@@ -26,7 +26,7 @@ We implement quantum channels that can be decomposed as a sum of unitary transfo
 
 <img src="results/optimized_product_ansatz_noisy/noise_model.png" alt="noise model" width="100"/>
 
-On the way, we have also checked that this kind of procedure approximates well the DensityMatrixSimulator of cirq; this can be found in notebook...
+On the way, we have also checked that this kind of procedure approximates well the DensityMatrixSimulator of cirq; this can be found in notebook.
 
 Running VANS in this context is feasible, but sligthly expensive (at least on my laptop, without GPU and depending on the particular circuit, each VQE optimization takes more than 30 minutes and hence that VANS-iteration step is considered skipped). Nonetheless, from a particular 50-iterations-VANS run - and three different values of depolarizing channel - we observe a nice reduction of circuit's number of CNOTS (although only for one case, since the remaining two got stuck). Find the circuits generating the results [here](https://github.com/matibilkis/vans/blob/implicit_noise/noisy_TFIM_3qubits):
 
