@@ -18,14 +18,14 @@ Xxz model was introduced since this [meta-VQE paper](https://arxiv.org/abs/2009.
 We ran 100 (50) iterations of the algorithm for TFIM (XXZ), and despict the lowest energy found as a function of different hamiltonian parameters. For each hamiltonian hyperparameter choice, the evolution of the ansatz can be found in the directory <i> results/model/4Q-configuration/evolution.txt </i>.
 
 ## energy as a function of hamiltonian hyperparameters
-<img src="results/xxz/display_results/xxz_4q_20_10.png" alt="xxz4" width="100"/>
-<img src="results/TFIM/tfim4.png" alt="tfim4" width="100"/>
+<img src="results/xxz/display_results/xxz_4q_20_10.png" alt="xxz4" width="600"/>
+<img src="results/TFIM/tfim4.png" alt="tfim4" width="600"/>
 
 ## "Learning" curves
 we depict the lowest-found energy evolution as iterations of the algorithm occur. Notice that due to the acceptance of a higher energy circuit (up to some threshold, set to be %1 of relative energy w.r.t lowest energy found so far), in some cases this curves go up. For other cases, the initial ansatz appears to be sufficiently good (notice that the learning rate for VQE was fixed to be 0.005 - this can be found in the run info inside each corresponding directory, under the name qlr - and hence the accuracy up to which the energy is minimized will also depend on it).
 
-<img src="results/TFIM/evolution_energy_TFIM.png" alt="evol_xxz4" width="100"/>
-<img src="results/xxz/display_results/plotting_history_energies.png" alt="tfim4" width="100"/>
+<img src="results/TFIM/evolution_energy_TFIM.png" alt="evol_xxz4" width="600"/>
+<img src="results/xxz/display_results/plotting_history_energies.png" alt="tfim4" width="600"/>
 
 ## Noisy circuits
 
@@ -33,7 +33,7 @@ we depict the lowest-found energy evolution as iterations of the algorithm occur
 
 We implement quantum channels that can be decomposed as a sum of unitary transformations; for this we take a batch of circuits, each affected by a possible unitary transformation under the corresponding probability. This permits the usage of the fast C++ TFQ simulator, since DensityMatrixSimulator is not implemented (yet) - check the open issue [here](https://github.com/tensorflow/quantum/issues/250). Quite arbitrarly from our side, the channel acts before each gate appears in the circuit (in case of CNOT, the channel is encountered at both control and target). We illustrate this in a 4-qubit circuit, composed of rotations around the x-axis, and considering the symmetric depolarizing channel: with probability <>1-p</i> nothing happens, whereas the probability of each Pauli matrix acting on the qubit is <>p/3</i>, as shown in the picture.
 
-<img src="results/optimized_product_ansatz_noisy/noise_model.png" alt="noise model" width="100"/>
+<img src="results/optimized_product_ansatz_noisy/noise_model.png" alt="noise model" width="600"/>
 
 On the way, we have also checked that this kind of procedure approximates well the DensityMatrixSimulator of cirq; this can be found [here](results/optimized_product_ansatz_noisy/noise_VANS_and_TFQ.ipynb).
 
