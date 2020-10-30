@@ -42,9 +42,9 @@ Quite arbitrarily from our side, the channel acts before each gate that appears 
 <img src="results/optimized_product_ansatz_noisy/noise_model.png" alt="noise model" width="600"/>
 
 ### Some trivial checks
-On the way, we have also checked that this kind of procedure approximates well the DensityMatrixSimulator of cirq; this can be found [here](results/optimized_product_ansatz_noisy/noise_VANS_and_TFQ.ipynb). Furthermore, we checked how the results of doing VQE varies on this simple ansatz, if the noise strength is increased
+On the way, we have also checked that this kind of procedure approximates well the Density Matrix Simulator of cirq; this can be found [here](results/optimized_product_ansatz_noisy/noise_VANS_and_TFQ.ipynb). Furthermore, we checked how the results of doing VQE varies on this simple ansatz, for TFIM with J=0, if the noise strength is increased. Find that notebook [here](results/optimized_product_ansatz_noisy/vqe_depolarizing_range_product_ansatz.ipynb).
 
-<img src="results/optimized_product_ansatz_noisy/ges_energy.png" alt="noise model" width="600"/>
+<img src="results/optimized_product_ansatz_noisy/ges_energy.png" alt="noise model" width="400"/>
 
 ### Some results
 Approximating noisy channels in the context described above and running VANS on top of this is feasible, but sligthly expensive. On a rather powerful laptop, but without GPU and depending on the particular circuit, each VQE optimization takes more than 30 minutes and hence that VANS-iteration step is considered skipped). On the way, we stress that VANS detects whether a GPU is available to be used, and if so, uses it (we did some little experiments using google colab's GPU, noticing a considerable increment on the speed that VQE is done).
@@ -60,14 +60,13 @@ It would be desirable to run more simulations if there is enough interest.
 
 ## Some ideas for the future
 <ul>
-<li> In case that it is desired to limit the circuit's depth, a simple way out it's to just limit it: don't allow new identity resolutions that would make the circuit longer than a certain threshold. </li>
+<li> In case that it is desired to limit the circuit's depth, a simple way out is to just limit it: do not allow new identity resolutions that would make the circuit longer than a certain threshold. </li>
 
-<li> In case that we want to scale the algorithm up (in terms of qubits), we can think on increase the number of identity resolutions added per VANS step </li>
+<li> In case that we want to scale the algorithm up (in terms of number of qubits), we can think on increasing the number of identity resolutions added per VANS step </li>
 
-<li> If many cores are available, it sounds reasonable to parallelize the VQE in the batched approximation of noisy channels. I do remember Arthur Pesah mentioning this greatly improves the speed of TFQ. </li>
+<li> If many cores are available, it sounds reasonable to parallelize the VQE in the batched approximation of noisy channels. I do remember Arthur Pesah mentioning that this greatly improves the speed of TFQ on VQE. </li>
 
-<li> Although the whole idea of VANS is quite simple, it serves as a nice way to generate datasets of approximate-ground-state-preparing circuits of the corresponding hamiltonians. This opens the door to play with machine learning methods. For instance one try to see if there's some correlation between the discovered circuits and the hamiltonian parameters. </li>
-
+<li> Although the whole idea of VANS is quite simple, it serves as a nice way to generate datasets of approximate-ground-state-preparing circuits of the corresponding hamiltonians. This opens the door to play with machine learning methods. For instance one try to see if there's some correlation between the discovered circuits and the hamiltonian parameters, or just if some pattern can be found. </li>
 </ul>
 
 ## Things that are patched and better solutions are welcome
