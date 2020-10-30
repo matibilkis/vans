@@ -4,11 +4,11 @@ We present VANS, an algorithm that uses a variable ansatz structure to do VQE. I
 
 ## Algorithm description
 
-[To be done, but the file <i>main.py</i> is a good overview, in particular the main loop]
+[To be done, but the file <i>main.py</i> is a good overview, in particular the main loop.]
 
 ## Code structure
 
-[To be done, this description is considered necessary since the code is structure by calling different mododules (see utilities folder). For instance, if in the future the VQE module is willing to be modified, enhance (for example replace adam with rosalin), this description will help a lot.]
+[To be done, this description is considered necessary since the code is structure by calling different mododules (which are quite documented, see utilities folder). For instance, if in the future the VQE module is willing to be modified, enhance (for example replace adam with rosalin), this description will help a lot.]
 
 ## Noiseless circuit results
 
@@ -71,4 +71,4 @@ It would be desirable to run more simulations if there is enough interest.
 
 ## Things that are patched and better solutions are welcome
 
-Rule 5 of utilities.simplifier, we use sympy.solve to reduce many consecutive 1-qubit unitary gates to Rz Rx Rz, but this solution is not very elegant.
+Rule 5 of utilities.simplifier, we use sympy.solve to reduce many consecutive 1-qubit unitary gates to Rz Rx Rz, but this solution is not very elegant. Also in case we want to implement a 3-CNOT identity resolution, this will be likely to crash. Nonetheless I could not find any promissing method to solve the non-linear system of equations with python (or even other stuff, also tried with Mathematica).
