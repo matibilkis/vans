@@ -37,7 +37,7 @@ Due to the acceptance of a higher energy circuit (up to some threshold, set to b
 
 We implement quantum channels that can be decomposed as a sum of unitary transformations; for this we take a batch of circuits, each affected by a possible unitary transformation with some probability. This permits the usage of the fast C++ TFQ simulator, since Density Matrix Simulator is not implemented (yet) - check the open issue [here](https://github.com/tensorflow/quantum/issues/250).
 
-Quite arbitrarily from our side, the channel acts before each gate that appears in the circuit (read from left to right). In case of CNOT gates, the channel is applied at both control and target. We illustrate this in a simple 4-qubit circuit, made up of rotations around the x-axis: we take the symmetric depolarizing channel that with probability <>1-p</i> acts as the identity, whereas with <>p</i> applies a Pauli gate (X, Y, Z), uniform-randomly chosen.
+Quite arbitrarily from our side, the channel acts before each gate that appears in the circuit (read from left to right). In case of CNOT gates, the channel is applied at both control and target. We illustrate this in a simple 4-qubit circuit, made up of rotations around the x-axis: we take the symmetric depolarizing channel that with probability <i>1-p</i> acts as the identity, whereas with <i>p</i> applies a Pauli gate (X, Y, Z), uniform-randomly chosen.
 
 <img src="results/optimized_product_ansatz_noisy/noise_model.png" alt="noise model" width="600"/>
 
