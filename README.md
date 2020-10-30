@@ -67,6 +67,8 @@ It would be desirable to run more simulations if there is enough interest.
 <li> If many cores are available, it sounds reasonable to parallelize the VQE in the batched approximation of noisy channels. I do remember Arthur Pesah mentioning that this greatly improves the speed of TFQ on VQE. </li>
 
 <li> Although the whole idea of VANS is quite simple, it serves as a nice way to generate datasets of approximate-ground-state-preparing circuits of the corresponding hamiltonians. It would be cool if there's something to tell about these circuits, which opens the door to play with machine learning tools. For instance one try to see if there's some correlation between the discovered circuits and the hamiltonian parameters, or just if some pattern can be found. (But this I'd say is beyond the scope for now, since it may take some time and maybe there's nothing to tell).</li>
+
+<li>Explore how could we use a real device to do this (preferable from Google since all code is written in Cirq)</li>
 </ul>
 
 ## Things that are patched and better solutions are welcome
