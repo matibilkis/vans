@@ -6,7 +6,7 @@ def channel_dict(channel="depolarizing", channel_params=[0], q_batch_size=10**2)
     d= '{\"channel\":\"' +channel + '\",\"channel_params\":'+str(channel_params)+',\"q_batch_size\":' + str(q_batch_size) + '}'
     return "\'"+d+ "\'"
 
-nq = 4
+nq = 2
 qeps = 10**2
 genetic_runs=5
 insts=[]

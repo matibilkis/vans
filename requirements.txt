@@ -1,0 +1,6 @@
+numpy
+sympy
+cirq
+tensorflow_quantum
+tensorflow==2.3.1
+tqdm
