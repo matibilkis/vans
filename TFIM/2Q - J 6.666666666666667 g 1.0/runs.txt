@@ -1,8 +1,0 @@
-len(n_qubits): 2
-g: 1.0, 
-noise: {}
-J: 6.666666666666667
-qlr: 0.005
-qepochs: 100
-patience: 100
-genetic runs: 5

@@ -8,7 +8,7 @@ STR="
 #SBATCH --output=${J}.out\n\
 #SBATCH --error=${J}.err\n\
 \n\
-python3 main.py --J $v \n\
+python3 main.py --J $J --problem XXZ --n_qubits 8 --reps 100 \n\
 "
 echo -e ${STR} | sbatch
 done
