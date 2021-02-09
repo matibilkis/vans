@@ -50,7 +50,7 @@ class VQE(Basic):
 
         if len(noise_model.keys()) >0 :
             self.noise=True
-            self.max_time_training = 10*60*self.n_qubits #30 mins in case 
+            self.max_time_training = 10*60*self.n_qubits #30 mins in case
         else:
             self.max_time_training = self.n_qubits*60
             self.noise=False

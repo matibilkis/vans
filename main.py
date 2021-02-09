@@ -37,8 +37,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    args = parser.parse_args()
-
     begin = datetime.now()
     #VQE in charge of continuous optimization
 

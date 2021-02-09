@@ -7,8 +7,8 @@ def channel_dict(channel="depolarizing", channel_params=[0], q_batch_size=10**2)
     return "\'"+d+ "\'"
 
 nq = 4
-qeps = 10**4
-genetic_runs=50
+qeps = 10**2
+genetic_runs=5
 insts=[]
 # for p in [10**-7, 10**-6, 10**-5, 10**-4]:
 # for p in [10**-8, 10**-3, 10**-2, 10**-1]:
