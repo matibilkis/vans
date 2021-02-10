@@ -2,6 +2,17 @@
 
 We present VANS, an algorithm that uses a variable ansatz structure to do VQE. In short, identity-resolution block of gates are proposed to be appended in the circuit, then VQE is run on the proposed circuit and if the obtained energy is lowered, the modification is accepted.
 
+
+#### Installation
+
+In your favorite directory, clone the github branch by typying git clone https://github.com/matibilkis/vans.git --depth=1 --branch numerics
+
+You will need to create a virtual environment. To do that, go to the vans directory (the one we have created by the "clone" command in the last item) and type virtualenv qvans
+
+We will need to install the libraries. For this, we first activate the virtual environment. To do that, type . qvans/bin/activate  and then install dependencies by typying pip3 install -r requirements.txt
+
+Once things got installed, we should be able to run VANS! In case we have access to the HPC, we can send many jobs by typying  bash <b>submit.sh</b> Otherwise we have two options: use multiple cores (we can do that by running meta_main.py) or doing a single configuration by <b>main.py</b>. One may play around with hyperparameters and Pool options according to computing resources.
+
 #### Algorithm description
 
 [To be done. In the meantime, the file <i>main.py</i> is a good overview, in particular the main loop.]

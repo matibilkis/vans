@@ -78,7 +78,7 @@ class Basic:
             control, target = self.indexed_cnots[str(ind)]
             circuit.append(cirq.CNOT.on(self.qubits[control], self.qubits[target]))
             if isinstance(index_to_symbols,dict):
-                index_to_symbols[len(list(index_to_symbols.keys()))] = []
+                index_to_symbols[le n(list(index_to_symbols.keys()))] = []
                 return circuit, params, index_to_symbols
             else:
                 return circuit, params
