@@ -59,11 +59,12 @@ class VQE(Basic):
     def give_observable(self,problem, g,J):
         if problem=="TFIM":
             return self.TFIM(g,J)
-        elif problem=="xxz":
+        elif problem.lower()=="xxz":
             return self.xxz_obs(g,J)
         else:
             print("please specify your hamiltonian.\n Available ones: "+str(self.hams))
             return
+
     def xxz_obs(self, g=1, J=0):
         """
         H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}

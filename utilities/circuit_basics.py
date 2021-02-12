@@ -78,7 +78,7 @@ class Basic:
             control, target = self.indexed_cnots[str(ind)]
             circuit.append(cirq.CNOT.on(self.qubits[control], self.qubits[target]))
             if isinstance(index_to_symbols,dict):
-                index_to_symbols[le n(list(index_to_symbols.keys()))] = []
+                index_to_symbols[len(list(index_to_symbols.keys()))] = []
                 return circuit, params, index_to_symbols
             else:
                 return circuit, params
@@ -190,7 +190,6 @@ class Basic:
         return qbatch, symbols, index_to_symbols
 
 
-
     def give_unitary(self,idx, res):
         """
         a shortcut to resolve parameters.
@@ -211,7 +210,7 @@ class Basic:
             return [(ind-self.number_of_cnots)%self.n_qubits]
 
 class Evaluator(Basic):
-    def __init__(self, args, info=None, loading=False, nrun_load=0):
+    def __init__(self, args, info=None, loading=False, nrun_load=0, path="../data-vans/"):
         """
 
         This class serves as evaluating the energy, admiting the new circuit or not. Also stores the results either if there's a relevant modification or not. Finally, it allows for the possibilty of loading previous results, an example for the TFIM is:
@@ -225,14 +224,15 @@ class Evaluator(Basic):
             {"channel":"depolarizing", "channel_params":[p], "q_batch_size":10**3}
 
         """
+        self.path = path
+
         if not loading:
             super(Evaluator, self).__init__(n_qubits=args.n_qubits)
             self.raw_history = {}
             self.evolution = {}
             self.lowest_energy = None
             self.directory = self.create_folder(args,info)
-            self.displaying = "\n hola, soy VANS :), and it's {} \n".format(datetime.now())
-
+            self.displaying = "\n Hola, I'm VANS, and current local time is {} \n".format(datetime.now())
         else:
             super(Evaluator, self).__init__(n_qubits=args["n_qubits"])
             args_load={}
@@ -245,13 +245,22 @@ class Evaluator(Basic):
 
 
     def create_folder(self,args, info):
+        """
+        self.path is data-vans
+        """
+        args.problem = self.path+args.problem
+
+        ### create TFIM / XXZ / molecule in data-vans
         if not os.path.exists(args.problem):
             os.makedirs(args.problem)
+
+        ##### if we have noise in the circuit 
         if len(args.noise_model.keys())>0:
             noisy_folder = args.problem+"/{}_{}".format(args.noise_model["channel"],args.noise_model["channel_params"] )
             if not os.path.exists(noisy_folder):
                 os.makedirs(noisy_folder)
             name_folder = noisy_folder+"/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
+
         else:
             name_folder = args.problem+"/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
         if not os.path.exists(name_folder):

@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     10454,        295]
-NotebookOptionsPosition[      9316,        266]
-NotebookOutlinePosition[      9710,        282]
-CellTagsIndexPosition[      9667,        279]
+NotebookDataLength[     15268,        393]
+NotebookOptionsPosition[     13741,        360]
+NotebookOutlinePosition[     14135,        376]
+CellTagsIndexPosition[     14092,        373]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -31,7 +31,7 @@ Cell[BoxData[{
   RowBox[{"js", "=", 
    RowBox[{"N", "@", 
     RowBox[{"Subdivide", "[", 
-     RowBox[{"0", ",", "3", ",", "19"}], "]"}]}]}], 
+     RowBox[{"0", ",", "4.6", ",", "46"}], "]"}]}]}], 
   ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{
@@ -133,35 +133,129 @@ Cell[BoxData[{
        RowBox[{"Length", "[", "js", "]"}]}], "}"}]}], "]"}]}], 
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"Export", "[", 
-  RowBox[{"\"\<TFIM4_v2.csv\>\"", ",", "num"}], 
+  RowBox[{"\"\<Desktop/vans/results/TFIM/plot/TFIM8.csv\>\"", ",", "num"}], 
   "]"}], "\[IndentingNewLine]"}], "Input",
  CellChangeTimes->{{3.811747760116335*^9, 3.811747805854804*^9}, {
-  3.8122171552572107`*^9, 3.8122171665404177`*^9}, {3.812217226409218*^9, 
-  3.812217230961779*^9}, {3.812217273999261*^9, 3.812217277895561*^9}, {
-  3.8122173104551992`*^9, 3.812217329627475*^9}, {3.812270584742055*^9, 
-  3.812270590980027*^9}, {3.812270945491829*^9, 3.812270946435828*^9}, {
-  3.812271671548525*^9, 3.812271687782954*^9}, {3.822116133647612*^9, 
-  3.8221161399235783`*^9}},ExpressionUUID->"b8ac5f54-2713-474a-a187-\
-e7653b4d479c"],
+   3.8122171552572107`*^9, 3.8122171665404177`*^9}, {3.812217226409218*^9, 
+   3.812217230961779*^9}, {3.812217273999261*^9, 3.812217277895561*^9}, {
+   3.8122173104551992`*^9, 3.812217329627475*^9}, {3.812270584742055*^9, 
+   3.812270590980027*^9}, {3.812270945491829*^9, 3.812270946435828*^9}, {
+   3.812271671548525*^9, 3.812271687782954*^9}, {3.822116133647612*^9, 
+   3.822116185472302*^9}, 3.822116226903885*^9, {3.8221162821574993`*^9, 
+   3.822116376702517*^9}, {3.822117584176893*^9, 3.8221175883827*^9}, {
+   3.822117635430928*^9, 3.822117635995673*^9}},
+ CellLabel->"In[67]:=",ExpressionUUID->"b8ac5f54-2713-474a-a187-e7653b4d479c"],
 
-Cell[BoxData["\<\"TFIM4_v2.csv\"\>"], "Output",
+Cell[BoxData[
+ TemplateBox[{
+  "Eigenvalues", "arh", 
+   "\"Because finding \\!\\(\\*RowBox[{\\\"256\\\"}]\\) out of the \
+\\!\\(\\*RowBox[{\\\"256\\\"}]\\) eigenvalues and/or eigenvectors is likely \
+to be faster with dense matrix methods, the sparse input matrix will be \
+converted. If fewer eigenvalues and/or eigenvectors would be sufficient, \
+consider restricting this number using the second argument to \
+\\!\\(\\*RowBox[{\\\"Eigenvalues\\\"}]\\).\"", 2, 73, 39, 
+   16865490411410881568, "Local"},
+  "MessageTemplate"]], "Message", "MSG",
+ CellChangeTimes->{
+  3.8221161904361677`*^9, {3.822116312636718*^9, 3.822116376946062*^9}, 
+   3.82211763655289*^9},
+ CellLabel->
+  "During evaluation of \
+In[67]:=",ExpressionUUID->"57eaf733-2843-403e-89a1-e6b602c442fa"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "Eigenvalues", "arh", 
+   "\"Because finding \\!\\(\\*RowBox[{\\\"256\\\"}]\\) out of the \
+\\!\\(\\*RowBox[{\\\"256\\\"}]\\) eigenvalues and/or eigenvectors is likely \
+to be faster with dense matrix methods, the sparse input matrix will be \
+converted. If fewer eigenvalues and/or eigenvectors would be sufficient, \
+consider restricting this number using the second argument to \
+\\!\\(\\*RowBox[{\\\"Eigenvalues\\\"}]\\).\"", 2, 73, 40, 
+   16865490411410881568, "Local"},
+  "MessageTemplate"]], "Message", "MSG",
+ CellChangeTimes->{
+  3.8221161904361677`*^9, {3.822116312636718*^9, 3.822116376946062*^9}, 
+   3.822117636561253*^9},
+ CellLabel->
+  "During evaluation of \
+In[67]:=",ExpressionUUID->"422f3bd5-3e24-435c-8c68-7cba3912b316"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "Eigenvalues", "arh", 
+   "\"Because finding \\!\\(\\*RowBox[{\\\"256\\\"}]\\) out of the \
+\\!\\(\\*RowBox[{\\\"256\\\"}]\\) eigenvalues and/or eigenvectors is likely \
+to be faster with dense matrix methods, the sparse input matrix will be \
+converted. If fewer eigenvalues and/or eigenvectors would be sufficient, \
+consider restricting this number using the second argument to \
+\\!\\(\\*RowBox[{\\\"Eigenvalues\\\"}]\\).\"", 2, 73, 41, 
+   16865490411410881568, "Local"},
+  "MessageTemplate"]], "Message", "MSG",
+ CellChangeTimes->{
+  3.8221161904361677`*^9, {3.822116312636718*^9, 3.822116376946062*^9}, 
+   3.8221176365693693`*^9},
+ CellLabel->
+  "During evaluation of \
+In[67]:=",ExpressionUUID->"123ce8e7-5243-4862-830d-66b8807b3a52"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "General", "stop", 
+   "\"Further output of \\!\\(\\*StyleBox[RowBox[{\\\"Eigenvalues\\\", \\\"::\
+\\\", \\\"arh\\\"}], \\\"MessageName\\\"]\\) will be suppressed during this \
+calculation.\"", 2, 73, 42, 16865490411410881568, "Local"},
+  "MessageTemplate"]], "Message", "MSG",
+ CellChangeTimes->{
+  3.8221161904361677`*^9, {3.822116312636718*^9, 3.822116376946062*^9}, 
+   3.822117636577409*^9},
+ CellLabel->
+  "During evaluation of \
+In[67]:=",ExpressionUUID->"45deb650-447b-47de-9b52-c26152fe7232"],
+
+Cell[BoxData["\<\"Desktop/vans/results/TFIM/plot/TFIM8.csv\"\>"], "Output",
  CellChangeTimes->{
   3.811747766375978*^9, 3.811747806226986*^9, 3.812217233810957*^9, 
    3.8122172800416517`*^9, {3.8122173176022387`*^9, 3.8122173328075113`*^9}, 
-   3.812270951304615*^9, {3.812271668850284*^9, 3.812271688140287*^9}},
- CellLabel->"Out[30]=",ExpressionUUID->"ea42074e-dffd-455a-b287-380da4b49d46"]
+   3.812270951304615*^9, {3.812271668850284*^9, 3.812271688140287*^9}, 
+   3.822116190664219*^9, {3.822116312841646*^9, 3.822116377127389*^9}, 
+   3.822117636707615*^9},
+ CellLabel->"Out[74]=",ExpressionUUID->"5550b852-506e-4ca1-aaf9-e563444a7183"]
 }, Open  ]],
 
 Cell[CellGroupData[{
 
-Cell[BoxData[
- RowBox[{"Directory", "[", "]"}]], "Input",
- CellChangeTimes->{{3.811747792586771*^9, 3.811747793669077*^9}},
- CellLabel->"In[8]:=",ExpressionUUID->"07e63b0a-26e8-4606-88d2-5ab14c93a607"],
+Cell[BoxData["js"], "Input",
+ CellChangeTimes->{{3.811747792586771*^9, 3.811747793669077*^9}, {
+  3.822117639739455*^9, 3.822117639943562*^9}},
+ CellLabel->"In[75]:=",ExpressionUUID->"07e63b0a-26e8-4606-88d2-5ab14c93a607"],
 
-Cell[BoxData["\<\"/home/cooper-cooper/Desktop/vans\"\>"], "Output",
- CellChangeTimes->{3.811747793917767*^9},
- CellLabel->"Out[8]=",ExpressionUUID->"aad7eb40-9f34-4378-bf59-728b4d3eb3ab"]
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+  "0.`", ",", "0.09999999999999999`", ",", "0.19999999999999998`", ",", 
+   "0.3`", ",", "0.39999999999999997`", ",", "0.49999999999999994`", ",", 
+   "0.6`", ",", "0.7`", ",", "0.7999999999999999`", ",", 
+   "0.8999999999999998`", ",", "0.9999999999999999`", ",", 
+   "1.0999999999999999`", ",", "1.2`", ",", "1.2999999999999998`", ",", 
+   "1.4`", ",", "1.5`", ",", "1.5999999999999999`", ",", 
+   "1.6999999999999997`", ",", "1.7999999999999996`", ",", "1.9`", ",", 
+   "1.9999999999999998`", ",", "2.0999999999999996`", ",", 
+   "2.1999999999999997`", ",", "2.3`", ",", "2.4`", ",", 
+   "2.4999999999999996`", ",", "2.5999999999999996`", ",", 
+   "2.6999999999999997`", ",", "2.8`", ",", "2.9`", ",", "3.`", ",", 
+   "3.0999999999999996`", ",", "3.1999999999999997`", ",", 
+   "3.2999999999999994`", ",", "3.3999999999999995`", ",", 
+   "3.4999999999999996`", ",", "3.599999999999999`", ",", 
+   "3.6999999999999997`", ",", "3.8`", ",", "3.8999999999999995`", ",", 
+   "3.9999999999999996`", ",", "4.1`", ",", "4.199999999999999`", ",", 
+   "4.299999999999999`", ",", "4.3999999999999995`", ",", "4.5`", ",", 
+   "4.6`"}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.811747793917767*^9, {3.822116315875716*^9, 3.822116334246985*^9}, 
+   3.822117640190586*^9},
+ CellLabel->"Out[75]=",ExpressionUUID->"40c77711-04c9-407c-b564-7dce3cf112a7"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -268,7 +362,7 @@ WindowSize->{1440., 768.75},
 WindowMargins->{{0, Automatic}, {0, Automatic}},
 FrontEndVersion->"12.1 for Linux x86 (64-bit) (March 18, 2020)",
 StyleDefinitions->"Default.nb",
-ExpressionUUID->"c578d836-6525-4c63-9201-1bb12b3442d9"
+ExpressionUUID->"2ac14f94-7a5c-4690-a5e4-a00eb9f75f5c"
 ]
 (* End of Notebook Content *)
 
@@ -282,20 +376,24 @@ CellTagsIndex->{}
 (*NotebookFileOutline
 Notebook[{
 Cell[CellGroupData[{
-Cell[580, 22, 4062, 122, 195, "Input",ExpressionUUID->"b8ac5f54-2713-474a-a187-e7653b4d479c"],
-Cell[4645, 146, 365, 5, 33, "Output",ExpressionUUID->"ea42074e-dffd-455a-b287-380da4b49d46"]
+Cell[580, 22, 4286, 124, 195, "Input",ExpressionUUID->"b8ac5f54-2713-474a-a187-e7653b4d479c"],
+Cell[4869, 148, 771, 16, 38, "Message",ExpressionUUID->"57eaf733-2843-403e-89a1-e6b602c442fa"],
+Cell[5643, 166, 772, 16, 38, "Message",ExpressionUUID->"422f3bd5-3e24-435c-8c68-7cba3912b316"],
+Cell[6418, 184, 774, 16, 38, "Message",ExpressionUUID->"123ce8e7-5243-4862-830d-66b8807b3a52"],
+Cell[7195, 202, 532, 12, 22, "Message",ExpressionUUID->"45deb650-447b-47de-9b52-c26152fe7232"],
+Cell[7730, 216, 491, 7, 33, "Output",ExpressionUUID->"5550b852-506e-4ca1-aaf9-e563444a7183"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5047, 156, 201, 3, 29, "Input",ExpressionUUID->"07e63b0a-26e8-4606-88d2-5ab14c93a607"],
-Cell[5251, 161, 187, 2, 33, "Output",ExpressionUUID->"aad7eb40-9f34-4378-bf59-728b4d3eb3ab"]
+Cell[8258, 228, 222, 3, 29, "Input",ExpressionUUID->"07e63b0a-26e8-4606-88d2-5ab14c93a607"],
+Cell[8483, 233, 1380, 24, 55, "Output",ExpressionUUID->"40c77711-04c9-407c-b564-7dce3cf112a7"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5475, 168, 375, 6, 29, "Input",ExpressionUUID->"d574a46d-d2ce-4cff-8a69-4ed39bf224f4"],
-Cell[5853, 176, 753, 13, 33, "Output",ExpressionUUID->"ba22ee33-a18d-43f7-9e48-de5af3464001"]
+Cell[9900, 262, 375, 6, 29, "Input",ExpressionUUID->"d574a46d-d2ce-4cff-8a69-4ed39bf224f4"],
+Cell[10278, 270, 753, 13, 33, "Output",ExpressionUUID->"ba22ee33-a18d-43f7-9e48-de5af3464001"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[6643, 194, 174, 2, 29, "Input",ExpressionUUID->"8cf6ff63-dca9-4317-b00e-9202937783b8"],
-Cell[6820, 198, 2480, 65, 75, "Output",ExpressionUUID->"04285837-c2d3-4f3c-be7c-c9d91b5d73a3"]
+Cell[11068, 288, 174, 2, 29, "Input",ExpressionUUID->"8cf6ff63-dca9-4317-b00e-9202937783b8"],
+Cell[11245, 292, 2480, 65, 75, "Output",ExpressionUUID->"04285837-c2d3-4f3c-be7c-c9d91b5d73a3"]
 }, Open  ]]
 }
 ]
