@@ -4,3 +4,5 @@ cirq
 tensorflow_quantum
 tensorflow==2.3.1
 tqdm
+openfermion==1.0.0
+openfermionpyscf==0.5
