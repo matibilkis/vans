@@ -1,18 +1,7 @@
 import os
 import numpy as np
 import multiprocessing as mp
-
-
-def dict_to_json(dictionary):
-    d="{"
-    for k,v in dictionary.items():
-        if isinstance(k,str):
-            d+='\"{}\":\"{}\",'.format(k,v)
-        else:
-            d+='\"{}\":{},'.format(k,v)
-    d=d[:-1]
-    d+="}" #kill the comma
-    return "\'"+d+ "\'"
+from utilities.misc import dict_to_json
 
 ##########################################################################################################################################################################
 ##########################################################################################################################################################################
@@ -26,16 +15,17 @@ def dict_to_json(dictionary):
 ##########################################################################################################################################################################
 
 
-QUBITS = 4
-QEPOCHS = 10**2
-GENETIC_RUNS=10
+# QUBITS = 4
+QEPOCHS = 10**3
+GENETIC_RUNS=10**3
 insts=[]
-
 # problem_config = dict_to_json({"problem" : "TFIM", "g":1.0, "J": 0.3})
 # problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": 0.3})
-BOND_LENGTH=1.2
-problem_config = dict_to_json({"problem" : "H2", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., BOND_LENGTH))], "multiplicity":1, "charge":0, "basis":"sto-3g"})
-noise_config = dict_to_json({"channel": "depolarizing", "channel_params":[0], "q_batch_size":10**2})
+# BOND_LENGTH=1.2
+# problem_config = dict_to_json({"problem" : "H2", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., BOND_LENGTH))], "multiplicity":1, "charge":0, "basis":"sto-3g"})
+# noise_config = dict_to_json({"channel": "depolarizing", "channel_params":[0], "q_batch_size":10**2})
+#problem_config = dict_to_json({"problem" : "LiH", "geometry": [('Li', (0., 0., 0.)), ('H', (0., 0., 2.0))], "multiplicity":1, "charge":0, "basis":"sto-3g"}); QUBITS=12
+problem_config = dict_to_json({"problem" : "H4", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., 1.5)), ('H', (0., 0., 3.0)), ('H', (0., 0., 4.5))], "multiplicity":1, "charge":0, "basis":"sto-3g"}); QUBITS=8
 
 
 for J in [1]:
