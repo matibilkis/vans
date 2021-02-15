@@ -56,14 +56,14 @@ class Basic:
         """
         self.noise = True
         self.channel = noise_config["channel"]
-        self.channel_params = noise_config["channel_params"]
-        self.q_batch_size = noise_config["q_batch_size"]
+        self.channel_params = eval(noise_config["channel_params"])
+        self.q_batch_size = eval(noise_config["q_batch_size"])
         if self.channel == "depolarizing":
             self.channel_unitaries = [cirq.I, cirq.X, cirq.Y, cirq.Z]
             self.number_noisy_unitaries = len(self.channel_unitaries)
             p = self.channel_params[0]
             self.channel_params = [1-p, p/3, p/3, p/3]
-            self.number_noisy_unitaries, self.channel_unitaries, self.channel_params
+            #self.number_noisy_unitaries, self.channel_unitaries, self.channel_params
 
     def append_to_circuit(self, ind, circuit, params, index_to_symbols):
         """

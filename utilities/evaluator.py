@@ -79,7 +79,7 @@ class Evaluator(Basic):
             id=""
             for key in ["channel"]:#"shots",
                 if key in list(noise_config.keys()):
-                    id+="{}_".format(key,noise_config[key])
+                    id+="{}_{}".format(key,noise_config[key])
             if id=="":
                 raise NameError("could not get noise label from noise_config. Fed dict is {}".format(noise_config))
         return id
