@@ -2,6 +2,8 @@ import openfermionpyscf as ofpyscf
 import cirq
 import numpy as np
 import openfermion as of
+import json
+
 
 class OpenFermion_to_Cirq:
     """
@@ -60,11 +62,38 @@ class ChemicalObservable(OpenFermion_to_Cirq):
         """
         super(ChemicalObservable).__init__()
 
+    def load_geometry_correct_format(self, geometry):
+        """
+        changes string of list of tuples to list, preserving things that OpenFermion likes (yes, I've been an entire afternoon fighting with this :E)
+        """
+
+        newgeometry = []
+        skip_next=False
+        for ind, k in enumerate(list(geometry)):
+            if k.isalpha() and not skip_next:
+                newgeometry.append('\'')
+                newgeometry.append(k)
+                if not list(geometry)[ind+1].isalpha():
+                    newgeometry.append('\'')
+                else:
+                    newgeometry.append(geometry[ind+1])
+                    newgeometry.append('\'')
+                    skip_next = True
+            else:
+                newgeometry.append(k)
+
+        newgeometry = "".join(newgeometry)
+        newgeometry= eval(newgeometry)
+        return newgeometry
+
     def give_observable(self,qubits, geometry, multiplicity=1, charge=0, basis="sto-3g"):
         """
         To-Do: implement a bool if the number of cirq qubits is not enough for the jordan_wigner
         """
-        hamiltonian = ofpyscf.generate_molecular_hamiltonian(geometry, basis=basis,
-                                                             multiplicity=multiplicity, charge=charge)
+
+        geometry = self.load_geometry_correct_format(geometry)
+
+        hamiltonian = ofpyscf.generate_molecular_hamiltonian(geometry=geometry, basis=str(basis),
+                                                             multiplicity=int(multiplicity), charge=int(charge))
         qham = of.jordan_wigner(hamiltonian)
         return self(qham, qubits)

@@ -87,10 +87,10 @@ class VQE(Basic):
 
         with open("utilities/chemical_hamiltonians.txt") as f:
             hams = f.readlines()
-        possible_hamiltonians.append([x.strip().upper() for x in hams])
+        possible_hamiltonians += ([x.strip().upper() for x in hams])
 
         if problem_config["problem"] not in possible_hamiltonians:
-            raise NameError("Hamiltonian {} is not invited to VANS yet. Available hamiltonians: {}\n".format(problem_config["name"],possible_hamiltonians))
+            raise NameError("Hamiltonian {} is not invited to VANS yet. Available hamiltonians: {}\n".format(problem_config["problem"],possible_hamiltonians))
 
         #### CONDENSED MATTER HAMILTONIANS ####
         if problem_config["problem"].upper() in ["XXZ","TFIM"]:
@@ -111,14 +111,15 @@ class VQE(Basic):
                     observable.append(cirq.Y.on(self.qubits[q])*cirq.Y.on(self.qubits[(q+1)%len(self.qubits)]))
                     observable.append(float(problem_config["J"])*cirq.Z.on(self.qubits[q])*cirq.Z.on(self.qubits[(q+1)%len(self.qubits)]))
                 return observable
-        elif problem_config["problem"].upper in ["H2"]:
+        elif problem_config["problem"].upper() in ["H2"]:
             oo = ChemicalObservable()
             for key,defvalue in zip(["geometry","multiplicity", "charge", "basis"], [None,1,0,"sto-3g"]):
-                if problem_config[key] not in list(problem_config.keys()):
+                if key not in list(problem_config.keys()):
                     raise ValueError("{} not specified in problem_config. Dictionary obtained: {}".format(key, problem_config))
-            return oo.give_observable(self.qubits, problem_config["geometry"], problem_config["multiplicity"], problem_config["charge"], problem_config["basis"])
+            observable=oo.give_observable(self.qubits, problem_config["geometry"], problem_config["multiplicity"], problem_config["charge"], problem_config["basis"])
+            return observable
         else:
-            raise NotImplementedError("The specified hamiltonian is in the list but we have not added to the code yet! Devs, take a look here!")
+            raise NotImplementedError("The specified hamiltonian is in the list but we have not added to the code yet! Devs, take a look here!\problem_config[problem]: {}".format(problem_config["problem"].upper()))
 
 
     def vqe(self, indexed_circuit, symbols_to_values=None):

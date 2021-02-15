@@ -66,7 +66,7 @@ class Evaluator(Basic):
 
         if args["problem"].upper() in cm_hamiltonians:
             id = "g{}J{}".format(args["g"],args["g"])
-        elif args["problem".upper()] in chemical_hamiltonians:
+        elif args["problem"].upper() in chemical_hamiltonians:
             id = "geometry_{}_multip_{}_charge_{}_basis{}".format(args["problem"], args["geometry"], args["multiplicity"], args["charge"], args["basis"])
         else:
             raise NameError("Check that your args.problem_config is correct")
