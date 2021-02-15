@@ -4,7 +4,6 @@ import sympy
 import pickle
 import os
 from datetime import datetime
-from glob import glob
 from functools import wraps
 import errno
 import os
@@ -12,14 +11,14 @@ import signal
 
 
 class Basic:
-    def __init__(self, n_qubits=3, testing=False, noise_model={}):
+    def __init__(self, n_qubits=3, testing=False, noise_config={}):
         """
         n_qubits: number of qubits on your ansatz
 
         testing: this is inherited by other classes to ease the debugging.
 
-        noise_model: implemented in batches.
-            if self.noise_model = {} ---> no noise
+        noise_config: implemented in batches.
+            if self.noise_config = {} ---> no noise
             else: passed thorugh the Basic, to inherit the circuit_with_noise
                 if should be in the form of {"channel":"depolarizing", "channel_params":array, "q_batch_size":int}
 
@@ -42,23 +41,23 @@ class Basic:
 
         self.testing=testing
 
-        if not isinstance(noise_model, dict):
-            print("noise_model should be passed as dict, in a form of, see docs")
-        elif len(noise_model.keys()) == 0 :
+        if not isinstance(noise_config, dict):
+            print("noise_config should be passed as dict, in a form of, see docs")
+        elif len(noise_config.keys()) == 0 :
                 self.q_batch_size = 1
                 self.noise=False
         else:
-            self.define_channel_things(noise_model)
+            self.define_channel_things(noise_config)
 
 
-    def define_channel_things(self, noise_model):
+    def define_channel_things(self, noise_config):
         """
         options: "depolarizing" (symetric depolarizing channel) {"channel":"depolarizing", "channel_params":[p], "q_batch_size":10**3}
         """
         self.noise = True
-        self.channel = noise_model["channel"]
-        self.channel_params = noise_model["channel_params"]
-        self.q_batch_size = noise_model["q_batch_size"]
+        self.channel = noise_config["channel"]
+        self.channel_params = noise_config["channel_params"]
+        self.q_batch_size = noise_config["q_batch_size"]
         if self.channel == "depolarizing":
             self.channel_unitaries = [cirq.I, cirq.X, cirq.Y, cirq.Z]
             self.number_noisy_unitaries = len(self.channel_unitaries)
@@ -208,163 +207,6 @@ class Basic:
             return self.indexed_cnots[str(ind)]
         else:
             return [(ind-self.number_of_cnots)%self.n_qubits]
-
-class Evaluator(Basic):
-    def __init__(self, args, info=None, loading=False, nrun_load=0, path="../data-vans/"):
-        """
-
-        This class serves as evaluating the energy, admiting the new circuit or not. Also stores the results either if there's a relevant modification or not. Finally, it allows for the possibilty of loading previous results, an example for the TFIM is:
-
-        (cheat-sheet for jupyter notebook):
-            %load_ext autoreload
-            %autoreload 2
-            from utilities.circuit_basics import Evaluator
-            evaluator = Evaluator(loading=True, args={"n_qubits":3, "J":4.5})
-            unitary, energy, indices, resolver = evaluator.raw_history[47]
-            {"channel":"depolarizing", "channel_params":[p], "q_batch_size":10**3}
-
-        """
-        self.path = path
-
-        if not loading:
-            super(Evaluator, self).__init__(n_qubits=args.n_qubits)
-            self.raw_history = {}
-            self.evolution = {}
-            self.lowest_energy = None
-            self.directory = self.create_folder(args,info)
-            self.displaying = "\n Hola, I'm VANS, and current local time is {} \n".format(datetime.now())
-        else:
-            super(Evaluator, self).__init__(n_qubits=args["n_qubits"])
-            args_load={}
-            for str,default in zip(["n_qubits", "J", "g","noise_model","problem"], [3,0.,1.,{},"TFIM"]):
-                if str not in list(args.keys()):
-                    args_load[str] = default
-                else:
-                    args_load[str] = args[str]
-            self.load(args_load,nrun=nrun_load)
-
-
-    def create_folder(self,args, info):
-        """
-        self.path is data-vans
-        """
-        args.problem = self.path+args.problem
-
-        ### create TFIM / XXZ / molecule in data-vans
-        if not os.path.exists(args.problem):
-            os.makedirs(args.problem)
-
-        ##### if we have noise in the circuit 
-        if len(args.noise_model.keys())>0:
-            noisy_folder = args.problem+"/{}_{}".format(args.noise_model["channel"],args.noise_model["channel_params"] )
-            if not os.path.exists(noisy_folder):
-                os.makedirs(noisy_folder)
-            name_folder = noisy_folder+"/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
-
-        else:
-            name_folder = args.problem+"/"+str(args.n_qubits)+"Q - J "+str(args.J)+" g "+str(args.g)
-        if not os.path.exists(name_folder):
-            os.makedirs(name_folder)
-            nrun=0
-            final_folder = name_folder+"/run_"+str(nrun)
-            with open(name_folder+"/runs.txt", "w+") as f:
-                f.write(info)
-                f.close()
-            os.makedirs(final_folder)
-        else:
-            folder = os.walk(name_folder)
-            nrun=0
-            for k in list(folder)[0][1]:
-                if k[0]!=".":
-                    nrun+=1
-            final_folder = name_folder+"/run_"+str(nrun)
-            with open(name_folder+"/runs.txt", "r") as f:
-                a = f.readlines()[0]
-                f.close()
-            with open(name_folder+"/runs.txt", "w") as f:
-                f.write(str(nrun)+"\n")
-                f.write(info)
-                f.write("\n")
-                f.close()
-            os.makedirs(final_folder)
-        return final_folder
-
-    def load(self,args, nrun=0):
-        if len(args["noise_model"].keys())>0:
-            noisy_folder = args["problem"]+"/{}_{}".format(args["noise_model"]["channel"],args["noise_model"]["channel_params"] )
-            name_folder = noisy_folder+"/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])
-        else:
-            name_folder = args["problem"]+"/"+str(args["n_qubits"])+"Q - J "+str(args["J"])+" g "+str(args["g"])
-        self.load_dicts_and_displaying(name_folder+"/run_"+str(nrun))
-        return
-
-    def save_dicts_and_displaying(self):
-        output = open(self.directory+"/raw_history.pkl", "wb")
-        pickle.dump(self.raw_history, output)
-        output.close()
-        output = open(self.directory+"/evolution.pkl", "wb")
-        pickle.dump(self.evolution, output)
-        output.close()
-        with open(self.directory+"/evolution.txt","w") as f:
-            f.write(self.displaying)
-            f.close()
-        return
-
-    def load_dicts_and_displaying(self,folder):
-
-        with open(folder+"/raw_history.pkl" ,"rb") as h:
-            self.raw_history = pickle.load(h)
-        with open(folder+"/evolution.pkl", "rb") as hh:
-            self.evolution = pickle.load(hh)
-        with open(folder+"/evolution.txt", "r") as f:
-            a = f.readlines()
-            f.close()
-        self.displaying = a
-        return self.displaying
-
-    def accept_energy(self, E, noise=False):
-        """
-        in the presence of noise, don't give gates for free!
-
-        E: energy after some optimization (to be accepted or not).
-
-        For the moment we leave the same criteria for the noisy scenario also.
-        """
-        if self.lowest_energy is None:
-            return True
-        else:
-            return (E-self.lowest_energy)/np.abs(self.lowest_energy) < 0.01
-
-    def get_best_iteration(self):
-        """
-        returns minimum in evolution.
-        """
-        return list(np.where(np.array(list(self.evolution.values()))[:,1] == np.min(np.array(list(self.raw_history.values()))[:,-1]))[0])
-
-    def number_cnots_best(self):
-        cn=0
-        for k in self.evolution[self.get_best_iteration()[0]][2]: #get the indices
-            if k < self.number_of_cnots:
-                cn+=1
-        return cn
-
-    def add_step(self,indices, resolver, energy, relevant=True):
-        """
-        indices: list of integers describing circuit to save
-        resolver: dictionary with the corresponding circuit's symbols
-        energy: expected value of target hamiltonian on prepared circuit.
-        relevant: if energy was minimized on that step
-        """
-        if self.lowest_energy is None:
-            self.lowest_energy = energy
-        elif energy < self.lowest_energy:
-            self.lowest_energy = energy
-
-        self.raw_history[len(list(self.raw_history.keys()))] = [self.give_unitary(indices, resolver), energy, indices, resolver, self.lowest_energy]
-        if relevant == True:
-            self.evolution[len(list(self.evolution.keys()))] = [self.give_unitary(indices, resolver), energy, indices,resolver, self.lowest_energy]
-        return
-
 
 
 class TimeoutError(Exception):

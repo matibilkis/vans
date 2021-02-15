@@ -4,11 +4,11 @@ import tensorflow_quantum as tfq
 from utilities.circuit_basics import Basic
 import tensorflow as tf
 import time
+from utilities.chemical import ChemicalObservable
 
 class VQE(Basic):
-    def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, g=1, J=0, problem="TFIM", noise_model={}):
+    def __init__(self, n_qubits=3, lr=0.01, epochs=100, patience=100, random_perturbations=True, verbose=0, noise_config={}, problem_config={}):
         """
-
         lr: learning_rate for each iteration of gradient descent
 
         epochs: number of gradient descent iterations (in this project)
@@ -18,37 +18,48 @@ class VQE(Basic):
         random_perturbations: if True adds to model's trainable variables random perturbations around (-pi/2, pi/
         problem: "ising", "xxz"
 
-        noise_model: implemented in batches.
-            if None: self.noise_model = False
+
+        noise_config: implemented in batches.
+            if None: self.noise_config = False
             else: passed thorugh the Basic, to inherit the circuit_with_noise
                 if should be in the form of {"channel":"depolarizing", "p":float, "q_batch_size":int}
 
         verbose: display progress or not
 
+        problem_config: dictionary that specifies the structure of the hamiltonian. Its keys will depend on the problem.
+                        condensed matter:
+                                problem_config["problem"] in ["XXZ", "TFIM"]
+                                problem_config["g"]
+                                problem_config["J"]
+                        chemical:
+                                problem_config["problem"] in [{molecule_name}] (for now should be H2)
+                                problem_config["geometry"]
+                                problem_config["charge"] (optional)
+                                problem_config["multiplicity"] (optional)
+                                problem_config["basis"]  (optional)
         Notes:
-
-               (1) we add noise with probability %10
-
+               (1) we add noise to parameters with probability %10
                (2) Hamiltonians:
                (2.1) &&ising model&& H = - g \sum_i \Z_i - (J) *\sum_i X_i X_{i+1}
                (2.2) &&xxz model$&&  H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}
-               (2.3) -- TODO --- import hamiltonian from .xyz file
-
+               (2.3) molecular hamiltonians, see chemical.py
                (3) Some callbacks are used: EarlyStopping and TimeStopping, which is set to 60*self.n_qubits (we can change this!)
+               (4) Note that we construct the circuit according to the number of qubits required, we should add a bool check in case circuit's qubits are not enoguh in chemical.py
         """
 
-        super(VQE, self).__init__(n_qubits=n_qubits, noise_model=noise_model)
+        super(VQE, self).__init__(n_qubits=n_qubits, noise_config=noise_config)
 
+        #### MACHINE LEARNING CONFIGURATION
         self.lr = lr
         self.epochs = epochs
         self.patience = patience
         self.random_perturbations = random_perturbations
         self.verbose=verbose
-        self.observable = self.give_observable(problem, g, J)
 
-        self.hams = ["xxz", "TFIM"]
+        ##### HAMILTONIAN CONFIGURATION
+        self.observable = self.give_observable(problem_config)
 
-        if len(noise_model.keys()) >0 :
+        if len(noise_config.keys()) >0 :
             self.noise=True
             self.max_time_training = 10*60*self.n_qubits #30 mins in case
         else:
@@ -56,35 +67,59 @@ class VQE(Basic):
             self.noise=False
         self.gpus=tf.config.list_physical_devices("GPU")
 
-    def give_observable(self,problem, g,J):
-        if problem=="TFIM":
-            return self.TFIM(g,J)
-        elif problem.lower()=="xxz":
-            return self.xxz_obs(g,J)
+    def give_observable(self,problem_config):
+        """
+        problem_config: dictionary that specifies the structure of the hamiltonian. Its keys will depend on the problem.
+                        condensed matter:
+                                problem_config["problem"] in ["XXZ", "TFIM"]
+                                problem_config["g"]
+                                problem_config["J"]
+                        chemical:
+                                problem_config["problem"] in [{molecule_name}] (for now should be H2)
+                                problem_config["geometry"]
+                                problem_config["charge"] (optional)
+                                problem_config["multiplicity"]  (optional)
+                                problem_config["basis"]  (optional)
+        """
+        with open("utilities/cm_hamiltonians.txt") as f:
+            hams = f.readlines()
+        possible_hamiltonians = [x.strip().upper() for x in hams]
+
+        with open("utilities/chemical_hamiltonians.txt") as f:
+            hams = f.readlines()
+        possible_hamiltonians.append([x.strip().upper() for x in hams])
+
+        if problem_config["problem"] not in possible_hamiltonians:
+            raise NameError("Hamiltonian {} is not invited to VANS yet. Available hamiltonians: {}\n".format(problem_config["name"],possible_hamiltonians))
+
+        #### CONDENSED MATTER HAMILTONIANS ####
+        if problem_config["problem"].upper() in ["XXZ","TFIM"]:
+            for field in ["g","J"]:
+                if field not in problem_config.keys():
+                    raise ValueError("You have not specified the fields correctly. Check out your problem_config back again. Current dict: {}".format(problem_config))
+            if problem_config["problem"].upper()=="TFIM":
+                #H = -J \sum_i^{n} X_i X_{i+1} - g \sum_i^{n} Z_i
+                observable = [-float(problem_config["g"])*cirq.Z.on(q) for q in self.qubits]
+                for q in range(len(self.qubits)):
+                    observable.append(-float(problem_config["J"])*cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
+                return observable
+            elif problem_config["problem"].upper()=="XXZ":
+                #H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}
+                observable = [float(problem_config["g"])*cirq.Z.on(q) for q in self.qubits]
+                for q in range(len(self.qubits)):
+                    observable.append(cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
+                    observable.append(cirq.Y.on(self.qubits[q])*cirq.Y.on(self.qubits[(q+1)%len(self.qubits)]))
+                    observable.append(float(problem_config["J"])*cirq.Z.on(self.qubits[q])*cirq.Z.on(self.qubits[(q+1)%len(self.qubits)]))
+                return observable
+        elif problem_config["problem"].upper in ["H2"]:
+            oo = ChemicalObservable()
+            for key,defvalue in zip(["geometry","multiplicity", "charge", "basis"], [None,1,0,"sto-3g"]):
+                if problem_config[key] not in list(problem_config.keys()):
+                    raise ValueError("{} not specified in problem_config. Dictionary obtained: {}".format(key, problem_config))
+            return oo.give_observable(self.qubits, problem_config["geometry"], problem_config["multiplicity"], problem_config["charge"], problem_config["basis"])
         else:
-            print("please specify your hamiltonian.\n Available ones: "+str(self.hams))
-            return
+            raise NotImplementedError("The specified hamiltonian is in the list but we have not added to the code yet! Devs, take a look here!")
 
-    def xxz_obs(self, g=1, J=0):
-        """
-        H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}
-        """
-        self.g = g
-        self.J = J
-        observable = [float(g)*cirq.Z.on(q) for q in self.qubits]
-        for q in range(len(self.qubits)):
-            observable.append(cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
-            observable.append(cirq.Y.on(self.qubits[q])*cirq.Y.on(self.qubits[(q+1)%len(self.qubits)]))
-            observable.append(float(J)*cirq.Z.on(self.qubits[q])*cirq.Z.on(self.qubits[(q+1)%len(self.qubits)]))
-        return observable
-
-    def TFIM(self, g=1, J=0):
-        self.g=g
-        self.J=J
-        observable = [-float(g)*cirq.Z.on(q) for q in self.qubits]
-        for q in range(len(self.qubits)):
-            observable.append(-float(J)*cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
-        return observable
 
     def vqe(self, indexed_circuit, symbols_to_values=None):
         """
@@ -123,7 +158,6 @@ class VQE(Basic):
             tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size))
             averaged_unitaries = tf.math.reduce_mean(tfq_layer, axis=0)
             energy = np.squeeze(tf.math.reduce_sum(averaged_unitaries, axis=-1))
-
         else:
             circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
             tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(circuit, symbols_to_values)])
@@ -173,7 +207,6 @@ class VQE(Basic):
                 if k not in effective_qubits:
                     raise Error("NOT ALL QUBITS AFFECTED")
 
-
     def train_model(self, circuit, model):
         """
         circuit:
@@ -209,7 +242,6 @@ class VQE(Basic):
         else:
             energy = np.squeeze(tf.math.reduce_sum(model.predict(tfqcircuit), axis=-1))
         return energy,h
-
 
 
 class TimedStopping(tf.keras.callbacks.Callback):

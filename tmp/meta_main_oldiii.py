@@ -6,7 +6,7 @@ import multiprocessing as mp
 def dict_to_json(dictionary):
     d="{"
     for k,v in dictionary.items():
-        if isinstance(k,str):
+        if type(k) == 'str':
             d+='\"{}\":\"{}\",'.format(k,v)
         else:
             d+='\"{}\":{},'.format(k,v)
@@ -17,27 +17,36 @@ def dict_to_json(dictionary):
 ##########################################################################################################################################################################
 ##########################################################################################################################################################################
 ##########                  models for dicts               ###############################################################################################################
-##########  noise_config = {"shots":1000, "channel": "depolarizing", "channel_params"=[0], "q_batch_size":10**2}
-##########  problem_config = {"problem" : "H2", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., BOND_LENGTH)), "multiplicity":1, "charge":0, "basis":"sto-3g"]
-##########  problem_config = {"problem" : "XXZ", "g":1.0, "J": 0.3}
-##########  problem_config = {"problem" : "TFIM", "g":1.0, "J": 0.3}
+##########  noise_model = {"channel": "depolarizing", "channel_params"=[0], "q_batch_size":10**2}
+##########  problem_config = {"problem" : "H2", geometry: [('H', (0., 0., 0.)), ('H', (0., 0., BOND_LENGTH))]
+##########  problem_config = {"problem" : "XXZ", "g":1.0, "J": 0.3]
+##########  problem_config = {"problem" : "TFIM", "g":1.0, "J": 0.3]
 ##########################################################################################################################################################################
 ##########################################################################################################################################################################
 ##########################################################################################################################################################################
 
 
-QUBITS = 3
-QEPOCHS = 10**2
-GENETIC_RUNS=10
+def channel_dict(channel="depolarizing", channel_params=[0], q_batch_size=10**2):
+    d= '{\"channel\":\"' +channel + '\",\"channel_params\":'+str(channel_params)+',\"q_batch_size\":' + str(q_batch_size) + '}'
+    return "\'"+d+ "\'"
+
+
+
+
+
+
+nq = 8
+qeps = 10**4
+genetic_runs=250
 insts=[]
-
-problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": 0.3})
-
-for J in [1]:
-    instruction = "python3 main.py --qlr 0.01 --acceptange_percentage 0.1 --n_qubits "+str(QUBITS)+" --reps "+str(GENETIC_RUNS)+" --qepochs "+str(QEPOCHS)+ " --problem_config "+problem_config#+" --noise_config "+noise_config + "
+# for p in [10**-7, 10**-6, 10**-5, 10**-4]:
+# for p in [10**-8, 10**-3, 10**-2, 10**-1]:
+for J in np.linspace(0,10,4):
+    # noise_model = channel_dict(channel_params=[p], q_batch_size=10**3)
+    instruction = "python3 main.py --J "+str(J) + " --n_qubits "+str(nq)+" --reps "+str(genetic_runs)+" --qepochs "+str(qeps)+ " --g "+str(1) + " --problem XXZ --qlr 0.005" #+" --noise_model "+noise_model + " --verbose 0"
+    # os.system(instruction)
     insts.append(instruction)
 
-print(insts)
 def execute_instruction(inst):
     os.system(inst)
 

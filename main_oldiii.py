@@ -13,7 +13,7 @@ from datetime import datetime
 
 
 from utilities.variational import VQE
-from utilities.evaluator import Evaluator
+from utilities.circuit_basics import Evaluator
 from utilities.idinserter import IdInserter
 from utilities.simplifier import Simplifier
 from utilities.unitary_killer import UnitaryMurder
@@ -23,41 +23,38 @@ from utilities.unitary_killer import UnitaryMurder
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--J", type=float, default=0.0)
+    parser.add_argument("--g", type=float, default=1.0)
     parser.add_argument("--n_qubits", type=int, default=3)
     parser.add_argument("--reps", type=int, default=15)
-    parser.add_argument("--path_results", type=str, default="../data-vans/")
+    parser.add_argument("--names", type=str, default="obj")
+    parser.add_argument("--folder_result", type=str, default="results")
     parser.add_argument("--verbose", type=int, default=0)
     parser.add_argument("--qepochs", type=int, default=10**4)
     parser.add_argument("--qlr", type=float, default=0.01)
-    parser.add_argument("--problem_config", type=json.loads, default='{}')
-    parser.add_argument("--noise_config", type=json.loads, default='{}')
-    parser.add_argument("--acceptange_percentage", type=float, default=0.01)
-    parser.add_argument("--accuracy_to_end", type=float, default=-np.inf)
+    parser.add_argument("--problem", type=str, default="TFIM")
+    parser.add_argument("--noise_model", type=json.loads, default='{}')
 
     args = parser.parse_args()
 
-
     begin = datetime.now()
-    #VQE module, in charge of continuous optimization
-    vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, verbose=args.verbose,
-                        noise_config=args.noise_config, problem_config=args.problem_config,
-                        patience=100, random_perturbations=True)
+    #VQE in charge of continuous optimization
+
+    vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, patience=100, random_perturbations=True, verbose=args.verbose, g=args.g, J = args.J, noise_model=args.noise_model, problem=args.problem)
 
     start = datetime.now()
     info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
-                        f"noise: {args.noise_config}\n"\
+                        f"g: {vqe_handler.g}, \n" \
+                        f"noise: {args.noise_model}\n"\
+                        f"J: {vqe_handler.J}\n" \
                         f"qlr: {vqe_handler.lr}\n" \
                         f"qepochs: {vqe_handler.epochs}\n" \
                         f"patience: {vqe_handler.patience}\n" \
-                        f"genetic runs: {args.reps}\n" \
-                        f"acceptange_percentage runs: {args.acceptange_percentage}\n" \
-                        f"problem_info: {args.problem_config}\n"
-
+                        f"genetic runs: {args.reps}\n"
     print("\n"*3+info)
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
-    evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptange_percentage=args.acceptange_percentage, accuracy_to_end=args.accuracy_to_end)
-
+    evaluator = Evaluator(args, info=info)
     evaluator.displaying +=info
     #IdInserter appends to a given circuit an identity resolution
     iid = IdInserter(n_qubits=args.n_qubits)
@@ -66,7 +63,7 @@ if __name__ == "__main__":
     Simp = Simplifier(n_qubits=args.n_qubits)
 
     #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
-    killer = UnitaryMurder(vqe_handler, noise_config=args.noise_config)
+    killer = UnitaryMurder(vqe_handler, noise_model=args.noise_model)
 
 
     ### begin with a product ansatz
