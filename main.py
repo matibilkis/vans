@@ -26,6 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_qubits", type=int, default=3)
     parser.add_argument("--reps", type=int, default=15)
     parser.add_argument("--path_results", type=str, default="../data-vans/")
+    parser.add_argument("--specific_name", type=str, default="")
     parser.add_argument("--verbose", type=int, default=0)
     parser.add_argument("--qepochs", type=int, default=10**4)
     parser.add_argument("--qlr", type=float, default=0.01)

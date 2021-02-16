@@ -81,11 +81,11 @@ class VQE(Basic):
                                 problem_config["multiplicity"]  (optional)
                                 problem_config["basis"]  (optional)
         """
-        with open("utilities/cm_hamiltonians.txt") as f:
+        with open("utilities/hamiltonians/cm_hamiltonians.txt") as f:
             hams = f.readlines()
         possible_hamiltonians = [x.strip().upper() for x in hams]
 
-        with open("utilities/chemical_hamiltonians.txt") as f:
+        with open("utilities/hamiltonians/chemical_hamiltonians.txt") as f:
             hams = f.readlines()
         possible_hamiltonians += ([x.strip().upper() for x in hams])
 

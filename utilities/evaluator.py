@@ -8,12 +8,22 @@ class Evaluator(Basic):
     def __init__(self, args, info=None, loading=False, acceptange_percentage = 0.01, accuracy_to_end=-np.inf,
                 nrun_load=0, path="../data-vans/"):
         """
+
         This class serves as evaluating the energy, admiting the new circuit or not. Also stores the results either if there's a relevant modification or not.
         Finally, it allows for the possibilty of loading previous results, an example for the TFIM is:
 
 
         if_finish_ok: bool, if accuracy to end is reached, then VANS stops
         accuraccy to end: ground_state_energy (or estimation of it) + chemical_accuracy (or some percentage for cm hamiltonians)
+
+
+        args: is a dictionary version of the parser.args.
+        Example:
+        args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "specific_name":"XXZ/8Q - J {} g 1.0".format(j)}
+
+        Note that if specific name is used, it will load the results from the path folder, but will use the format "specific_name" instead of the pre-defined.
+
+        Also, if a run requires more details (say, different values for the depolarizing channel), results can be labeled using args["specific_name"].
 
         (cheat-sheet for jupyter notebook):
             %load_ext autoreload
@@ -22,7 +32,6 @@ class Evaluator(Basic):
             evaluator = Evaluator(loading=True, args={"n_qubits":3, "J":4.5})
             unitary, energy, indices, resolver = evaluator.raw_history[47]
             {"channel":"depolarizing", "channel_params":[p], "q_batch_size":10**3}
-
         """
         super(Evaluator, self).__init__(n_qubits=args["n_qubits"])
         self.path = path
@@ -37,30 +46,33 @@ class Evaluator(Basic):
 
             problem_identifier = self.get_problem_identifier(args["problem_config"])
             noise_identifier = self.get_noise_identifier(args["noise_config"])
-            self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args["n_qubits"],problem_identifier, noise_identifier)
+            self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args["n_qubits"],problem_identifier, noise_identifier)+args["specific_name"]
 
             self.directory = self.create_folder(info)
             self.acceptange_percentage = acceptange_percentage
             self.displaying = "\n Hola, I'm VANS, and current local time is {} \n".format(datetime.now())
         else:
             args_load={}
-            for str,default in zip(["n_qubits", "problem_config", "noise_config"], [4, {"problem":"TFIM", "g":1.0, "J": 0.0}, {}]):
+            for str,default in zip(["n_qubits", "problem_config", "noise_config","specific_name"], [4, {"problem":"TFIM", "g":1.0, "J": 0.0}, {}, None]):
                 if str not in list(args.keys()):
                     args_load[str] = default
                 else:
                     args_load[str] = args[str]
             problem_identifier = self.get_problem_identifier(args_load["problem_config"])
             noise_identifier = self.get_noise_identifier(args_load["noise_config"])
-            self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args_load["n_qubits"],problem_identifier, noise_identifier)
-            self.load(args_load,nrun=nrun_load)
+            if args_load["specific_name"] is None:
+                self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args_load["n_qubits"],problem_identifier, noise_identifier)
+                self.load(args_load,nrun=nrun_load)
+            else:
+                self.load_from_name(args_load["specific_name"], nrun=nrun_load)
 
     def get_problem_identifier(self, args):
         #### read possible hamiltonians to get id structure
-        with open("utilities/cm_hamiltonians.txt") as f:
+        with open("utilities/hamiltonians/cm_hamiltonians.txt") as f:
             hams = f.readlines()
         cm_hamiltonians = [x.strip().upper() for x in hams]
 
-        with open("utilities/chemical_hamiltonians.txt") as f:
+        with open("utilities/hamiltonians/chemical_hamiltonians.txt") as f:
             hams = f.readlines()
         chemical_hamiltonians=([x.strip().upper() for x in hams])
 
@@ -117,6 +129,11 @@ class Evaluator(Basic):
 
     def load(self,args, nrun=0):
         name_folder = self.path+self.identifier+"/run_{}".format(nrun)
+        self.load_dicts_and_displaying(name_folder)
+        return
+
+    def load_from_name(self,name, nrun=0):
+        name_folder = self.path+name+"/run_{}".format(nrun)
         self.load_dicts_and_displaying(name_folder)
         return
 

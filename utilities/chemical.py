@@ -2,7 +2,7 @@ import openfermionpyscf as ofpyscf
 import cirq
 import numpy as np
 import openfermion as of
-import json
+
 
 
 class OpenFermion_to_Cirq:

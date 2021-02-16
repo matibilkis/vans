@@ -9,7 +9,7 @@ energies = []
 js = np.linspace(-1.1,1.1,20)
 for j in js:
     evaluator = Evaluator(loading=True, args={"n_qubits":4, "J":j, "g":0.75,"problem":"xxz"})
-    energies.append(evaluator.raw_history[len(list(evaluator.raw_history.keys()))-1][1])
+    energies.append(evaluator.raw_history[len(list(evaluator.raw_history.keys()))-1][-1])
 
 plt.figure(figsize=(10,10))
 ax1 = plt.subplot2grid((2,1),(0,0))
