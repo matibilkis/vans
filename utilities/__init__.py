@@ -5,3 +5,4 @@
 # from unitary_killer import UnitaryMurder
 # from variational import VQE
 # from chemical import ChemicalObservable
+# from qmodels import *

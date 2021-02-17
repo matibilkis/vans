@@ -25,7 +25,6 @@ class Basic:
         """
         self.n_qubits = n_qubits
         self.qubits = cirq.GridQubit.rect(1, n_qubits)
-        self.lower_bound_Eg = -20*self.n_qubits
 
         #### keep a register on which integers corresponds to which CNOTS, target or control.
         self.indexed_cnots = {}
@@ -40,15 +39,13 @@ class Basic:
         self.number_of_cnots = len(self.indexed_cnots)
 
         self.testing=testing
-
         if not isinstance(noise_config, dict):
             print("noise_config should be passed as dict, in a form of, see docs")
-        elif len(noise_config.keys()) == 0 :
-                self.q_batch_size = 1
-                self.noise=False
+        elif noise_config == {} :
+            self.q_batch_size = 1
+            self.noise=False
         else:
             self.define_channel_things(noise_config)
-
 
     def define_channel_things(self, noise_config):
         """
@@ -68,6 +65,7 @@ class Basic:
             p = self.channel_params[0]
             self.channel_params = [1-p, p/3, p/3, p/3]
             #self.number_noisy_unitaries, self.channel_unitaries, self.channel_params
+            return
 
     def append_to_circuit(self, ind, circuit, params, index_to_symbols):
         """
@@ -153,7 +151,6 @@ class Basic:
             for par, gate in zip(range(1),[cirq.rx]):
                 new_param = "th_"+str(len(params))
                 params.append(new_param)
-
                 #adding noise
                 ng = np.random.choice(self.channel_unitaries,1, p=self.channel_params)[0]
                 circuit.append(ng.on(qubit))

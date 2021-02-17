@@ -30,19 +30,22 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", type=int, default=0)
     parser.add_argument("--qepochs", type=int, default=10**4)
     parser.add_argument("--qlr", type=float, default=0.01)
+    parser.add_argument("--training_patience", type=int, default=1000)
+    parser.add_argument("--optimizer", type=str, default="sgd")
     parser.add_argument("--problem_config", type=json.loads, default='{}')
     parser.add_argument("--noise_config", type=json.loads, default='{}')
     parser.add_argument("--acceptange_percentage", type=float, default=0.01)
     parser.add_argument("--accuracy_to_end", type=float, default=-np.inf)
-
+    parser.add_argument("--show_tensorboarddata",type=bool, default=True)
     args = parser.parse_args()
 
-
     begin = datetime.now()
+
+
     #VQE module, in charge of continuous optimization
     vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, verbose=args.verbose,
                         noise_config=args.noise_config, problem_config=args.problem_config,
-                        patience=100, random_perturbations=True)
+                        patience=args.training_patience, random_perturbations=True)
 
     start = datetime.now()
     info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
@@ -54,12 +57,12 @@ if __name__ == "__main__":
                         f"acceptange_percentage runs: {args.acceptange_percentage}\n" \
                         f"problem_info: {args.problem_config}\n"
 
-    print("\n"*3+info)
-
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
     evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptange_percentage=args.acceptange_percentage, accuracy_to_end=args.accuracy_to_end)
-
     evaluator.displaying +=info
+
+    if args.show_tensorboarddata:
+        vqe_handler.tensorboarddata = evaluator.directory
     #IdInserter appends to a given circuit an identity resolution
     iid = IdInserter(n_qubits=args.n_qubits)
 

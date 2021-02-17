@@ -21,8 +21,6 @@ class UnitaryMurder(Basic):
 
     def give_energy(self, indexed_circuit, symbols_to_values):
         """
-        ((borrowed from vqe_handler))
-
         indexed_circuit: list with integers that correspond to unitaries (target qubit deduced from the value)
         symbols_to_values: dictionary with the values of each symbol. Importantly, they should respect the order of indexed_circuit, i.e. list(symbols_to_values.keys()) = self.give_circuit(indexed_circuit)[1]
 
@@ -39,7 +37,6 @@ class UnitaryMurder(Basic):
             tfq_layer = tfq.layers.Expectation()(tfqcircuit, operators=tfq.convert_to_tensor([self.observable]*self.q_batch_size))
             averaged_unitaries = tf.math.reduce_mean(tfq_layer, axis=0)
             energy = np.squeeze(tf.math.reduce_sum(averaged_unitaries, axis=-1))
-
         else:
             circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
             tfqcircuit = tfq.convert_to_tensor([cirq.resolve_parameters(circuit, symbols_to_values)])

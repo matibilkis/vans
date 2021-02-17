@@ -2,6 +2,22 @@
 
 We present VANS, an algorithm that uses a variable ansatz structure to do VQE. In short, identity-resolution block of gates are proposed to be appended in the circuit, then VQE is run on the proposed circuit and if the obtained energy is lowered, the modification is accepted.
 
+#### important changes in variational..., there are also some tips in case things do not work ####
+
+1. deleted the give_energy method in variational.
+2. killed the nasty lower_bound_Eg
+3. killed the max_time_training depeding on noise/qubits. Set to 5 mins now.
+4. changed the adam optimizer for the SGD with algoritm 4 of qacq (actually implemented options there)
+5. changed the strength of adding the random_perturbations; now it's almost vanishing (THIS IS IMPORTANT, DISCUSS IT WITH LUKASZ). In case we want to calim the BP mitigation...
+
+6. changed the min_delta to 1e-6 (this can be changed as well..) THIS IS ALSO SOMETHING SUBTLE
+7. changed the give_energy thing as well. In vqe_handler there's no more give_energy, I retrieve the energy from the last value of the training history (we could actually take the best one instead, but I wouldn't know how to fetch the trainable variables, maybe with a callback).
+
+8. killed train_model function
+
+
+
+
 
 #### Installation
 
