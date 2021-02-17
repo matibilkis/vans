@@ -20,8 +20,8 @@ class VQE(Basic):
 
 
         noise_config: implemented in batches.
+        else: passed thorugh the Basic, to inherit the circuit_with_noise
             if None: self.noise_config = False
-            else: passed thorugh the Basic, to inherit the circuit_with_noise
                 if should be in the form of {"channel":"depolarizing", "p":float, "q_batch_size":int}
 
         verbose: display progress or not
@@ -59,9 +59,9 @@ class VQE(Basic):
         ##### HAMILTONIAN CONFIGURATION
         self.observable = self.give_observable(problem_config)
 
-        if len(noise_config.keys()) >0 :
+        if noise_config.keys() != {}:
             self.noise=True
-            self.max_time_training = 10*60*self.n_qubits #30 mins in case
+            self.max_time_training = 60*self.n_qubits #let's give 1 min per qubit
         else:
             self.max_time_training = self.n_qubits*60
             self.noise=False
@@ -135,6 +135,7 @@ class VQE(Basic):
             circuit, symbols, index_to_symbol = self.give_circuit_with_noise(indexed_circuit)
         else:
             circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
+            
         model = self.TFQ_model(symbols, symbols_to_values=symbols_to_values)
         energy, training_history = self.train_model(circuit, model)
         final_params = model.trainable_variables[0].numpy()

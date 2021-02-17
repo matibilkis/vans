@@ -56,8 +56,12 @@ class Basic:
         """
         self.noise = True
         self.channel = noise_config["channel"]
-        self.channel_params = eval(noise_config["channel_params"])
-        self.q_batch_size = eval(noise_config["q_batch_size"])
+        try:
+            self.channel_params = eval(noise_config["channel_params"])
+            self.q_batch_size = eval(noise_config["q_batch_size"])
+        except Exception or Error: #if you are not passing from parser args
+            self.channel_params = noise_config["channel_params"]
+            self.q_batch_size = noise_config["q_batch_size"]
         if self.channel == "depolarizing":
             self.channel_unitaries = [cirq.I, cirq.X, cirq.Y, cirq.Z]
             self.number_noisy_unitaries = len(self.channel_unitaries)
