@@ -72,7 +72,6 @@ if __name__ == "__main__":
     #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
     killer = UnitaryMurder(vqe_handler, noise_config=args.noise_config)
 
-
     ### begin with a product ansatz
     indexed_circuit=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
     energy, symbol_to_value, training_evolution = vqe_handler.vqe(indexed_circuit) #compute energy

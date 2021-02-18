@@ -1,0 +1,1 @@
+We've spent a couple of hours figuring out why ground state energies differ. I'm using a different convention here, than the one used in condensed matter, which is flipping the sign of spin interactions (VANS is positive, as with meta-vqe).

@@ -41,7 +41,7 @@ class OpenFermion_to_Cirq:
 
     def get_matrix_rep(self, observable, qubits):
         """
-        method that gives the matrix representation (as a sanity check)
+        method that gives the matrix representation (as a sanity check); notice this works only for 4 qubits!
         """
         ind_to_2 = {"0":np.eye(2), "1":cirq.unitary(cirq.X), "2":cirq.unitary(cirq.Y), "3":cirq.unitary(cirq.Z)}
         mat = np.zeros((2**len(qubits), 2**len(qubits))).astype(np.complex128)

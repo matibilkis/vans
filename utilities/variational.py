@@ -104,6 +104,7 @@ class VQE(Basic):
                     observable.append(cirq.Y.on(self.qubits[q])*cirq.Y.on(self.qubits[(q+1)%len(self.qubits)]))
                     observable.append(float(problem_config["J"])*cirq.Z.on(self.qubits[q])*cirq.Z.on(self.qubits[(q+1)%len(self.qubits)]))
                 return observable
+
         elif problem_config["problem"].upper() in ["H2"]:
             oo = ChemicalObservable()
             for key,defvalue in zip(["geometry","multiplicity", "charge", "basis"], [None,1,0,"sto-3g"]):
