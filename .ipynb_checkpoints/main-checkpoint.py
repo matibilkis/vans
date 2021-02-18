@@ -3,7 +3,8 @@ import gc
 import numpy as np
 import sympy
 import cirq
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow_quantum as tfq
 from tqdm import tqdm
 import tensorflow as tf
@@ -30,13 +31,13 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", type=int, default=0)
     parser.add_argument("--qepochs", type=int, default=10**4)
     parser.add_argument("--qlr", type=float, default=0.01)
-    parser.add_argument("--training_patience", type=int, default=1000)
+    parser.add_argument("--training_patience", type=int, default=200)
     parser.add_argument("--optimizer", type=str, default="sgd")
     parser.add_argument("--problem_config", type=json.loads, default='{}')
     parser.add_argument("--noise_config", type=json.loads, default='{}')
     parser.add_argument("--acceptange_percentage", type=float, default=0.01)
     parser.add_argument("--accuracy_to_end", type=float, default=-np.inf)
-    parser.add_argument("--show_tensorboarddata",type=bool, default=True)
+    parser.add_argument("--show_tensorboarddata",type=int, default=0)
     args = parser.parse_args()
 
     begin = datetime.now()
@@ -61,7 +62,7 @@ if __name__ == "__main__":
     evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptange_percentage=args.acceptange_percentage, accuracy_to_end=args.accuracy_to_end)
     evaluator.displaying +=info
 
-    if args.show_tensorboarddata:
+    if args.show_tensorboarddata == 1:
         vqe_handler.tensorboarddata = evaluator.directory
     #IdInserter appends to a given circuit an identity resolution
     iid = IdInserter(n_qubits=args.n_qubits)

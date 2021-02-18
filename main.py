@@ -62,7 +62,6 @@ if __name__ == "__main__":
     evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptange_percentage=args.acceptange_percentage, accuracy_to_end=args.accuracy_to_end)
     evaluator.displaying +=info
 
-    print("ARGSSSS : {}".format(args.show_tensorboarddata))
     if args.show_tensorboarddata == 1:
         vqe_handler.tensorboarddata = evaluator.directory
     #IdInserter appends to a given circuit an identity resolution
