@@ -145,7 +145,7 @@ class VQE(Basic):
             if np.random.uniform()<.1:
                 model.trainable_variables[0].assign(model.trainable_variables[0] + tf.random.uniform(model.trainable_variables[0].shape.as_list())*0.01)
 
-        calls=[tf.keras.callbacks.EarlyStopping(monitor='energy', patience=self.patience, mode="min", min_delta=10**-6),TimedStopping(seconds=self.max_time_training)]
+        calls=[tf.keras.callbacks.EarlyStopping(monitor='energy', patience=self.patience, mode="min", min_delta=10**-3),TimedStopping(seconds=self.max_time_training)]
 
         if hasattr(self, "tensorboarddata"):
             self.repe+=1

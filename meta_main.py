@@ -32,6 +32,8 @@ for J in [1]:
     insts.append(instruction)
 #
 print(instruction)
+
+#os.system(instruction)
 # def execute_instruction(inst):
 #     os.system(inst)
 #
