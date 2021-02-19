@@ -59,7 +59,6 @@ class IdInserter(Basic):
 
         return block_to_insert, insertion_index
 
-
     def inserter(self, indexed_circuit, symbol_to_value, block_to_insert, insertion_index):
         """
         This funciton loops over the elements of indexed_circuit.
