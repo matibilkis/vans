@@ -86,14 +86,29 @@ class ChemicalObservable(OpenFermion_to_Cirq):
         newgeometry= eval(newgeometry)
         return newgeometry
 
-    def give_observable(self,qubits, geometry, multiplicity=1, charge=0, basis="sto-3g"):
+    def get_fci_energy(self, geometry, multiplicity, charge, basis):
+        from openfermion.chem import MolecularData
+        from openfermionpyscf import run_pyscf
+        molecule = MolecularData(geometry, basis=basis, multiplicity=multiplicity)
+        molecule = run_pyscf(molecule,run_scf=0,run_mp2=0,run_cisd=0,run_ccsd=0,run_fci=1)
+        return molecule.fci_energy + 0.0016 #add chemical accuracy.
+
+    def give_observable(self,qubits, geometry, multiplicity=1, charge=0, basis="sto-3g", return_lower_bound=True):
         """
         To-Do: implement a bool if the number of cirq qubits is not enough for the jordan_wigner
         """
-
-        geometry = self.load_geometry_correct_format(geometry)
-
+        try:
+            #this is to load from json, to submit to HPC; litearally a pain in the ass
+            geometry = self.load_geometry_correct_format(geometry)
+        except Exception:
+            pass
         hamiltonian = ofpyscf.generate_molecular_hamiltonian(geometry=geometry, basis=str(basis),
                                                              multiplicity=int(multiplicity), charge=int(charge))
+        if len(qubits) != hamiltonian.n_qubits:
+            raise AttributeError("you need {} qubits for this molecule, but you have {}. \n Molecule received: {}".format(hamiltonian.n_qubits, len(qubits),geometry))
         qham = of.jordan_wigner(hamiltonian)
-        return self(qham, qubits)
+        if return_lower_bound:
+            fci = self.get_fci_energy(geometry, int(multiplicity), charge, basis)
+        else:
+            fci = -np.inf
+        return self(qham, qubits), fci

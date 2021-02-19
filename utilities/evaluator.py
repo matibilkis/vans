@@ -14,7 +14,7 @@ class Evaluator(Basic):
 
 
         if_finish_ok: bool, if accuracy to end is reached, then VANS stops
-        accuraccy to end: ground_state_energy (or estimation of it) + chemical_accuracy (or some percentage for cm hamiltonians)
+        accuraccy to end: ground_state_energy (exact diagonalization or FCI) (+ chemical_accuracy in case of chemical hamiltonians). TODO: add some relative error for condensed matter hamiltonians (not super important though.)
 
 
         args: is a dictionary version of the parser.args.
@@ -147,6 +147,7 @@ class Evaluator(Basic):
         with open(self.directory+"/evolution.txt","w") as f:
             f.write(self.displaying)
             f.close()
+        np.save(self.directory+"/accuracy_to_end",np.array([self.accuracy_to_end]))
         return
 
     def load_dicts_and_displaying(self,folder, load_txt=False):

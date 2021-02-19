@@ -36,7 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--problem_config", type=json.loads, default='{}')
     parser.add_argument("--noise_config", type=json.loads, default='{}')
     parser.add_argument("--acceptange_percentage", type=float, default=0.01)
-    parser.add_argument("--accuracy_to_end", type=float, default=-np.inf)
+    parser.add_argument("--return_lower_bound", type=int, default=0)
     parser.add_argument("--show_tensorboarddata",type=int, default=0)
     args = parser.parse_args()
 
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     #VQE module, in charge of continuous optimization
     vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, verbose=args.verbose,
                         noise_config=args.noise_config, problem_config=args.problem_config,
-                        patience=args.training_patience, random_perturbations=True)
+                        patience=args.training_patience, random_perturbations=True, return_lower_bound=[True, False][args.return_lower_bound])
 
     start = datetime.now()
     info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
@@ -59,16 +59,16 @@ if __name__ == "__main__":
                         f"problem_info: {args.problem_config}\n"
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
-    evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptange_percentage=args.acceptange_percentage, accuracy_to_end=args.accuracy_to_end)
+    evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptange_percentage=args.acceptange_percentage, accuracy_to_end=vqe_handler.lower_bound_energy)
     evaluator.displaying +=info
 
     if args.show_tensorboarddata == 1:
         vqe_handler.tensorboarddata = evaluator.directory
     #IdInserter appends to a given circuit an identity resolution
-    iid = IdInserter(n_qubits=args.n_qubits)
+    iid = IdInserter(n_qubits=len(vqe_handler.qubits))
 
     #Simplifier reduces gates number as much as possible while keeping same expected value of target hamiltonian
-    Simp = Simplifier(n_qubits=args.n_qubits)
+    Simp = Simplifier(n_qubits=len(vqe_handler.qubits))
 
     #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
     killer = UnitaryMurder(vqe_handler, noise_config=args.noise_config)

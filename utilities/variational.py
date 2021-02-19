@@ -9,7 +9,7 @@ from utilities.qmodels import *
 
 class VQE(Basic):
     def __init__(self, n_qubits=3, lr=0.01, optimizer="sgd", epochs=1000, patience=200,
-                random_perturbations=True, verbose=0, noise_config={}, problem_config={}):
+                random_perturbations=True, verbose=0, noise_config={}, problem_config={}, return_lower_bound=True):
         """
         lr: learning_rate for each iteration of gradient descent
         optimizer: we give two choices, Adam and SGD. If SGD, we implement Algorithm 4 of qacq to adapt learning rate.
@@ -54,6 +54,7 @@ class VQE(Basic):
         self.gpus=tf.config.list_physical_devices("GPU")
         self.optimizer = {"ADAM":tf.keras.optimizers.Adam, "SGD":tf.keras.optimizers.SGD}[optimizer.upper()]
         self.repe=0 #this is to have some control on the number of VQEs done (for tensorboard)
+        self.return_lower_bound = return_lower_bound
         ##### HAMILTONIAN CONFIGURATION
         self.observable = self.give_observable(problem_config)
 
@@ -77,10 +78,12 @@ class VQE(Basic):
         with open("utilities/hamiltonians/cm_hamiltonians.txt") as f:
             hams = f.readlines()
         possible_hamiltonians = [x.strip().upper() for x in hams]
+        cm_hams = possible_hamiltonians[:]
 
         with open("utilities/hamiltonians/chemical_hamiltonians.txt") as f:
             hams = f.readlines()
         possible_hamiltonians += ([x.strip().upper() for x in hams])
+        chemical_hams = possible_hamiltonians[:]
 
         if problem_config["problem"] not in possible_hamiltonians:
             raise NameError("Hamiltonian {} is not invited to VANS yet. Available hamiltonians: {}\n".format(problem_config["problem"],possible_hamiltonians))
@@ -95,6 +98,10 @@ class VQE(Basic):
                 observable = [-float(problem_config["g"])*cirq.Z.on(q) for q in self.qubits]
                 for q in range(len(self.qubits)):
                     observable.append(-float(problem_config["J"])*cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
+                if self.return_lower_bound is True:
+                    self.lower_bound_energy = compute_ground_energy(observable,self.qubits)[0]
+                else:
+                    self.lower_bound_energy = -np.inf
                 return observable
             elif problem_config["problem"].upper()=="XXZ":
                 #H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}
@@ -103,14 +110,18 @@ class VQE(Basic):
                     observable.append(cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
                     observable.append(cirq.Y.on(self.qubits[q])*cirq.Y.on(self.qubits[(q+1)%len(self.qubits)]))
                     observable.append(float(problem_config["J"])*cirq.Z.on(self.qubits[q])*cirq.Z.on(self.qubits[(q+1)%len(self.qubits)]))
+                if self.return_lower_bound is True:
+                    self.lower_bound_energy = compute_ground_energy(observable,self.qubits)[0]
+                else:
+                    self.lower_bound_energy = -np.inf
                 return observable
 
-        elif problem_config["problem"].upper() in ["H2"]:
+        elif problem_config["problem"].upper() in chemical_hams:
             oo = ChemicalObservable()
             for key,defvalue in zip(["geometry","multiplicity", "charge", "basis"], [None,1,0,"sto-3g"]):
                 if key not in list(problem_config.keys()):
                     raise ValueError("{} not specified in problem_config. Dictionary obtained: {}".format(key, problem_config))
-            observable=oo.give_observable(self.qubits, problem_config["geometry"], problem_config["multiplicity"], problem_config["charge"], problem_config["basis"])
+            observable, self.lower_bound_energy =oo.give_observable(self.qubits, problem_config["geometry"], problem_config["multiplicity"], problem_config["charge"], problem_config["basis"],return_lower_bound=self.return_lower_bound)
             return observable
         else:
             raise NotImplementedError("The specified hamiltonian is in the list but we have not added to the code yet! Devs, take a look here!\problem_config[problem]: {}".format(problem_config["problem"].upper()))
