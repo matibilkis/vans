@@ -6,6 +6,7 @@ import tensorflow as tf
 import time
 from utilities.chemical import ChemicalObservable
 from utilities.qmodels import *
+from utilities.misc import compute_ground_energy
 
 class VQE(Basic):
     def __init__(self, n_qubits=3, lr=0.01, optimizer="sgd", epochs=1000, patience=200,

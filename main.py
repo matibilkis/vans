@@ -46,7 +46,7 @@ if __name__ == "__main__":
     #VQE module, in charge of continuous optimization
     vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, verbose=args.verbose,
                         noise_config=args.noise_config, problem_config=args.problem_config,
-                        patience=args.training_patience, random_perturbations=True, return_lower_bound=[True, False][args.return_lower_bound])
+                        patience=args.training_patience, random_perturbations=True, return_lower_bound=[True, False][args.return_lower_bound], optimizer=args.optimizer)
 
     start = datetime.now()
     info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
@@ -75,6 +75,12 @@ if __name__ == "__main__":
 
     ### begin with a product ansatz
     indexed_circuit=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
+
+    ### add some no local gates..
+    for i in range(len(vqe_handler.qubits)):
+        indexed_circuit+=iid.resolution_2cnots(i,(i+1)%len(vqe_handler.qubits))
+    indexed_circuit+=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
+
     energy, symbol_to_value, training_evolution = vqe_handler.vqe(indexed_circuit) #compute energy
 
     #add initial info to evaluator

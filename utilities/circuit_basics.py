@@ -104,6 +104,16 @@ class Basic:
                 index_to_symbols[len(list(index_to_symbols.keys()))] = new_param
             return circuit, params, index_to_symbols
 
+        #### add ry #####
+        elif 2*self.n_qubits <= ind - self.number_of_cnots  < 3*self.n_qubits:
+            qubit = self.qubits[(ind-self.number_of_cnots)%self.n_qubits]
+            for par, gate in zip(range(1),[cirq.ry]):
+                new_param = "th_"+str(len(params))
+                params.append(new_param)
+                circuit.append(gate(sympy.Symbol(new_param)).on(qubit))
+                index_to_symbols[len(list(index_to_symbols.keys()))] = new_param
+            return circuit, params, index_to_symbols
+
     def append_to_circuit_with_noise(self, ind, circuit, params, index_to_symbols):
         """
         ind: integer describing the gate to append to circuit
@@ -208,6 +218,24 @@ class Basic:
             return self.indexed_cnots[str(ind)]
         else:
             return [(ind-self.number_of_cnots)%self.n_qubits]
+
+
+    def hea_layer(self,full=False):
+        layer = []
+        for ind in range(0,self.n_qubits):
+            layer.append(self.number_of_cnots + ind+ (2*self.n_qubits))
+            layer.append(self.number_of_cnots + ind)
+            if full:
+                layer.append(self.number_of_cnots + ind+ (2*self.n_qubits))
+        for ind in range(0,self.n_qubits-1):
+            layer.append(self.cnots_index[str([ind, (ind+1)%self.n_qubits])])
+        return layer
+
+    def hea_ansatz_indexed_circuit(self, L=2, full=False):
+        indexed_circuit=[]
+        for l in range(L):
+            indexed_circuit+=self.hea_layer(full=full)
+        return indexed_circuit
 
 
 class TimeoutError(Exception):

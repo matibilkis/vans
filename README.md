@@ -17,7 +17,6 @@ We present VANS, an algorithm that uses a variable ansatz structure to do VQE. I
 
 9. List of hamiltonians.
 
-10. replace n_qubits by len(self.qubits)
 ### About hamiltonians.
 
 The idea is to have some control when developing the code, so I put the hamiltonians that have been working in a .txt (at utilities/hamiltonians/*.txt)
