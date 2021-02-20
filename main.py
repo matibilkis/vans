@@ -59,6 +59,7 @@ if __name__ == "__main__":
                         f"patience: {vqe_handler.patience}\n" \
                         f"genetic runs: {args.reps}\n" \
                         f"acceptange_percentage runs: {args.acceptange_percentage}\n" \
+                        f"rate_iids_per_step: {args.rate_iids_per_step}\n" \
                         f"problem_info: {args.problem_config}\n"
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration

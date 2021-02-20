@@ -61,10 +61,14 @@ class Evaluator(Basic):
             problem_identifier = self.get_problem_identifier(args_load["problem_config"])
             noise_identifier = self.get_noise_identifier(args_load["noise_config"])
             if args_load["specific_name"] is None:
-                self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args_load["n_qubits"],problem_identifier, noise_identifier)
-                self.load(args_load,nrun=nrun_load)
+                ap=""
             else:
-                self.load_from_name(args_load["specific_name"], nrun=nrun_load)
+                ap = args_load["specific_name"]
+            self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args_load["n_qubits"],problem_identifier, noise_identifier)+ap
+            self.load(args_load,nrun=nrun_load)
+            #if args_load["specific_name"] is None:
+                       # else:
+           #     self.load_from_name(args_load["specific_name"], nrun=nrun_load)
 
     def get_problem_identifier(self, args):
         #### read possible hamiltonians to get id structure
