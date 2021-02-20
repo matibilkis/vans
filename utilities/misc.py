@@ -13,14 +13,20 @@ def dict_to_json(dictionary):
     return "\'"+d+ "\'"
 
 def compute_ground_energy(obse,qubits):
-    ind_to_2 = {"0":np.eye(2), "1":cirq.unitary(cirq.X), "2":cirq.unitary(cirq.Y), "3":cirq.unitary(cirq.Z)}
-    ham = np.zeros((2**len(qubits),2**len(qubits))).astype(np.complex128)
-    for kham in obse:
-        item= kham.dense(qubits)
-        string = item.pauli_mask
-        matrices = [ind_to_2[str(int(ok))] for ok in string]
-        ham += give_kr_prod(matrices)*item.coefficient
-    return np.sort(np.real(np.linalg.eigvals(ham)))
+    """
+    TO do. Implement this for, say, 6 qubits (therer's a problem in give_kr_prod...)
+    """
+    if np.log2(len(qubits)%2.is_integer():
+        ind_to_2 = {"0":np.eye(2), "1":cirq.unitary(cirq.X), "2":cirq.unitary(cirq.Y), "3":cirq.unitary(cirq.Z)}
+        ham = np.zeros((2**len(qubits),2**len(qubits))).astype(np.complex128)
+        for kham in obse:
+            item= kham.dense(qubits)
+            string = item.pauli_mask
+            matrices = [ind_to_2[str(int(ok))] for ok in string]
+            ham += give_kr_prod(matrices)*item.coefficient
+        return np.sort(np.real(np.linalg.eigvals(ham)))
+    else:
+        return [-np.inf]
 
 
 def give_kr_prod(matrices):
