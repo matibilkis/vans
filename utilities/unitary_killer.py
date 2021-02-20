@@ -97,11 +97,16 @@ class UnitaryMurder(Basic):
             return indexed_circuit, symbol_to_value, index_to_symbols, original_energy, False
 
 
-    def accepting_criteria(self, e_new, e_old):
+    def accepting_criteria(self, e_new, e_old,factor=100):
         """
-        we give %1 in exchange of killing an unitary.
-        # """
-        return (e_new-e_old)/np.abs(e_old) < 0.01
+        if decreases energy, we accept it;
+        otherwise exponentially decreasing probability of acceptance (the 100 is yet another a bit handcrafted)
+        """
+        #return  < 0.01
+        if (e_new-e_old)/np.abs(e_old) <= 0:
+            return True
+        else:
+            return np.random.random() < np.exp(-(e_new-e_old)/np.abs(e_old)*factor)
 
 
     def create_proposal_without_gate(self, info_gate):

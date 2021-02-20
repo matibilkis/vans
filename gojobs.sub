@@ -6,4 +6,4 @@ log = ../jobs/$(Item).log
 request_memory = 2 GB
 +flavour="short"
 
-queue from seq 0 0.1 0.7|
+queue from seq 1 0.1 1.7|

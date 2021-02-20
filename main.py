@@ -50,10 +50,8 @@ if __name__ == "__main__":
                         patience=args.training_patience, random_perturbations=True, return_lower_bound=[True, False][args.return_lower_bound], optimizer=args.optimizer)
 
     start = datetime.now()
-    
-    
     #info = "len(n_qubits):{}\nnoise: {}\nqlr: {}\nqepochs: {}\npatience: {}\ngenetic runs: {}\nacceptange_percentage runs:{}\nproblem_info:{}\n".format(vqe_handler.n_qubits,args.noise_config,vqe_handler.lr,vqe_handler.epochs,vqe_handler.patience,args.reps,args.acceptange_percentage,args.problem_config)
-    
+
     info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
                         f"noise: {args.noise_config}\n"\
                         f"qlr: {vqe_handler.lr}\n" \
@@ -62,13 +60,14 @@ if __name__ == "__main__":
                         f"genetic runs: {args.reps}\n" \
                         f"acceptange_percentage runs: {args.acceptange_percentage}\n" \
                         f"problem_info: {args.problem_config}\n"
-    
+
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
     evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptange_percentage=args.acceptange_percentage, accuracy_to_end=vqe_handler.lower_bound_energy)
-    evaluator.displaying +=info
+    evaluator.displaying["information"]+=info
 
     if args.show_tensorboarddata == 1:
         vqe_handler.tensorboarddata = evaluator.directory
+
     #IdInserter appends to a given circuit an identity resolution
     iid = IdInserter(n_qubits=len(vqe_handler.qubits))
 
@@ -80,33 +79,25 @@ if __name__ == "__main__":
 
     ### begin with a product ansatz
     indexed_circuit=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
-
-    ### add some no local gates..
-    for i in range(len(vqe_handler.qubits)):
-        indexed_circuit+=iid.resolution_2cnots(i,(i+1)%len(vqe_handler.qubits))
-    indexed_circuit+=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
+    # ### add some no local gates..
+    # for i in range(len(vqe_handler.qubits)):
+    #     indexed_circuit+=iid.resolution_2cnots(i,(i+1)%len(vqe_handler.qubits))
+    # indexed_circuit+=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
 
     energy, symbol_to_value, training_evolution = vqe_handler.vqe(indexed_circuit) #compute energy
-
     #add initial info to evaluator
 
-    to_print="\nIteration #{}\nTime since beggining:{}\n ".format(0, datetime.now()-start)+str("**"*20)+"\n"+str(str("*"*20))+"\ncurrent energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
-    to_print+="\n\n"
-    
-    print(energy)
-    #print(vqe_handler.give_unitary(indexed_circuit,symbol_to_value).encode('utf-8'))
-    print("\n\n")
-    #print(to_print)
-    #evaluator.displaying+=to_print
+    to_print="\nIteration #{}\nTime since beggining:{}\n best energy: {}\n lower_bound: {}".format(0, datetime.now()-start, evaluator.lowest_energy, evaluator.accuracy_to_end)
+    print(to_print)
+    evaluator.displaying["information"]+=to_print
 
 
     evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=True)
     evaluator.lowest_energy = energy
 
-    for iteration in range(args.reps):
+    for iteration in range(1,args.reps+1):
         relevant=False
-        
-        
+
         ### create a mutation M (maybe this word is too fancy); we add (probably more than one) identity resolution
         M_indices, M_symbols_to_values, M_idx_to_symbols = iid.place_identities(indexed_circuit, symbol_to_value, rate_iids_per_step= args.rate_iids_per_step)
 
@@ -129,12 +120,9 @@ if __name__ == "__main__":
             relevant=True
         evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=relevant)
 
-        to_print="\nIteration #{}\nTime since beggining:{}\n best energy: {}\n lower_bound: {}".format(iteration, start-datetime.now(), evaluator.lowest_energy, evaluator.accuracy_to_end)
-        
-        #+str("**"*20)+"\n"+str(str("*"*20))+"\ncurrent energy: {}\n\n{}\n\n".format(energy,vqe_handler.give_unitary(indexed_circuit,symbol_to_value))
-        #to_print+="\n\n"
-        #print(to_print)
-        #evaluator.displaying +=to_print
+        to_print="\nIteration #{}\nTime since beggining:{}\n best energy: {}\n lower_bound: {}".format(iteration, datetime.now()-start, evaluator.lowest_energy, evaluator.accuracy_to_end)
+        print(to_print)
+        evaluator.displaying["information"]+=to_print
 
         ## save results of iteration.
         evaluator.save_dicts_and_displaying()

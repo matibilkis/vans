@@ -17,7 +17,7 @@ from utilities.misc import dict_to_json
 
 
 QEPOCHS = 10**3
-GENETIC_RUNS=10
+GENETIC_RUNS=5
 insts=[]
 # problem_config = dict_to_json({"problem" : "TFIM", "g":1.0, "J": 0.3})
 # problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": 0.3})

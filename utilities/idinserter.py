@@ -15,13 +15,13 @@ class IdInserter(Basic):
 
     def place_identities(self,indexed_circuit, symbol_to_value, rate_iids_per_step=1):
         ngates = np.random.exponential(scale=rate_iids_per_step)
-        ngates = np.round(ngates,0)+1
+        ngates = int(np.round(ngates,0)+1)
         M_indices, M_symbols_to_values, M_idx_to_symbols = self.place_almost_identity(indexed_circuit, symbol_to_value)
         for l in range(ngates-1):
             M_indices, M_symbols_to_values, M_idx_to_symbols = self.place_almost_identity(M_indices, M_symbols_to_values)
-        return M_indices, M_symbols_to_values, M_idx_to_symbols    
-        
-            
+        return M_indices, M_symbols_to_values, M_idx_to_symbols
+
+
     def place_almost_identity(self, indexed_circuit, symbol_to_value, random=True, block_to_insert=None, insertion_index=None):
         if random:
             block_to_insert, insertion_index = self.choose_block(indexed_circuit)
