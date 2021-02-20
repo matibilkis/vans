@@ -39,10 +39,10 @@ class Evaluator(Basic):
         if not loading:
             self.raw_history = {}
             self.evolution = {}
+            self.displaying={"information":"\n Hola, I'm VANS, and current local time is {} \n".format(datetime.now())}
             self.lowest_energy = None
             self.if_finish_ok = False
             self.accuracy_to_end = accuracy_to_end
-
 
             problem_identifier = self.get_problem_identifier(args["problem_config"])
             noise_identifier = self.get_noise_identifier(args["noise_config"])
@@ -50,7 +50,7 @@ class Evaluator(Basic):
 
             self.directory = self.create_folder(info)
             self.acceptange_percentage = acceptange_percentage
-            self.displaying = "\n Hola, I'm VANS, and current local time is {} \n".format(datetime.now())
+
         else:
             args_load={}
             for str,default in zip(["n_qubits", "problem_config", "noise_config","specific_name"], [4, {"problem":"TFIM", "g":1.0, "J": 0.0}, {}, None]):
@@ -61,10 +61,14 @@ class Evaluator(Basic):
             problem_identifier = self.get_problem_identifier(args_load["problem_config"])
             noise_identifier = self.get_noise_identifier(args_load["noise_config"])
             if args_load["specific_name"] is None:
-                self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args_load["n_qubits"],problem_identifier, noise_identifier)
-                self.load(args_load,nrun=nrun_load)
+                ap=""
             else:
-                self.load_from_name(args_load["specific_name"], nrun=nrun_load)
+                ap = args_load["specific_name"]
+            self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args_load["n_qubits"],problem_identifier, noise_identifier)+ap
+            self.load(args_load,nrun=nrun_load)
+            #if args_load["specific_name"] is None:
+                       # else:
+           #     self.load_from_name(args_load["specific_name"], nrun=nrun_load)
 
     def get_problem_identifier(self, args):
         #### read possible hamiltonians to get id structure
@@ -144,6 +148,9 @@ class Evaluator(Basic):
         output = open(self.directory+"/evolution.pkl", "wb")
         pickle.dump(self.evolution, output)
         output.close()
+        output = open(self.directory+"/displaying.pkl", "wb")
+        pickle.dump(self.displaying, output)
+        output.close()
         #with open(self.directory+"/evolution.txt","wb") as f:
         #    f.write(self.displaying)
         #    f.close()
@@ -155,11 +162,13 @@ class Evaluator(Basic):
             self.raw_history = pickle.load(h)
         with open(folder+"/evolution.pkl", "rb") as hh:
             self.evolution = pickle.load(hh)
-        if load_txt is True:
-            with open(folder+"/evolution.txt", "r") as f:
-               a = f.readlines()
-               f.close()
-            self.displaying = a
+        with open(folder+"/displaying.pkl", "rb") as hhh:
+            self.displaying = pickle.load(hhh)
+        # if load_txt is True:
+        #     with open(folder+"/evolution.txt", "r") as f:
+        #        a = f.readlines()
+        #        f.close()
+        #     self.displaying = a
         return
 
     def accept_energy(self, E, noise=False):
