@@ -1,0 +1,9 @@
+executable = subfile.sh
+args=$(Item)
+output = ../jobs/$(Item).out
+error = ../jobs/$(Item).err
+log = ../jobs/$(Item).log
+request_memory = 2 GB
++flavour="short"
+
+queue from seq 0 0.1 0.7|
