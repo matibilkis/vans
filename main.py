@@ -101,7 +101,8 @@ if __name__ == "__main__":
         relevant=False
 
         ### create a mutation M (maybe this word is too fancy); we add (probably more than one) identity resolution
-        M_indices, M_symbols_to_values, M_idx_to_symbols = iid.place_identities(indexed_circuit, symbol_to_value, rate_iids_per_step= args.rate_iids_per_step, selector_temperature=scheduler_selector_temperature(energy, evaluator.lowest_energy, evaluator.accuracy_to_end))
+        iid.selector_temperature=scheduler_selector_temperature(energy, evaluator.lowest_energy)
+        M_indices, M_symbols_to_values, M_idx_to_symbols = iid.place_identities(indexed_circuit, symbol_to_value, rate_iids_per_step= args.rate_iids_per_step)
 
         ### simplify the circuit as much as possible
         Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(M_indices, M_symbols_to_values, M_idx_to_symbols)

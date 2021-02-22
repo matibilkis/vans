@@ -30,11 +30,11 @@ class IdInserter(Basic):
         function that selects qubit according to how many gates are acting on each one in the circuit
         """
         if gate_type == "one-qubit":
-            gc=np.array(list(ngates.values()))[:, 0] #### gives the gate population for each qubit
+            gc=np.array(list(ngates.values()))[:, 0]+1 #### gives the gate population for each qubit
             probs=np.exp(self.selector_temperature*(1-gc/np.sum(gc)))/np.sum(np.exp(self.selector_temperature*(1-gc/np.sum(gc))))
-            return np.random.choice(range(vqe_handler.n_qubits),1,p=probs)[0]
+            return np.random.choice(range(self.n_qubits),1,p=probs)[0]
         elif gate_type == "two-qubit":
-            gc=np.array(list(ngates.values()))[:, 1] #### gives the gate population for each qubit
+            gc=np.array(list(ngates.values()))[:, 1]+1 #### gives the gate population for each qubit
             probs=np.exp(self.selector_temperature*(1-gc/np.sum(gc)))/np.sum(np.exp(self.selector_temperature*(1-gc/np.sum(gc))))
             return np.random.choice(range(self.n_qubits),2,p=probs,replace=False)
         else:
@@ -80,10 +80,10 @@ class IdInserter(Basic):
 
         if which_block == 0:
             # qubit = np.random.choice(self.n_qubits)
-            qubit = self.choose_qubit_from_N1q(ngates=ngates,gate_type="one-qubit")
+            qubit = self.choose_target_bodies(ngates=ngates,gate_type="one-qubit")
             block_to_insert = self.resolution_1qubit(qubit)
         else:
-            qubits = self.choose_qubit_from_N1q(ngates=ngates,gate_type="two-qubit")
+            qubits = self.choose_target_bodies(ngates=ngates,gate_type="two-qubit")
             #qubits = np.random.choice(self.n_qubits, 2,replace = False)
             block_to_insert = self.resolution_2cnots(qubits[0], qubits[1])
 
