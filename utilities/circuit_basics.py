@@ -220,13 +220,19 @@ class Basic:
             return [(ind-self.number_of_cnots)%self.n_qubits]
 
 
-    def hea_layer(self,full=False):
+    def hea_layer(self,full=False, x=True):
         layer = []
         for ind in range(0,self.n_qubits):
-            layer.append(self.number_of_cnots + ind+ (2*self.n_qubits))
+            if x == True:
+                layer.append(self.number_of_cnots + ind+ (self.n_qubits))
+            else:
+                layer.append(self.number_of_cnots + ind+ (2*self.n_qubits))
             layer.append(self.number_of_cnots + ind)
             if full:
-                layer.append(self.number_of_cnots + ind+ (2*self.n_qubits))
+                if x==True:
+                    layer.append(self.number_of_cnots + ind+ (self.n_qubits))
+                else:
+                    layer.append(self.number_of_cnots + ind+ (2*self.n_qubits))
         for ind in range(0,self.n_qubits-1):
             layer.append(self.cnots_index[str([ind, (ind+1)%self.n_qubits])])
         return layer
@@ -237,6 +243,24 @@ class Basic:
             indexed_circuit+=self.hea_layer(full=full)
         return indexed_circuit
 
+    def count_cnots(self, indexed_circuit):
+        cncount=0
+        for k in indexed_circuit:
+            if k < self.number_of_cnots:
+                cncount+=1
+        return cncount
+
+    def gate_counter_on_qubits(self, indexed_circuit):
+        ngates = {k:[0,0] for k in range(len(self.qubits))}
+        for ind in indexed_circuit:
+            if ind < self.number_of_cnots:
+                control, target = self.indexed_cnots[str(ind)]
+                ngates[control][1]+=1
+                ngates[target][1]+=1
+            else:
+                qind = (ind-self.number_of_cnots)%self.n_qubits
+                ngates[qind][0]+=1
+        return ngates
 
 class TimeoutError(Exception):
     pass

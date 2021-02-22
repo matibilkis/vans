@@ -2,7 +2,7 @@ from utilities.circuit_basics import Basic
 import numpy as np
 
 class IdInserter(Basic):
-    def __init__(self, n_qubits=3,epsilon=0.01, initialization="epsilon"):
+    def __init__(self, n_qubits=3,epsilon=0.01, initialization="epsilon", selector_temperature=10):
         """
         epsilon: perturbation strength
         initialization: how parameters at ientity compilation are perturbated on single-qubit unitary.
@@ -11,7 +11,7 @@ class IdInserter(Basic):
         super(IdInserter, self).__init__(n_qubits=n_qubits)
         self.epsilon = epsilon
         self.init_params = initialization
-
+        self.selector_temperature=selector_temperature
 
     def place_identities(self,indexed_circuit, symbol_to_value, rate_iids_per_step=1):
         ngates = np.random.exponential(scale=rate_iids_per_step)
@@ -21,6 +21,24 @@ class IdInserter(Basic):
             M_indices, M_symbols_to_values, M_idx_to_symbols = self.place_almost_identity(M_indices, M_symbols_to_values)
         return M_indices, M_symbols_to_values, M_idx_to_symbols
 
+    def choose_target_bodies(self, ngates={}, gate_type="one-qubit"):
+        """
+        gate_type: "one-qubit" or "two-qubit"
+        ngates: gate_counter_on_qubits
+
+        Note that beta could be annealed as energy decreases.. (at beta = 0 we get uniform sampling)
+        function that selects qubit according to how many gates are acting on each one in the circuit
+        """
+        if gate_type == "one-qubit":
+            gc=np.array(list(ngates.values()))[:, 0] #### gives the gate population for each qubit
+            probs=np.exp(self.selector_temperature*(1-gc/np.sum(gc)))/np.sum(np.exp(self.selector_temperature*(1-gc/np.sum(gc))))
+            return np.random.choice(range(vqe_handler.n_qubits),1,p=probs)[0]
+        elif gate_type == "two-qubit":
+            gc=np.array(list(ngates.values()))[:, 1] #### gives the gate population for each qubit
+            probs=np.exp(self.selector_temperature*(1-gc/np.sum(gc)))/np.sum(np.exp(self.selector_temperature*(1-gc/np.sum(gc))))
+            return np.random.choice(range(self.n_qubits),2,p=probs,replace=False)
+        else:
+            raise NameError("typo code here.")
 
     def place_almost_identity(self, indexed_circuit, symbol_to_value, random=True, block_to_insert=None, insertion_index=None):
         if random:
@@ -58,12 +76,15 @@ class IdInserter(Basic):
         """
         which_block = np.random.choice([0,1], p=[.5,.5])
         insertion_index = np.random.choice(max(1,len(indexed_circuit)))
+        ngates = self.gate_counter_on_qubits(indexed_circuit)
 
         if which_block == 0:
-            qubit = np.random.choice(self.n_qubits)
+            # qubit = np.random.choice(self.n_qubits)
+            qubit = self.choose_qubit_from_N1q(ngates=ngates,gate_type="one-qubit")
             block_to_insert = self.resolution_1qubit(qubit)
         else:
-            qubits = np.random.choice(self.n_qubits, 2,replace = False)
+            qubits = self.choose_qubit_from_N1q(ngates=ngates,gate_type="two-qubit")
+            #qubits = np.random.choice(self.n_qubits, 2,replace = False)
             block_to_insert = self.resolution_2cnots(qubits[0], qubits[1])
 
         return block_to_insert, insertion_index
