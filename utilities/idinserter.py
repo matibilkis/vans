@@ -15,9 +15,10 @@ class IdInserter(Basic):
 
     def place_identities(self,indexed_circuit, symbol_to_value, rate_iids_per_step=1):
         ngates = np.random.exponential(scale=rate_iids_per_step)
-        ngates = int(np.round(ngates,0)+1)
+        ngates = int(ngates+1)
+        #print("Adding {}".format(ngates))
         M_indices, M_symbols_to_values, M_idx_to_symbols = self.place_almost_identity(indexed_circuit, symbol_to_value)
-        for l in range(ngates-1):
+        for ll in range(ngates-1):
             M_indices, M_symbols_to_values, M_idx_to_symbols = self.place_almost_identity(M_indices, M_symbols_to_values)
         return M_indices, M_symbols_to_values, M_idx_to_symbols
 
@@ -30,19 +31,19 @@ class IdInserter(Basic):
         function that selects qubit according to how many gates are acting on each one in the circuit
         """
         if gate_type == "one-qubit":
-            gc=np.array(list(ngates.values()))[:, 0]+1 #### gives the gate population for each qubit
+            gc=np.array(list(ngates.values()))[:,0]+1 #### gives the gate population for each qubit
             probs=np.exp(self.selector_temperature*(1-gc/np.sum(gc)))/np.sum(np.exp(self.selector_temperature*(1-gc/np.sum(gc))))
             return np.random.choice(range(self.n_qubits),1,p=probs)[0]
         elif gate_type == "two-qubit":
-            gc=np.array(list(ngates.values()))[:, 1]+1 #### gives the gate population for each qubit
+            gc=np.array(list(ngates.values()))[:,1]+1 #### gives the gate population for each qubit
             probs=np.exp(self.selector_temperature*(1-gc/np.sum(gc)))/np.sum(np.exp(self.selector_temperature*(1-gc/np.sum(gc))))
-            return np.random.choice(range(self.n_qubits),2,p=probs,replace=False)
+            qubits = np.random.choice(range(self.n_qubits),2,p=probs,replace=False)
+            return qubits
         else:
             raise NameError("typo code here.")
 
-    def place_almost_identity(self, indexed_circuit, symbol_to_value, random=True, block_to_insert=None, insertion_index=None):
-        if random:
-            block_to_insert, insertion_index = self.choose_block(indexed_circuit)
+    def place_almost_identity(self, indexed_circuit, symbol_to_value):
+        block_to_insert, insertion_index = self.choose_block(indexed_circuit)
         Iindexed_circuit, Isymbol_to_value, Iindex_to_symbols = self.inserter(indexed_circuit, symbol_to_value, block_to_insert, insertion_index)
         return Iindexed_circuit, Isymbol_to_value, Iindex_to_symbols
 
@@ -70,14 +71,26 @@ class IdInserter(Basic):
         rxq1 = self.number_of_cnots + self.n_qubits + q
         return [rzq1, rxq1, rzq1]
 
+
+    def where_to_insert(self, indexed_circuit):
+        if len(indexed_circuit) == self.n_qubits:
+            insertion_index = self.n_qubits-1
+        else:
+            insertion_index = np.squeeze(np.random.choice(range(self.n_qubits, len(indexed_circuit)), 1))
+        return insertion_index
+
     def choose_block(self, indexed_circuit):
         """
         randomly choices an identity resolution and index to place it at indexed_circuit.
         """
-        which_block = np.random.choice([0,1], p=[.5,.5])
-        insertion_index = np.random.choice(max(1,len(indexed_circuit)))
         ngates = self.gate_counter_on_qubits(indexed_circuit)
-
+        ### if no qubit is affected by a CNOT in the circuit... (careful, since this might be bias the search if problem is too easy)
+        if np.count_nonzero(np.array(list(self.gate_counter_on_qubits(indexed_circuit).values()))[:,1] < 1) <= self.n_qubits:
+            which_block = np.random.choice([0,1], p=[.2,.8])
+            insertion_index = self.where_to_insert(indexed_circuit)
+        else:
+            which_block = np.random.choice([0,1], p=[.5,.5])
+            insertion_index = np.random.choice(max(1,len(indexed_circuit)))
         if which_block == 0:
             # qubit = np.random.choice(self.n_qubits)
             qubit = self.choose_target_bodies(ngates=ngates,gate_type="one-qubit")
