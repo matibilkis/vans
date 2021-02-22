@@ -18,7 +18,7 @@ from utilities.evaluator import Evaluator
 from utilities.idinserter import IdInserter
 from utilities.simplifier import Simplifier
 from utilities.unitary_killer import UnitaryMurder
-
+from utilities.misc import scheduler_selector_temperature #this outputs always 10 for now.
 
 
 if __name__ == "__main__":
@@ -39,6 +39,9 @@ if __name__ == "__main__":
     parser.add_argument("--return_lower_bound", type=int, default=0)
     parser.add_argument("--show_tensorboarddata",type=int, default=0)
     parser.add_argument("--rate_iids_per_step",type=float,default=1)
+    parser.add_argument("--selector_temperature",type=float,default=10.0)
+    parser.add_argument("--initialization",type=str,default="hea")
+
     args = parser.parse_args()
 
     begin = datetime.now()
@@ -58,8 +61,11 @@ if __name__ == "__main__":
                         f"qepochs: {vqe_handler.epochs}\n" \
                         f"patience: {vqe_handler.patience}\n" \
                         f"genetic runs: {args.reps}\n" \
+                        f"optimizer: {args.optimizer}\n" \
                         f"acceptange_percentage runs: {args.acceptange_percentage}\n" \
+                        f"temperature_iid_resolution_selector: {args.selector_temperature}\n" \
                         f"rate_iids_per_step: {args.rate_iids_per_step}\n" \
+                        f"initialization: {args.initialization}\n" \
                         f"problem_info: {args.problem_config}\n"
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
@@ -71,6 +77,7 @@ if __name__ == "__main__":
 
     #IdInserter appends to a given circuit an identity resolution
     iid = IdInserter(n_qubits=len(vqe_handler.qubits))
+    iid.selector_temperature = args.selector_temperature
 
     #Simplifier reduces gates number as much as possible while keeping same expected value of target hamiltonian
     Simp = Simplifier(n_qubits=len(vqe_handler.qubits))
@@ -78,20 +85,29 @@ if __name__ == "__main__":
     #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
     killer = UnitaryMurder(vqe_handler, noise_config=args.noise_config)
 
-    ### begin with a product ansatz
-    indexed_circuit=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
-    # ### add some no local gates..
-    # for i in range(len(vqe_handler.qubits)):
-    #     indexed_circuit+=iid.resolution_2cnots(i,(i+1)%len(vqe_handler.qubits))
-    # indexed_circuit+=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
+    if args.initialization == "hea":
+        indexed_circuit = vqe_handler.hea_ansatz_indexed_circuit(L=3)
+    elif args.initialization == "separable":
+        indexed_circuit=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
+    elif args.initialization == "xz":
+        indexed_circuit=[]
+        for i in range(len(vqe_handler.qubits)):
+            indexed_circuit.append(vqe_handler.number_of_cnots+ vqe_handler.n_qubits +i)
+            indexed_circuit.append(vqe_handler.number_of_cnots+i)
+    else:
+        raise NameError("Please choose your initial ansatz!")
+        # for i in range(vqe_handler.n_qubits):
+        #     indexed_circuit.append(vqe_handler.number_of_cnots+ (2*vqe_handler.n_qubits) +i))
+        #     indexed_circuit+=vqe_handler.number_of_cnots+(2*i)
+        # indexed_circuit+=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
 
+    print("beggining to train!")
     energy, symbol_to_value, training_evolution = vqe_handler.vqe(indexed_circuit) #compute energy
     #add initial info to evaluator
 
-    to_print="\nIteration #{}\nTime since beggining:{}\n best energy: {}\n lower_bound: {}".format(0, datetime.now()-start, evaluator.lowest_energy, evaluator.accuracy_to_end)
+    to_print="\nIteration #{}\nTime since beggining:{}\n best energy: {}\ncurrent_energy {}\n lower_bound: {}".format(0, datetime.now()-start, energy, energy, evaluator.accuracy_to_end)
     print(to_print)
     evaluator.displaying["information"]+=to_print
-
 
     evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=True)
     evaluator.lowest_energy = energy
@@ -100,13 +116,15 @@ if __name__ == "__main__":
         relevant=False
 
         ### create a mutation M (maybe this word is too fancy); we add (probably more than one) identity resolution
+        iid.selector_temperature=scheduler_selector_temperature(energy, evaluator.lowest_energy, when_on=args.selector_temperature)
         M_indices, M_symbols_to_values, M_idx_to_symbols = iid.place_identities(indexed_circuit, symbol_to_value, rate_iids_per_step= args.rate_iids_per_step)
 
         ### simplify the circuit as much as possible
         Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(M_indices, M_symbols_to_values, M_idx_to_symbols)
 
+        # print(vqe_handler.give_circuit(Sindices)[0])
         ## compute the energy of the mutated-simplified circuit [Note 1]
-        MSenergy, MSsymbols_to_values, _ = vqe_handler.vqe(Sindices)
+        MSenergy, MSsymbols_to_values, _ = vqe_handler.vqe(Sindices, symbols_to_values=Ssymbols_to_values)
 
         if evaluator.accept_energy(MSenergy):
             indexed_circuit, symbol_to_value, index_to_symbols = Sindices, MSsymbols_to_values, Sindex_to_symbols
@@ -121,7 +139,7 @@ if __name__ == "__main__":
             relevant=True
         evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=relevant)
 
-        to_print="\nIteration #{}\nTime since beggining:{}\n best energy: {}\n lower_bound: {}".format(iteration, datetime.now()-start, evaluator.lowest_energy, evaluator.accuracy_to_end)
+        to_print="\nIteration #{}\nTime since beggining:{}\n best energy: {}\ncurrent energy: {}\n lower_bound: {}".format(iteration, datetime.now()-start, evaluator.lowest_energy,energy, evaluator.accuracy_to_end)
         print(to_print)
         evaluator.displaying["information"]+=to_print
 

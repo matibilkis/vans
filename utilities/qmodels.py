@@ -1,6 +1,10 @@
 import tensorflow_quantum as tfq
 import tensorflow as tf
 
+#class UnitaryCompile(tf.keras.model)
+
+
+
 class QNN(tf.keras.Model):
     def __init__(self, symbols, observable, batch_sizes=1):
         """

@@ -485,7 +485,7 @@ class Simplifier(Basic):
 
         t=[]
         for eq, val in zip(eqs,s):
-            t.append((eq)-np.round(val,5))
+            t.append(eq-val)
 
         ### this while appears since the seed values may enter
         # in vanishing gradients and through Matrix-zero error.

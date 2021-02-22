@@ -40,3 +40,17 @@ def give_kr_prod(matrices):
                 sm=[]
         matrices = smf
     return matrices[0]
+
+def scheduler_selector_temperature(energy, lowest_energy_found,when_on=10):
+    relative_energy = np.abs((energy - lowest_energy_found)/lowest_energy_found)
+    if relative_energy < 1e-4:
+       return 1#
+    else:
+       return when_on
+    #
+    #     if  < 0.05:
+    #         return 0
+    #     else:
+    #         return
+    # else:
+    #     return
