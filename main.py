@@ -35,7 +35,8 @@ if __name__ == "__main__":
     parser.add_argument("--optimizer", type=str, default="sgd")
     parser.add_argument("--problem_config", type=json.loads, default='{}')
     parser.add_argument("--noise_config", type=json.loads, default='{}')
-    parser.add_argument("--acceptange_percentage", type=float, default=0.01)
+    parser.add_argument("--acceptance_percentage", type=float, default=0.01)
+    parser.add_argument("--reduce_acceptance_percentage",type=float,default=1.0)
     parser.add_argument("--return_lower_bound", type=int, default=0)
     parser.add_argument("--show_tensorboarddata",type=int, default=0)
     parser.add_argument("--rate_iids_per_step",type=float,default=1)
@@ -43,9 +44,10 @@ if __name__ == "__main__":
     parser.add_argument("--initialization",type=str,default="hea")
 
     args = parser.parse_args()
+    reduce_acceptance_percentage=[False,True][int(args.reduce_acceptance_percentage)]
+
 
     begin = datetime.now()
-
 
     #VQE module, in charge of continuous optimization
     vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, verbose=args.verbose,
@@ -53,7 +55,9 @@ if __name__ == "__main__":
                         patience=args.training_patience, random_perturbations=True, return_lower_bound=[True, False][args.return_lower_bound], optimizer=args.optimizer)
 
     start = datetime.now()
-    #info = "len(n_qubits):{}\nnoise: {}\nqlr: {}\nqepochs: {}\npatience: {}\ngenetic runs: {}\nacceptange_percentage runs:{}\nproblem_info:{}\n".format(vqe_handler.n_qubits,args.noise_config,vqe_handler.lr,vqe_handler.epochs,vqe_handler.patience,args.reps,args.acceptange_percentage,args.problem_config)
+
+
+
 
     info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
                         f"noise: {args.noise_config}\n"\
@@ -62,14 +66,16 @@ if __name__ == "__main__":
                         f"patience: {vqe_handler.patience}\n" \
                         f"genetic runs: {args.reps}\n" \
                         f"optimizer: {args.optimizer}\n" \
-                        f"acceptange_percentage runs: {args.acceptange_percentage}\n" \
+                        f"acceptance_percentage runs: {args.acceptance_percentage}\n" \
+                        f"reduce_acceptance_percentage: {reduce_acceptance_percentage}\n" \
                         f"temperature_iid_resolution_selector: {args.selector_temperature}\n" \
                         f"rate_iids_per_step: {args.rate_iids_per_step}\n" \
                         f"initialization: {args.initialization}\n" \
                         f"problem_info: {args.problem_config}\n"
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
-    evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptange_percentage=args.acceptange_percentage, accuracy_to_end=vqe_handler.lower_bound_energy)
+    evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptance_percentage=args.acceptance_percentage, accuracy_to_end=vqe_handler.lower_bound_energy, reduce_acceptance_percentage=reduce_acceptance_percentage)
+
     evaluator.displaying["information"]+=info
 
     if args.show_tensorboarddata == 1:

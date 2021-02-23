@@ -28,7 +28,7 @@ problem_config = dict_to_json({"problem" : "H4", "geometry": [('H', (0., 0., 0.)
 # problem_config = dict_to_json({"problem" : "H4", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., 1.5)), ('H', (0., 0., 3.0)), ('H', (0., 0., 4.5))], "multiplicity":1, "charge":0, "basis":"sto-3g"}); QUBITS=8
 
 for J in [1]:
-    instruction = "python3 main.py --path_results "+"\"../data-vans/\""+" --qlr 0.01 --acceptange_percentage 0.01 --n_qubits "+str(QUBITS)+" --reps "+str(GENETIC_RUNS)+" --qepochs "+str(QEPOCHS)+ " --problem_config "+problem_config#+" --noise_config "+noise_config + "
+    instruction = "python3 main.py --path_results "+"\"../data-vans/\""+" --qlr 0.01 --acceptance_percentage 0.01 --n_qubits "+str(QUBITS)+" --reps "+str(GENETIC_RUNS)+" --qepochs "+str(QEPOCHS)+ " --problem_config "+problem_config#+" --noise_config "+noise_config + "
     insts.append(instruction)
 #
 print(instruction)

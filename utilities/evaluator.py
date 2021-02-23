@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 class Evaluator(Basic):
-    def __init__(self, args, info=None, loading=False, acceptange_percentage = 0.01, accuracy_to_end=-np.inf,
+    def __init__(self, args, info=None, loading=False, acceptance_percentage = 0.01, reduce_acceptance_percentage=True,accuracy_to_end=-np.inf,
                 nrun_load=0, path="/data/uab-giq/scratch/matias/data-vans/"):
         """
 
@@ -35,6 +35,7 @@ class Evaluator(Basic):
         """
         super(Evaluator, self).__init__(n_qubits=args["n_qubits"])
         self.path = path
+        self.reduce_acceptance_percentage=reduce_acceptance_percentage
 
         if not loading:
             self.raw_history = {}
@@ -49,7 +50,7 @@ class Evaluator(Basic):
             self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args["n_qubits"],problem_identifier, noise_identifier)+args["specific_name"]
 
             self.directory = self.create_folder(info)
-            self.acceptange_percentage = acceptange_percentage
+            self.acceptance_percentage = acceptance_percentage
 
         else:
             args_load={}
@@ -180,7 +181,7 @@ class Evaluator(Basic):
         if self.lowest_energy is None:
             return True
         else:
-            return (E-self.lowest_energy)/np.abs(self.lowest_energy) < self.acceptange_percentage
+            return (E-self.lowest_energy)/np.abs(self.lowest_energy) < self.acceptance_percentage
 
     def get_best_iteration(self):
         """
@@ -195,6 +196,15 @@ class Evaluator(Basic):
                 cn+=1
         return cn
 
+    def decrease_acceptance_range(self, energy):
+        """
+        This function is to guarantee that you don't move so far away
+        TODO: smarter scheduling, some meta-learning?
+        """
+        if self.decrease_acceptance_range is True:
+            self.acceptance_percentage*=0.9
+        return
+
     def add_step(self,indices, resolver, energy, relevant=True):
         """
         indices: list of integers describing circuit to save
@@ -206,6 +216,7 @@ class Evaluator(Basic):
             self.lowest_energy = energy
         elif energy < self.lowest_energy:
             self.lowest_energy = energy
+            self.decrease_acceptance_range(energy)
 
         if self.lowest_energy < self.accuracy_to_end:
             self.if_finish_ok = True
