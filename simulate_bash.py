@@ -17,6 +17,5 @@ problem_config = dict_to_json({"problem" : "H4", "geometry": [('H', (0., 0., 0.)
 #problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": args.swvar1});q=2
             ##### tfim #######
 #problem_config = dict_to_json({"problem" : "tfim", "g":1.0, "J": 0.3})
-#/data/uab-giq/scratch/matias/data-vans/
-st = "python3 main.py --path_results \"../data-vans/\" --qlr 0.01 --acceptange_percentage 0.001 --n_qubits {} --reps 3000 --qepochs 2000 --problem_config {} --show_tensorboarddata 0 --optimizer adam --training_patience 200 --rate_iids_per_step {} --specific_name __nrun{}".format(q,problem_config, nrun)
+st = "python3 main.py --path_results \"/data/uab-giq/scratch/matias/data-vans/\" --qlr 0.01 --acceptange_percentage 0.001 --n_qubits {} --reps 3000 --qepochs 2000 --problem_config {} --show_tensorboarddata 0 --optimizer adam --training_patience 200 --rate_iids_per_step 1.0 --specific_name _singlebond_nrun{}".format(q,problem_config, nrun)
 os.system(st)

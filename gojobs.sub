@@ -1,9 +1,10 @@
 executable = subfile.sh
 args=$(Item)
-output = ../jobs/$(Item).out
-error = ../jobs/$(Item).err
-log = ../jobs/$(Item).log
-request_memory = 16 GB
+output = ../jobs/bd$(Item).out
+error = ../jobs/bd$(Item).err
+log = ../jobs/bd$(Item).log
+request_memory = 8 GB
+request_cpus = 2
 +flavour="medium"
 
-queue from seq 1.0 0.1 1.7|
+queue from seq 0.25 0.05 3.5|
