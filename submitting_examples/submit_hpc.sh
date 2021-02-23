@@ -8,6 +8,6 @@ STR="
 #SBATCH --output=${J}.out\n\
 #SBATCH --error=${J}.err\n\
 \n\
-python3 main.py --path_results "." --qlr 0.01 --acceptange_percentage 0.01 --n_qubits 8 --reps 1000 --qepochs 1000 --problem_config '{"problem":"XXZ","g":"0.75","J":"$J"}'
+python3 main.py --path_results "." --qlr 0.01 --acceptance_percentage 0.01 --n_qubits 8 --reps 1000 --qepochs 1000 --problem_config '{"problem":"XXZ","g":"0.75","J":"$J"}'
 echo -e ${STR} | sbatch
 done
