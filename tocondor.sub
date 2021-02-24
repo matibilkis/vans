@@ -1,0 +1,11 @@
+executable = subash.sh
+optimizer=sgd
+args=$(Item) $(optimizer)
+output = ../jobs/$(optimizer)_bd$(Item).out
+error = ../jobs/$(optimizer)_bd$(Item).err
+log = ../jobs/$(optimizer)_bd$(Item).log
+request_memory = 8 GB
+request_cpus = 4
++flavour="medium"
+
+queue from seq 0.30 0.225 1.875|
