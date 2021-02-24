@@ -4,7 +4,7 @@ output = ../jobs/bd$(Item).out
 error = ../jobs/bd$(Item).err
 log = ../jobs/bd$(Item).log
 request_memory = 8 GB
-request_cpus = 2
+request_cpus = 4
 +flavour="medium"
 
 queue from seq 0.25 0.05 3.5|

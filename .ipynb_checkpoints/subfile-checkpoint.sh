@@ -3,5 +3,5 @@
 rates=$1
 cd ~/vans
 . ~/qenv_bilkis/bin/activate
-python3 simulate_bash.py --nrun $rates
+python3 simulate_bash.py --bonds $rates
 deactivate
