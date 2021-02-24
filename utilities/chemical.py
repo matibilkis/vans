@@ -2,7 +2,8 @@ import openfermionpyscf as ofpyscf
 import cirq
 import numpy as np
 import openfermion as of
-
+from openfermion.chem import MolecularData
+from openfermionpyscf import run_pyscf
 
 
 class OpenFermion_to_Cirq:
@@ -87,11 +88,10 @@ class ChemicalObservable(OpenFermion_to_Cirq):
         return newgeometry
 
     def get_fci_energy(self, geometry, multiplicity, charge, basis):
-        from openfermion.chem import MolecularData
-        from openfermionpyscf import run_pyscf
+
         molecule = MolecularData(geometry, basis=basis, multiplicity=multiplicity)
         molecule = run_pyscf(molecule,run_scf=0,run_mp2=0,run_cisd=0,run_ccsd=0,run_fci=1)
-        return molecule.fci_energy + 0.0016 #add chemical accuracy.
+        return molecule.fci_energy
 
     def give_observable(self,qubits, geometry, multiplicity=1, charge=0, basis="sto-3g", return_lower_bound=True):
         """

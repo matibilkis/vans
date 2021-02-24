@@ -22,5 +22,5 @@ problem_config = dict_to_json({"problem" : "H4", "geometry": [('H', (0., 0., 0.)
 ### POSSIBLE PATHS
 # path="/data/uab-giq/scratch/matias/data-vans/"
 path = "../data-vans/"
-st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.01 --n_qubits {} --reps 3000 --qepochs 2000 --problem_config {} --show_tensorboarddata 0 --optimizer adam --training_patience 200 --rate_iids_per_step {}".format(path,q,problem_config, ratesiid)
+st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.001 --n_qubits {} --reps 3000 --qepochs 2000 --problem_config {} --show_tensorboarddata 0 --optimizer adam --training_patience 200 --rate_iids_per_step {} --specific_name __nrun{}".format(path,q,problem_config, ratesiid, nrun)
 os.system(st)
