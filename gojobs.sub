@@ -7,4 +7,4 @@ request_memory = 8 GB
 request_cpus = 4
 +flavour="medium"
 
-queue from seq 0.25 0.05 3.5|
+queue from seq 0.30 0.15 1.75|
