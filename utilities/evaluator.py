@@ -187,7 +187,7 @@ class Evaluator(Basic):
         """
         returns minimum in evolution.
         """
-        return list(np.where(np.array(list(self.evolution.values()))[:,1] == np.min(np.array(list(self.raw_history.values()))[:,-1]))[0])
+        return list(np.where(np.array(list(self.evolution.values()))[:,1] == np.min(np.array(list(self.raw_history.values()))[:,4]))[0])
 
     def number_cnots_best(self):
         cn=0
