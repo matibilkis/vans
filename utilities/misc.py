@@ -49,7 +49,7 @@ def give_kr_prod(matrices):
         sm, smf=[],[]
         for ind in range(len(matrices)):
             sm.append(matrices[ind])
-            if ind%2==1 and ind>0:
+            if len(sm) == 2:
                 smf.append(np.kron(*sm))
                 sm=[]
         matrices = smf
