@@ -12,11 +12,25 @@ def dict_to_json(dictionary):
     d+="}" #kill the comma
     return "\'"+d+ "\'"
 
+
+def compute_ground_energy_1(obse,qubits):
+    """
+    TO do. Implement this for, say, 6 qubits (therer's a problem in give_kr_prod...)
+    """
+    ind_to_2 = {"0":np.eye(2), "1":cirq.unitary(cirq.X), "2":cirq.unitary(cirq.Y), "3":cirq.unitary(cirq.Z)}
+    ham = np.zeros((2**len(qubits),2**len(qubits))).astype(np.complex128)
+    for kham in obse:
+        item= kham.dense(qubits)
+        string = item.pauli_mask
+        matrices = [ind_to_2[str(int(ok))] for ok in string]
+        ham += give_kr_prod(matrices)*item.coefficient
+    return np.sort(np.real(np.linalg.eigvals(ham)))
+
 def compute_ground_energy(obse,qubits):
     """
     TO do. Implement this for, say, 6 qubits (therer's a problem in give_kr_prod...)
     """
-    if np.log2(len(qubits)).is_integer():
+    if -np.log2(len(qubits)).is_integer() is True:
         ind_to_2 = {"0":np.eye(2), "1":cirq.unitary(cirq.X), "2":cirq.unitary(cirq.Y), "3":cirq.unitary(cirq.Z)}
         ham = np.zeros((2**len(qubits),2**len(qubits))).astype(np.complex128)
         for kham in obse:

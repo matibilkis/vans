@@ -221,9 +221,9 @@ class Evaluator(Basic):
         if self.lowest_energy < self.accuracy_to_end:
             self.if_finish_ok = True
 
-        self.raw_history[len(list(self.raw_history.keys()))] = [self.give_unitary(indices, resolver), energy, indices, resolver, self.lowest_energy]
+        self.raw_history[len(list(self.raw_history.keys()))] = [self.give_unitary(indices, resolver), energy, indices, resolver, self.lowest_energy, self.accuracy_to_end]
         if relevant == True:
-            self.evolution[len(list(self.evolution.keys()))] = [self.give_unitary(indices, resolver), energy, indices,resolver, self.lowest_energy]
+            self.evolution[len(list(self.evolution.keys()))] = [self.give_unitary(indices, resolver), energy, indices,resolver, self.lowest_energy, self.accuracy_to_end]
         self.save_dicts_and_displaying()
 
         return
