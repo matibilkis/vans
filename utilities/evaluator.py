@@ -54,22 +54,27 @@ class Evaluator(Basic):
 
         else:
             args_load={}
-            for str,default in zip(["n_qubits", "problem_config", "noise_config","specific_name"], [4, {"problem":"TFIM", "g":1.0, "J": 0.0}, {}, None]):
+            for str,default in zip(["n_qubits", "problem_config", "noise_config","specific_name","load_displaying"], [4, {"problem":"TFIM", "g":1.0, "J": 0.0}, {}, None,False]):
                 if str not in list(args.keys()):
                     args_load[str] = default
                 else:
                     args_load[str] = args[str]
             problem_identifier = self.get_problem_identifier(args_load["problem_config"])
             noise_identifier = self.get_noise_identifier(args_load["noise_config"])
-            if args_load["specific_name"] is None:
-                ap=""
+
+            if "specific_folder_name" not in list(args.keys()):
+                if args_load["specific_name"] is None:
+                    ap=""
+                else:
+                    ap = args_load["specific_name"]
+                self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args_load["n_qubits"],problem_identifier, noise_identifier)+ap
             else:
-                ap = args_load["specific_name"]
-            self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args_load["n_qubits"],problem_identifier, noise_identifier)+ap
-            self.load(args_load,nrun=nrun_load)
-            #if args_load["specific_name"] is None:
-                       # else:
-           #     self.load_from_name(args_load["specific_name"], nrun=nrun_load)
+                self.identifier = "{}/{}".format(args["problem_config"]["problem"], args["specific_folder_name"])
+            self.load(args_load,nrun=nrun_load, load_displaying = args_load["load_displaying"]) #this is because i changed this abit...
+
+                #if args_load["specific_name"] is None:
+                           # else:
+               #     self.load_from_name(args_load["specific_name"], nrun=nrun_load)
 
     def get_problem_identifier(self, args):
         #### read possible hamiltonians to get id structure
@@ -132,9 +137,9 @@ class Evaluator(Basic):
             os.makedirs(final_folder)
         return final_folder
 
-    def load(self,args, nrun=0):
+    def load(self,args, nrun=0, load_displaying=False):
         name_folder = self.path+self.identifier+"/run_{}".format(nrun)
-        self.load_dicts_and_displaying(name_folder)
+        self.load_dicts_and_displaying(name_folder, load_displaying=load_displaying)
         return
 
     def load_from_name(self,name, nrun=0):
@@ -158,13 +163,14 @@ class Evaluator(Basic):
         np.save(self.directory+"/accuracy_to_end",np.array([self.accuracy_to_end]))
         return
 
-    def load_dicts_and_displaying(self,folder, load_txt=False):
+    def load_dicts_and_displaying(self,folder, load_displaying=False):
         with open(folder+"/raw_history.pkl" ,"rb") as h:
             self.raw_history = pickle.load(h)
         with open(folder+"/evolution.pkl", "rb") as hh:
             self.evolution = pickle.load(hh)
-        with open(folder+"/displaying.pkl", "rb") as hhh:
-            self.displaying = pickle.load(hhh)
+        if load_displaying is True:
+            with open(folder+"/displaying.pkl", "rb") as hhh:
+                self.displaying = pickle.load(hhh)
         # if load_txt is True:
         #     with open(folder+"/evolution.txt", "r") as f:
         #        a = f.readlines()
@@ -187,7 +193,7 @@ class Evaluator(Basic):
         """
         returns minimum in evolution.
         """
-        return list(np.where(np.array(list(self.evolution.values()))[:,1] == np.min(np.array(list(self.raw_history.values()))[:,-1]))[0])
+        return list(np.where(np.array(list(self.evolution.values()))[:,1] == np.min(np.array(list(self.raw_history.values()))[:,4]))[0])
 
     def number_cnots_best(self):
         cn=0
