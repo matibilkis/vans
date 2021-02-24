@@ -61,6 +61,11 @@ def scheduler_selector_temperature(energy, lowest_energy_found,when_on=10):
        return 1#
     else:
        return when_on
+
+def scheduler_parameter_perturbation_wall(its_without_improvig):
+    n=max(1,its_without_improvig)
+    return np.max([0.2, np.sqrt(1/n)])
+
     #
     #     if  < 0.05:
     #         return 0

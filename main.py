@@ -18,7 +18,7 @@ from utilities.evaluator import Evaluator
 from utilities.idinserter import IdInserter
 from utilities.simplifier import Simplifier
 from utilities.unitary_killer import UnitaryMurder
-from utilities.misc import scheduler_selector_temperature #this outputs always 10 for now.
+from utilities.misc import scheduler_selector_temperature, scheduler_parameter_perturbation_wall #this outputs always 10 for now.
 
 
 if __name__ == "__main__":
@@ -42,6 +42,7 @@ if __name__ == "__main__":
     parser.add_argument("--rate_iids_per_step",type=float,default=1)
     parser.add_argument("--selector_temperature",type=float,default=10.0)
     parser.add_argument("--initialization",type=str,default="hea")
+    parser.add_argument("--wait_to_get_back",type=int,default=25) #notice there's some correspondence with the annealing in the perturbations_wall
 
     args = parser.parse_args()
     reduce_acceptance_percentage=[False,True][int(args.reduce_acceptance_percentage)]
@@ -52,12 +53,9 @@ if __name__ == "__main__":
     #VQE module, in charge of continuous optimization
     vqe_handler = VQE(n_qubits=args.n_qubits, lr=args.qlr, epochs=args.qepochs, verbose=args.verbose,
                         noise_config=args.noise_config, problem_config=args.problem_config,
-                        patience=args.training_patience, random_perturbations=True, return_lower_bound=[True, False][args.return_lower_bound], optimizer=args.optimizer)
+                        patience=args.training_patience, return_lower_bound=[True, False][args.return_lower_bound], optimizer=args.optimizer)
 
     start = datetime.now()
-
-
-
 
     info = f"len(n_qubits): {vqe_handler.n_qubits}\n" \
                         f"noise: {args.noise_config}\n"\
@@ -71,10 +69,16 @@ if __name__ == "__main__":
                         f"temperature_iid_resolution_selector: {args.selector_temperature}\n" \
                         f"rate_iids_per_step: {args.rate_iids_per_step}\n" \
                         f"initialization: {args.initialization}\n" \
+                        f"Wait to get back to favorite: {args.wait_to_get_back} \n"\
                         f"problem_info: {args.problem_config}\n"
 
+    if vqe_handler.problem_nature == "chemical":
+        accuracy_to_end = vqe_handler.lower_bound_energy + 0.0016 #chemical accuracy
+    else:
+        accuracy_to_end = vqe_handler.lower_bound_energy
+
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
-    evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptance_percentage=args.acceptance_percentage, accuracy_to_end=vqe_handler.lower_bound_energy, reduce_acceptance_percentage=reduce_acceptance_percentage)
+    evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptance_percentage=args.acceptance_percentage, accuracy_to_end=accuracy_to_end, reduce_acceptance_percentage=reduce_acceptance_percentage)
 
     evaluator.displaying["information"]+=info
 
@@ -102,10 +106,6 @@ if __name__ == "__main__":
             indexed_circuit.append(vqe_handler.number_of_cnots+i)
     else:
         raise NameError("Please choose your initial ansatz!")
-        # for i in range(vqe_handler.n_qubits):
-        #     indexed_circuit.append(vqe_handler.number_of_cnots+ (2*vqe_handler.n_qubits) +i))
-        #     indexed_circuit+=vqe_handler.number_of_cnots+(2*i)
-        # indexed_circuit+=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
 
     print("beggining to train!")
     energy, symbol_to_value, training_evolution = vqe_handler.vqe(indexed_circuit) #compute energy
@@ -128,9 +128,8 @@ if __name__ == "__main__":
         ### simplify the circuit as much as possible
         Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(M_indices, M_symbols_to_values, M_idx_to_symbols)
 
-        # print(vqe_handler.give_circuit(Sindices)[0])
         ## compute the energy of the mutated-simplified circuit [Note 1]
-        MSenergy, MSsymbols_to_values, _ = vqe_handler.vqe(Sindices, symbols_to_values=Ssymbols_to_values)
+        MSenergy, MSsymbols_to_values, _ = vqe_handler.vqe(Sindices, symbols_to_values=Ssymbols_to_values, parameter_perturbation_wall=scheduler_parameter_perturbation_wall(its_without_improvig=evaluator.its_without_improvig))
 
         if evaluator.accept_energy(MSenergy):
             indexed_circuit, symbol_to_value, index_to_symbols = Sindices, MSsymbols_to_values, Sindex_to_symbols
@@ -149,6 +148,17 @@ if __name__ == "__main__":
         print(to_print)
         evaluator.displaying["information"]+=to_print
 
-        ## save results of iteration.
         evaluator.save_dicts_and_displaying()
+
+        if evaluator.if_finish_ok is True:
+            print("HOMEWORK DONE! \nBeers on me ;)")
+            break
+
+        if evaluator.its_without_improvig == args.wait_to_get_back:
+            print("Getting back to favorite, it's been already {} iterations".format(args.wait_to_get_back))
+            _, energy, indices, resolver, _, _ =  evaluator.evolution[evaluator.get_best_iteration()]
+            evaluator.its_without_improvig = 0
+
+
+
 ### [Note 1]: Even if the circuit gets simplified to the original one, it's harmless to compute the energy again since i) you give another try to the optimization, ii) we have the EarlyStopping and despite of the added noise, it's supossed the seeds are close to optima.

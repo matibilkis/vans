@@ -10,13 +10,12 @@ from utilities.misc import compute_ground_energy
 
 class VQE(Basic):
     def __init__(self, n_qubits=3, lr=0.01, optimizer="sgd", epochs=1000, patience=200,
-                random_perturbations=True, verbose=0, noise_config={}, problem_config={}, return_lower_bound=True):
+                 verbose=0, noise_config={}, problem_config={}, return_lower_bound=True):
         """
         lr: learning_rate for each iteration of gradient descent
         optimizer: we give two choices, Adam and SGD. If SGD, we implement Algorithm 4 of qacq to adapt learning rate.
         epochs: number of gradient descent iterations (in this project)
         patience: EarlyStopping parameter
-        random_perturbations: if True adds to model's trainable variables random perturbations around (-pi/2, pi/
         verbose: display progress or not
 
         noise_config:see circuit_basics (inherits properties from the circuit_with_noise)
@@ -33,7 +32,6 @@ class VQE(Basic):
                                 problem_config["multiplicity"] (optional)
                                 problem_config["basis"]  (optional)
         Notes:
-               (1) we add noise to parameters with probability %10
                (2) Hamiltonians:
                (2.1) &&ising model&& H = - g \sum_i \Z_i - (J) *\sum_i X_i X_{i+1}
                (2.2) &&xxz model$&&  H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}
@@ -49,16 +47,16 @@ class VQE(Basic):
         self.lr = lr
         self.epochs = epochs
         self.patience = patience
-        self.random_perturbations = random_perturbations
         self.verbose=verbose
-        self.max_time_training = 300 #let's give 5 minutes for each circuit to be trained, at most
+        self.max_time_training = 85 #we give 85 to train per circuit, could be more,but it's the limit we have for 2000 iterations in the barcelona cluster..
         self.gpus=tf.config.list_physical_devices("GPU")
         self.optimizer = {"ADAM":tf.keras.optimizers.Adam,"ADAGRAD":tf.keras.optimizers.Adagrad,"SGD":tf.keras.optimizers.SGD}[optimizer.upper()]
         self.repe=0 #this is to have some control on the number of VQEs done (for tensorboard)
         self.return_lower_bound = return_lower_bound
+
         ##### HAMILTONIAN CONFIGURATION
         self.observable = self.give_observable(problem_config)
-
+        self.problem_nature = "" #this is for accuracy issues, see main.py
         #### NOISE CONFIGURATION
         ### this is inherited from circuit_basics: self.noise, self.q_batch_size
 
@@ -91,6 +89,7 @@ class VQE(Basic):
 
         #### CONDENSED MATTER HAMILTONIANS ####
         if problem_config["problem"].upper() in ["XXZ","TFIM"]:
+            self.problem_nature = "cm"
             for field in ["g","J"]:
                 if field not in problem_config.keys():
                     raise ValueError("You have not specified the fields correctly. Check out your problem_config back again. Current dict: {}".format(problem_config))
@@ -118,6 +117,7 @@ class VQE(Basic):
                 return observable
 
         elif problem_config["problem"].upper() in chemical_hams:
+            self.problem_nature = "chemical"
             oo = ChemicalObservable()
             for key,defvalue in zip(["geometry","multiplicity", "charge", "basis"], [None,1,0,"sto-3g"]):
                 if key not in list(problem_config.keys()):
@@ -128,7 +128,7 @@ class VQE(Basic):
             raise NotImplementedError("The specified hamiltonian is in the list but we have not added to the code yet! Devs, take a look here!\problem_config[problem]: {}".format(problem_config["problem"].upper()))
 
 
-    def vqe(self, indexed_circuit, symbols_to_values=None):
+    def vqe(self, indexed_circuit, symbols_to_values=None, parameter_perturbation_wall=0.5):
         """
         indexed_circuit: list with integers that correspond to unitaries (target qubit deduced from the value)
 
@@ -136,6 +136,8 @@ class VQE(Basic):
 
         if self.noise is True, we've a noise model!
         Every detail of the noise model is inherited from circuit_basics
+
+        parameter_perturbation_wall:
         """
         if self.noise is False:
             circuit, symbols, index_to_symbol = self.give_circuit(indexed_circuit)
@@ -149,15 +151,14 @@ class VQE(Basic):
         model.compile(optimizer=self.optimizer(lr=self.lr), loss=EnergyLoss())
 
         #in case we have already travelled the parameter space,
-        if symbols_to_values:
+        if symbols_to_values is not None:
             model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32)))
 
-        ### add noise only %10 of the times.
-        if self.random_perturbations:
-            if np.random.uniform()<.1:
-                model.trainable_variables[0].assign(model.trainable_variables[0] + tf.random.uniform(model.trainable_variables[0].shape.as_list())*0.01)
+        if np.random.uniform() < parameter_perturbation_wall:
+            perturbation_strength = np.random.uniform(1e-1, np.pi*2)
+            model.trainable_variables[0].assign(model.trainable_variables[0] + tf.random.uniform(model.trainable_variables[0].shape.as_list())*perturbation_strength)
 
-        calls=[tf.keras.callbacks.EarlyStopping(monitor='energy', patience=self.patience, mode="min", min_delta=10**-3),TimedStopping(seconds=self.max_time_training)]
+        calls=[tf.keras.callbacks.EarlyStopping(monitor='energy', patience=self.patience, mode="min", min_delta=0),TimedStopping(seconds=self.max_time_training)]
 
         if hasattr(self, "tensorboarddata"):
             self.repe+=1
