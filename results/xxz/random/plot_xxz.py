@@ -42,7 +42,7 @@ js = np.arange(-3,5.1,0.1)
 #     eigs = compute_ground_energy_1(obs, vqe_handler.qubits)
 #     eigens[j] = eigs[:3]
 
-n="results/xxz/ges8"
+n="results/xxz/plot/ges8"
 # os.makedirs(n,exist_ok=True)
 # ge,ge1,ge2 = np.transpose(np.array(list(eigens.values())))
 # np.save(n+"/ge",ge)
@@ -58,7 +58,7 @@ ge2=np.load(n+"/ge2.npy")
 # ground = np.genfromtxt('results/xxz/plot/xxz8.csv',delimiter=',')
 # js,ans = ground[:,0], ground[:,1]
 
-energies = np.load("results/xxz/energies_xxz_8_g1.npy")
+energies = np.load("results/xxz/plot/energies_xxz_8_g1.npy")
 relatives=np.abs((energies-ge)/ge)
 
 # plt.figure(figsize=(10,10))
@@ -105,7 +105,7 @@ ax1.set_yticks([np.round(k,0) for k in np.linspace(np.min(energies), np.max(ener
 ax1.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=40)
 
 energies=np.array(energies)
-ax2.plot(js,np.abs((energies-np.array(ge))/ge), color=converter.to_rgb(color5),alpha=0.84, label=r'$\frac{\Delta E}{E_{ground}}$')
+ax2.plot(js,np.abs((energies-np.array(ge))/ge), color=converter.to_rgb(color3),alpha=1, label="ground energy")
 # ax2.plot(js,np.abs((energies-np.array(ge1))/ge1),color=converter.to_rgb(color2), alpha=1, label="first excited")
 # ax2.plot(js,np.abs((energies-np.array(ge2))/ge2), '--',color=converter.to_rgb(color1),alpha=1, label="second excited")
 #
@@ -138,11 +138,11 @@ ax1.set_ylabel("Energy",size=70)
 # labs = [l.get_label() for l in [ax1,axins]]
 #
 lines, labels = ax1.get_legend_handles_labels()
-lines2, labels2 = ax2.get_legend_handles_labels()
+# lines2, labels2 = ax2.get_legend_handles_labels()
 #
 ###incremento x ---> se va a la izquierda. Incremento y ---> se va para arriba
-ax2.legend(lines2+lines, labels2+labels, prop={"size":35}, bbox_to_anchor=(.05, .9), loc=2, borderaxespad=0.)
-plt.savefig("results/xxz/xxz8qbits.pdf",format="pdf")
+ax2.legend(lines, labels, prop={"size":35}, bbox_to_anchor=(.05, .9), loc=2, borderaxespad=0.)
+plt.savefig("results/xxz/plot/xxz8qbits.pdf",format="pdf")
 
 
 
