@@ -1,5 +1,5 @@
 #!/bin/bash
-for argu in `seq -2.0 .1 2.`
+for argu in `seq 0.3 .225 1.875`
 do
 STR="
 #!/bin/bash\n\
@@ -11,7 +11,7 @@ STR="
 #SBATCH --error=${argu}.err\n\
 #SBATCH --qos=long\n\
 . qvans/bin/activate\n\
-python3 simulbash.py --J $J\n\
+python3 simulbash.py --bond $argu\n\
 "
 echo -e ${STR} | sbatch
 done

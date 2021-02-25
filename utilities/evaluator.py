@@ -88,11 +88,12 @@ class Evaluator(Basic):
         chemical_hamiltonians=([x.strip().upper() for x in hams])
 
         if args["problem"].upper() in cm_hamiltonians:
-            id = "g{}J{}".format(args["g"],args["g"])
+            id = "g{}J{}".format(args["g"],args["J"])
         elif args["problem"].upper() in chemical_hamiltonians:
-            id = "geometry_{}_multip_{}_charge_{}_basis{}".format(args["problem"], args["geometry"], args["multiplicity"], args["charge"], args["basis"])
+            id = "geometry_{}_multip_{}_charge_{}_basis{}".format(args["geometry"], args["multiplicity"], args["charge"], args["basis"])
         else:
-            raise NameError("Check that your args.problem_config is correct")
+            # raise NameError("Check that your args.problem_config is correct")
+            id="BAD_LABEL_{}".format(args)
         return id
 
     def get_noise_identifier(self, noise_config):
