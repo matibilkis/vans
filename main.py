@@ -36,7 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--problem_config", type=json.loads, default='{}')
     parser.add_argument("--noise_config", type=json.loads, default='{}')
     parser.add_argument("--acceptance_percentage", type=float, default=0.01)
-    parser.add_argument("--reduce_acceptance_percentage",type=float,default=1.0)
+    parser.add_argument("--reduce_acceptance_percentage",type=float,default=0.0)
     parser.add_argument("--return_lower_bound", type=int, default=0)
     parser.add_argument("--show_tensorboarddata",type=int, default=0)
     parser.add_argument("--rate_iids_per_step",type=float,default=1)
