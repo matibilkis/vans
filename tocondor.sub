@@ -1,13 +1,13 @@
 executable = subash.sh
 optimizer=adam
-problem=XXZ
+problem=H4
 args=$(Item) $(optimizer) $(problem)
-output = ../jobs/$(problem)_J$(Item).out
-error = ../jobs/$(problem)_J$(Item).err
-log = ../jobs/$(problem)_J$(Item).log
-request_memory = 6 GB
-request_cpus = 2
-requirements= Has_avx2 == true
-+flavour="short"
+output = ../jobs/nn$(problem)_J$(Item).out
+error = ../jobs/nn$(problem)_$(Item).err
+log = ../jobs/nn$(problem)_J$(Item).log
+request_memory = 12 GB
+request_cpus = 6
+requirements= Has_avx == true
++flavour="medium"
 
-queue from seq 0 0.25 2|
+queue from seq 0.4 0.2 1.8|
