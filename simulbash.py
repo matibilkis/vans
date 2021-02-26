@@ -30,7 +30,7 @@ elif args.problem.upper() == "XXZ":
     problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": args.J});q=4
 else:
     problem_config = dict_to_json({"problem" : "H4", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., bond)), ('H', (0., 0., 2*bond)), ('H', (0., 0., 3*bond))], "multiplicity":1, "charge":0, "basis":"sto-3g"});q=8
-    
+
 ### POSSIBLE PATHS
 path="/data/uab-giq/scratch/matias/data-vans/"
 #path = "../data-vans/"
