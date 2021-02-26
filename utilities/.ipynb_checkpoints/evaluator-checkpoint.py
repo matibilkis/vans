@@ -44,6 +44,7 @@ class Evaluator(Basic):
             self.lowest_energy = None
             self.if_finish_ok = False
             self.accuracy_to_end = accuracy_to_end
+            self.its_without_improvig=0
 
             problem_identifier = self.get_problem_identifier(args["problem_config"])
             noise_identifier = self.get_noise_identifier(args["noise_config"])
@@ -54,22 +55,27 @@ class Evaluator(Basic):
 
         else:
             args_load={}
-            for str,default in zip(["n_qubits", "problem_config", "noise_config","specific_name"], [4, {"problem":"TFIM", "g":1.0, "J": 0.0}, {}, None]):
+            for str,default in zip(["n_qubits", "problem_config", "noise_config","specific_name","load_displaying"], [4, {"problem":"TFIM", "g":1.0, "J": 0.0}, {}, None,False]):
                 if str not in list(args.keys()):
                     args_load[str] = default
                 else:
                     args_load[str] = args[str]
             problem_identifier = self.get_problem_identifier(args_load["problem_config"])
             noise_identifier = self.get_noise_identifier(args_load["noise_config"])
-            if args_load["specific_name"] is None:
-                ap=""
+
+            if "specific_folder_name" not in list(args.keys()):
+                if args_load["specific_name"] is None:
+                    ap=""
+                else:
+                    ap = args_load["specific_name"]
+                self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args_load["n_qubits"],problem_identifier, noise_identifier)+ap
             else:
-                ap = args_load["specific_name"]
-            self.identifier = "{}/N{}_{}_{}".format(args["problem_config"]["problem"],args_load["n_qubits"],problem_identifier, noise_identifier)+ap
-            self.load(args_load,nrun=nrun_load)
-            #if args_load["specific_name"] is None:
-                       # else:
-           #     self.load_from_name(args_load["specific_name"], nrun=nrun_load)
+                self.identifier = "{}/{}".format(args["problem_config"]["problem"], args["specific_folder_name"])
+            self.load(args_load,nrun=nrun_load, load_displaying = args_load["load_displaying"]) #this is because i changed this abit...
+
+                #if args_load["specific_name"] is None:
+                           # else:
+               #     self.load_from_name(args_load["specific_name"], nrun=nrun_load)
 
     def get_problem_identifier(self, args):
         #### read possible hamiltonians to get id structure
@@ -82,11 +88,12 @@ class Evaluator(Basic):
         chemical_hamiltonians=([x.strip().upper() for x in hams])
 
         if args["problem"].upper() in cm_hamiltonians:
-            id = "g{}J{}".format(args["g"],args["g"])
+            id = "g{}J{}".format(args["g"],args["J"])
         elif args["problem"].upper() in chemical_hamiltonians:
-            id = "geometry_{}_multip_{}_charge_{}_basis{}".format(args["problem"], args["geometry"], args["multiplicity"], args["charge"], args["basis"])
+            id = "geometry_{}_multip_{}_charge_{}_basis{}".format(args["geometry"], args["multiplicity"], args["charge"], args["basis"])
         else:
-            raise NameError("Check that your args.problem_config is correct")
+            # raise NameError("Check that your args.problem_config is correct")
+            id="BAD_LABEL_{}".format(args)
         return id
 
     def get_noise_identifier(self, noise_config):
@@ -132,9 +139,9 @@ class Evaluator(Basic):
             os.makedirs(final_folder)
         return final_folder
 
-    def load(self,args, nrun=0):
+    def load(self,args, nrun=0, load_displaying=False):
         name_folder = self.path+self.identifier+"/run_{}".format(nrun)
-        self.load_dicts_and_displaying(name_folder)
+        self.load_dicts_and_displaying(name_folder, load_displaying=load_displaying)
         return
 
     def load_from_name(self,name, nrun=0):
@@ -158,13 +165,14 @@ class Evaluator(Basic):
         np.save(self.directory+"/accuracy_to_end",np.array([self.accuracy_to_end]))
         return
 
-    def load_dicts_and_displaying(self,folder, load_txt=False):
+    def load_dicts_and_displaying(self,folder, load_displaying=False):
         with open(folder+"/raw_history.pkl" ,"rb") as h:
             self.raw_history = pickle.load(h)
         with open(folder+"/evolution.pkl", "rb") as hh:
             self.evolution = pickle.load(hh)
-        with open(folder+"/displaying.pkl", "rb") as hhh:
-            self.displaying = pickle.load(hhh)
+        if load_displaying is True:
+            with open(folder+"/displaying.pkl", "rb") as hhh:
+                self.displaying = pickle.load(hhh)
         # if load_txt is True:
         #     with open(folder+"/evolution.txt", "r") as f:
         #        a = f.readlines()
@@ -187,14 +195,22 @@ class Evaluator(Basic):
         """
         returns minimum in evolution.
         """
-        return list(np.where(np.array(list(self.evolution.values()))[:,1] == np.min(np.array(list(self.raw_history.values()))[:,4]))[0])
+        bests = list(np.where(np.array(list(self.evolution.values()))[:,1] == np.min(np.array(list(self.evolution.values()))[:,4]))[0])
+        if len([np.squeeze(bests)])==0:
+            return int(bests)
+        else:
+            return int(np.squeeze(bests[0])) #say... actually would be nice to keep the most shallow one
 
     def number_cnots_best(self):
         cn=0
-        for k in self.evolution[self.get_best_iteration()[0]][2]: #get the indices
+        for k in self.evolution[self.get_best_iteration()][2]: #get the indices
             if k < self.number_of_cnots:
                 cn+=1
         return cn
+
+    def number_of_parameters_best(self):
+        indices = self.evolution[self.get_best_iteration()][2]
+        return len(indices)-self.number_cnots_best()
 
     def decrease_acceptance_range(self, energy):
         """
@@ -214,9 +230,15 @@ class Evaluator(Basic):
         """
         if self.lowest_energy is None:
             self.lowest_energy = energy
+            self.its_without_improvig = 0
+
         elif energy < self.lowest_energy:
             self.lowest_energy = energy
+            self.its_without_improvig = 0
             self.decrease_acceptance_range(energy)
+
+        else:
+            self.its_without_improvig+=1
 
         if self.lowest_energy < self.accuracy_to_end:
             self.if_finish_ok = True
@@ -225,5 +247,4 @@ class Evaluator(Basic):
         if relevant == True:
             self.evolution[len(list(self.evolution.keys()))] = [self.give_unitary(indices, resolver), energy, indices,resolver, self.lowest_energy, self.accuracy_to_end]
         self.save_dicts_and_displaying()
-
         return
