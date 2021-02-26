@@ -1,11 +1,13 @@
 executable = subash.sh
-optimizer=sgd
-args=$(Item) $(optimizer)
-output = ../jobs/$(optimizer)_bd$(Item).out
-error = ../jobs/$(optimizer)_bd$(Item).err
-log = ../jobs/$(optimizer)_bd$(Item).log
-request_memory = 8 GB
-request_cpus = 4
-+flavour="medium"
+optimizer=adam
+problem=XXZ
+args=$(Item) $(optimizer) $(problem)
+output = ../jobs/$(problem)_J$(Item).out
+error = ../jobs/$(problem)_J$(Item).err
+log = ../jobs/$(problem)_J$(Item).log
+request_memory = 6 GB
+request_cpus = 2
+requirements= Has_avx2 == true
++flavour="short"
 
-queue from seq 0.30 0.225 1.875|
+queue from seq 0 0.25 2|
