@@ -12,20 +12,20 @@ from utilities.misc import dict_to_json
 
 ### POSSIBLE PATHS
 # path="/data/uab-giq/scratch/matias/data-vans/"
-path = "../data-vans-viernes/"
+path = "../data-vans-sabado1/"
 q=8
 insts=[]
 #st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.001 --n_qubits {} --reps 1000 --qepochs 2000 --problem_config {} --show_tensorboarddata 0 --optimizer {} --training_patience 200 --rate_iids_per_step 1.0 --specific_name __{}__ --wait_to_get_back 25".format(path,q,problem_config, args.optimizer, args.optimizer)
 
-for bond in [1.5, 2.0, 1.0]:
+for bond in np.linspace(.5,2,8):
 
     problem_config=dict_to_json({"problem" : "H4", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., bond)), ('H', (0., 0., 2*bond)), ('H', (0., 0., 3*bond))], "multiplicity":1, "charge":0, "basis":"sto-3g"})
 
-    instruction = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.01 --n_qubits {} --reps 4000 --qepochs 2000 --problem_config {} --show_tensorboarddata 0 --optimizer adam --training_patience 200 --rate_iids_per_step 0.8 --wait_to_get_back 10".format(path,q,problem_config)
+    instruction = "python3 main.py --path_results \"{}\" --qlr 1e-2 --acceptance_percentage 0.01 --n_qubits {} --reps 150 --qepochs 2000 --problem_config {} --show_tensorboarddata 0 --optimizer sgd --training_patience 200 --rate_iids_per_step 1.5 --wait_to_get_back 10".format(path,q,problem_config)
     insts.append(instruction)
 #
 def execute_instruction(inst):
     os.system(inst)
 
-with mp.Pool(1) as p:
+with mp.Pool(2) as p:
     p.map(execute_instruction,insts)

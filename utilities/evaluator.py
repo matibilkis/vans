@@ -45,6 +45,8 @@ class Evaluator(Basic):
             self.if_finish_ok = False
             self.accuracy_to_end = accuracy_to_end
             self.its_without_improvig=0
+            if "specific_name" not in list(args.keys()):
+                args["specific_name"] = ""
 
             problem_identifier = self.get_problem_identifier(args["problem_config"])
             noise_identifier = self.get_noise_identifier(args["noise_config"])
@@ -91,8 +93,10 @@ class Evaluator(Basic):
             id = "g{}J{}".format(args["g"],args["J"])
         elif args["problem"].upper() in chemical_hamiltonians:
             id = "geometry_{}_multip_{}_charge_{}_basis{}".format(args["geometry"], args["multiplicity"], args["charge"], args["basis"])
-        else:
+        elif args["problem"].upper() == "AUTOENCODERH2":
+            id = "AUTOENCODERH2_{}".format(args["n_qubits"])
             # raise NameError("Check that your args.problem_config is correct")
+        else:
             id="BAD_LABEL_{}".format(args)
         return id
 
@@ -129,7 +133,7 @@ class Evaluator(Basic):
                     nrun+=1
             final_folder = name_folder+"/run_"+str(nrun)
             with open(name_folder+"/runs.txt", "r") as f:
-                a = f.readlines()[0]
+                a = f.readlines()
                 f.close()
             with open(name_folder+"/runs.txt", "w") as f:
                 f.write(str(nrun)+"\n")
