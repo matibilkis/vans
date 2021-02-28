@@ -5,7 +5,7 @@ import sympy
 import tensorflow_quantum as tfq
 import tensorflow as tf
 from utilities.qmodels import QNN, EnergyLoss
-
+import copy
 class UnitaryMurder(Basic):
     def __init__(self, au_handler, many_indexed_circuits, many_symbols_to_values,
         noise_config={},testing=False):
@@ -30,7 +30,8 @@ class UnitaryMurder(Basic):
         """
         qbatch=[]
         for pure_indexed, resolver in zip(listas, resolvers):
-            preparation_circuit=cirq.resolve_parameters(self.give_circuit(pure_indexed)[0], resolver)
+            circuit=self.give_circuit(pure_indexed)[0]
+            preparation_circuit=cirq.resolve_parameters(circuit, resolver)
             qbatch.append(preparation_circuit)
         return qbatch
 
@@ -41,7 +42,7 @@ class UnitaryMurder(Basic):
         """
         au_circuit,symbols  = self.give_circuit(indexed_circuit)[0:2]
         qbatch=[]
-        qq = self.qbatch.copy()
+        qq = copy.deepcopy(self.qbatch)
         for qc in qq:
             qc.append(au_circuit)
             qbatch.append(qc)
@@ -112,6 +113,7 @@ class UnitaryMurder(Basic):
         otherwise exponentially decreasing probability of acceptance (the 100 is yet another a bit handcrafted)
         """
         #return  < 0.01
+        # return False
         if (e_new-e_old)/np.abs(e_old) <= 0:
             return True
         else:

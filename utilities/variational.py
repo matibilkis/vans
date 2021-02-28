@@ -7,6 +7,7 @@ import time
 from utilities.chemical import ChemicalObservable
 from utilities.qmodels import *
 from utilities.misc import compute_ground_energy
+import copy
 
 class VQE(Basic):
     def __init__(self, n_qubits=3, lr=0.01, optimizer="sgd", epochs=1000, patience=200,
@@ -232,7 +233,6 @@ class Autoencoder(Basic):
         self.patience = patience
         self.verbose=verbose
         self.max_time_training = 85 #we give 85 to train per circuit, could be more,but it's the limit we have for 2000 iterations in the barcelona cluster..
-        self.gpus=tf.config.list_physical_devices("GPU")
         self.optimizer = {"ADAM":tf.keras.optimizers.Adam,"ADAGRAD":tf.keras.optimizers.Adagrad,"SGD":tf.keras.optimizers.SGD}[optimizer.upper()]
         self.repe=0 #this is to have some control on the number of VQEs done (for tensorboard)
 
@@ -259,7 +259,8 @@ class Autoencoder(Basic):
         """
         qbatch=[]
         for pure_indexed, resolver in zip(listas, resolvers):
-            preparation_circuit=cirq.resolve_parameters(self.give_circuit(pure_indexed)[0], resolver)
+            circuit=self.give_circuit(pure_indexed)[0]
+            preparation_circuit=cirq.resolve_parameters(circuit, resolver)
             qbatch.append(preparation_circuit)
         return qbatch
 
@@ -271,7 +272,7 @@ class Autoencoder(Basic):
 
         au_circuit,symbols  = self.give_circuit(indexed_circuit)[0:2]
         qbatch=[]
-        qq=self.qbatch.copy()
+        qq=copy.deepcopy(self.qbatch)
         for qc in qq:
             qc.append(au_circuit)
             qbatch.append(qc)
@@ -301,11 +302,8 @@ class Autoencoder(Basic):
             self.repe+=1
             calls.append(tf.keras.callbacks.TensorBoard(log_dir=self.tensorboarddata+"/logs/{}".format(self.repe)))
         #
-        if len(self.gpus)>0:
-            with tf.device(self.gpus[0]):
-                training_history = model.fit(x=tfqcircuit, y=tf.zeros((self.q_batch_size,)), verbose=self.verbose, epochs=self.epochs, batch_size=self.q_batch_size, callbacks=calls)
-        else:
-            training_history = model.fit(x=tfqcircuit, y=tf.zeros((self.q_batch_size,)),verbose=self.verbose, epochs=self.epochs, batch_size=self.q_batch_size, callbacks=calls)
+
+        training_history = model.fit(x=tfqcircuit, y=tf.zeros((self.q_batch_size,)),verbose=self.verbose, epochs=self.epochs, batch_size=self.q_batch_size, callbacks=calls)
         #
         antifidelity = ((1/self.nb)*model.cost_value.result())/len(self.qbatch) #equal priors.
         final_params = model.trainable_variables[0].numpy()

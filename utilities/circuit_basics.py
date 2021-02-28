@@ -75,6 +75,7 @@ class Basic:
         index_to_sybols: tells which symbol corresponds to i^{th} item in the circuit (useful for simplifier)
         """
         #### add CNOT
+
         if ind < self.number_of_cnots:
             control, target = self.indexed_cnots[str(ind)]
             circuit.append(cirq.CNOT.on(self.qubits[control], self.qubits[target]))
@@ -169,13 +170,15 @@ class Basic:
                 index_to_symbols[len(list(index_to_symbols.keys()))] = new_param
             return circuit, params, index_to_symbols
 
-    def give_circuit(self, lista):
+    def give_circuit(self, lista, inverse=False):
         """
         retrieves circuit (cirq object), with a list of each continuous parameter (symbols) and dictionary index_to_symbols giving the symbols for each position (useful for simplifier)
 
         lista: list of integers in [0, 2*n + n(n-1)), with n = self.number_qubits. Each integer describes a possible unitary (CNOT, rx, rz)
         """
         circuit, symbols, index_to_symbols = [], [], {}
+        if inverse is True:
+            lista = lista[::-1]
         for k in lista:
             circuit, symbols, index_to_symbols = self.append_to_circuit(k,circuit,symbols, index_to_symbols)
         circuit = cirq.Circuit(circuit)
@@ -208,6 +211,16 @@ class Basic:
         res: parameters dictionary
         """
         return cirq.resolve_parameters(self.give_circuit(idx)[0], res)
+
+    def give_inverse(self, indexed_circuit, resolver):
+        """
+        computes inverse of circuit, just go reverse and put a minus on rotations ;)
+        """
+        res_in = {}
+        for sym_name, value in zip(list(resolver.keys()), list(resolver.values())[::-1]):
+            res_in[sym_name] = -value
+        unitary = cirq.resolve_parameters(self.give_circuit(indexed_circuit[::-1])[0], res_in)
+        return indexed_circuit[::-1], res_in, unitary
 
     def give_qubit(self, ind):
         """
