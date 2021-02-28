@@ -12,7 +12,7 @@ from utilities.misc import dict_to_json
 
 ### POSSIBLE PATHS
 # path="/data/uab-giq/scratch/matias/data-vans/"
-path = "../data-vans-viernes/"
+path = "../data-vans-domingo/"
 q=8
 insts=[]
 #st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.001 --n_qubits {} --reps 1000 --qepochs 2000 --problem_config {} --show_tensorboarddata 0 --optimizer {} --training_patience 200 --rate_iids_per_step 1.0 --specific_name __{}__ --wait_to_get_back 25".format(path,q,problem_config, args.optimizer, args.optimizer)
