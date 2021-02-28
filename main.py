@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     if args.initialization == "hea":
         # indexed_circuit = vqe_handler.hea_ansatz_indexed_circuit(L=3)
-        indexed_circuit = create_hea_w_cnots(nconts=60)
+        indexed_circuit = vqe_handler.create_hea_w_cnots(nconts=60)
     elif args.initialization == "separable":
         indexed_circuit=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
     elif args.initialization == "xz":

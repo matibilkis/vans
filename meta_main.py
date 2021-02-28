@@ -27,5 +27,5 @@ for bond in np.arange(.5,2.0,0.1):
 def execute_instruction(inst):
     os.system(inst)
 
-with mp.Pool(1) as p:
+with mp.Pool(2) as p:
     p.map(execute_instruction,insts)
