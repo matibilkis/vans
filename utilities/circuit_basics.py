@@ -263,9 +263,9 @@ class Basic:
         while self.count_params(indexed_circuit)<nparams:
             for ind in range(self.n_qubits)[::2]:
                 if self.count_params(indexed_circuit)<nparams:
-                    indexed_circuit.append(self.number_of_cnots + (ind+s)%self.n_qubits+ (2*self.n_qubits))
+                    indexed_circuit.append(self.number_of_cnots + (ind+s)%self.n_qubits+ (self.n_qubits))
                     indexed_circuit.append(self.number_of_cnots + (ind+s)%self.n_qubits)
-                    indexed_circuit.append(self.number_of_cnots + (ind+1+s)%self.n_qubits +(2*self.n_qubits))
+                    indexed_circuit.append(self.number_of_cnots + (ind+1+s)%self.n_qubits +(self.n_qubits))
                     indexed_circuit.append(self.number_of_cnots +(ind+1+s)%self.n_qubits)
                     indexed_circuit.append(self.cnots_index[str([(ind+s)%self.n_qubits, (ind+1+s)%self.n_qubits])])
                 else:
@@ -281,9 +281,9 @@ class Basic:
         while self.count_cnots(indexed_circuit)<nconts:
             for ind in range(self.n_qubits)[::2]:
                 if self.count_cnots(indexed_circuit)<nconts:
-                    indexed_circuit.append(self.number_of_cnots + (ind+s)%self.n_qubits+ (2*self.n_qubits))
+                    indexed_circuit.append(self.number_of_cnots + (ind+s)%self.n_qubits+ (self.n_qubits))
                     indexed_circuit.append(self.number_of_cnots + (ind+s)%self.n_qubits)
-                    indexed_circuit.append(self.number_of_cnots + (ind+1+s)%self.n_qubits +(2*self.n_qubits))
+                    indexed_circuit.append(self.number_of_cnots + (ind+1+s)%self.n_qubits +(self.n_qubits))
                     indexed_circuit.append(self.number_of_cnots +(ind+1+s)%self.n_qubits)
                     indexed_circuit.append(self.cnots_index[str([(ind+s)%self.n_qubits, (ind+1+s)%self.n_qubits])])
                 else:
