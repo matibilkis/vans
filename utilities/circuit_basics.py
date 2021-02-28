@@ -250,6 +250,48 @@ class Basic:
                 cncount+=1
         return cncount
 
+    def count_params(self, indexed_circuit):
+        cncount=0
+        for k in indexed_circuit:
+            if k >= self.number_of_cnots:
+                cncount+=1
+        return cncount
+
+    def create_hea_w_params(self, nparams=10):
+        indexed_circuit=[]
+        s=0
+        while self.count_params(indexed_circuit)<nparams:
+            for ind in range(self.n_qubits)[::2]:
+                if self.count_params(indexed_circuit)<nparams:
+                    indexed_circuit.append(self.number_of_cnots + (ind+s)%self.n_qubits+ (2*self.n_qubits))
+                    indexed_circuit.append(self.number_of_cnots + (ind+s)%self.n_qubits)
+                    indexed_circuit.append(self.number_of_cnots + (ind+1+s)%self.n_qubits +(2*self.n_qubits))
+                    indexed_circuit.append(self.number_of_cnots +(ind+1+s)%self.n_qubits)
+                    indexed_circuit.append(self.cnots_index[str([(ind+s)%self.n_qubits, (ind+1+s)%self.n_qubits])])
+                else:
+                    break
+            s+=1
+        return indexed_circuit
+
+
+
+    def create_hea_w_cnots(self, nconts=10):
+        indexed_circuit=[]
+        s=0
+        while self.count_cnots(indexed_circuit)<nconts:
+            for ind in range(self.n_qubits)[::2]:
+                if self.count_cnots(indexed_circuit)<nconts:
+                    indexed_circuit.append(self.number_of_cnots + (ind+s)%self.n_qubits+ (2*self.n_qubits))
+                    indexed_circuit.append(self.number_of_cnots + (ind+s)%self.n_qubits)
+                    indexed_circuit.append(self.number_of_cnots + (ind+1+s)%self.n_qubits +(2*self.n_qubits))
+                    indexed_circuit.append(self.number_of_cnots +(ind+1+s)%self.n_qubits)
+                    indexed_circuit.append(self.cnots_index[str([(ind+s)%self.n_qubits, (ind+1+s)%self.n_qubits])])
+                else:
+                    break
+            s+=1
+        return indexed_circuit
+
+
     def gate_counter_on_qubits(self, indexed_circuit):
         ngates = {k:[0,0] for k in range(len(self.qubits))}
         for ind in indexed_circuit:

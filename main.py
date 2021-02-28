@@ -36,7 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--problem_config", type=json.loads, default='{}')
     parser.add_argument("--noise_config", type=json.loads, default='{}')
     parser.add_argument("--acceptance_percentage", type=float, default=0.01)
-    parser.add_argument("--reduce_acceptance_percentage",type=float,default=0.0)
+    parser.add_argument("--reduce_acceptance_percentage",type=float,default=1.0)
     parser.add_argument("--return_lower_bound", type=int, default=0)
     parser.add_argument("--show_tensorboarddata",type=int, default=0)
     parser.add_argument("--rate_iids_per_step",type=float,default=1)
@@ -96,7 +96,8 @@ if __name__ == "__main__":
     killer = UnitaryMurder(vqe_handler, noise_config=args.noise_config)
 
     if args.initialization == "hea":
-        indexed_circuit = vqe_handler.hea_ansatz_indexed_circuit(L=3)
+        # indexed_circuit = vqe_handler.hea_ansatz_indexed_circuit(L=3)
+        indexed_circuit = create_hea_w_cnots(nconts=60)
     elif args.initialization == "separable":
         indexed_circuit=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
     elif args.initialization == "xz":
