@@ -7,6 +7,7 @@ import time
 from utilities.chemical import ChemicalObservable
 from utilities.qmodels import *
 from utilities.misc import compute_ground_energy
+import copy
 
 class VQE(Basic):
     def __init__(self, n_qubits=3, lr=0.01, optimizer="sgd", epochs=1000, patience=200,
@@ -191,6 +192,8 @@ class VQE(Basic):
                 if k not in effective_qubits:
                     raise Error("NOT ALL QUBITS AFFECTED")
 
+
+
 class TimedStopping(tf.keras.callbacks.Callback):
     '''Stop training when enough time has passed.
 
@@ -212,3 +215,113 @@ class TimedStopping(tf.keras.callbacks.Callback):
             self.model.stop_training = True
             if self.verbose>0:
                 print('Stopping after %s seconds.' % self.seconds)
+
+
+
+
+
+class Autoencoder(Basic):
+    def __init__(self, many_indexed_circuits, many_symbols_to_values, n_qubits=3, lr=0.01, optimizer="sgd", epochs=1000, patience=200,
+                 verbose=0,problem_config={},nb=1):
+
+        super(Autoencoder, self).__init__(n_qubits=n_qubits, noise_config={})
+
+
+        #### MACHINE LEARNING CONFIGURATION
+        self.lr = lr
+        self.epochs = epochs
+        self.patience = patience
+        self.verbose=verbose
+        self.max_time_training = 85 #we give 85 to train per circuit, could be more,but it's the limit we have for 2000 iterations in the barcelona cluster..
+        self.optimizer = {"ADAM":tf.keras.optimizers.Adam,"ADAGRAD":tf.keras.optimizers.Adagrad,"SGD":tf.keras.optimizers.SGD}[optimizer.upper()]
+        self.repe=0 #this is to have some control on the number of VQEs done (for tensorboard)
+
+
+        ##### HAMILTONIAN CONFIGURATION
+        self.nb = nb
+
+        self.observable = self.give_observable(mode="local")
+        if self.nb > len(self.qubits):
+            raise AttributeError("problem w/ # of autoencoder trash qubits")
+        self.qbatch = self.give_batch_of_circuits(many_indexed_circuits, many_symbols_to_values)#mixed states
+
+
+    def zero_proj(self,q):
+        return (1 + cirq.Z(q)) / 2
+
+
+    def give_observable(self,mode="local"):
+        return [self.zero_proj(q) for q in self.qubits[:self.nb]]
+
+    def give_batch_of_circuits(self, listas, resolvers):
+        """
+        this guy gives the mixed state i form of batched circuits (wegiths are added later)
+        """
+        qbatch=[]
+        for pure_indexed, resolver in zip(listas, resolvers):
+            circuit=self.give_circuit(pure_indexed)[0]
+            preparation_circuit=cirq.resolve_parameters(circuit, resolver)
+            qbatch.append(preparation_circuit)
+        return qbatch
+
+    def autoencoder(self, indexed_circuit, symbols_to_values=None, parameter_perturbation_wall=0.5):
+        """
+        blablabla
+        """
+        qbatch = []#self.give_batch_of_circuits(many_indexed_circuits, many_symbols_to_values)
+
+        au_circuit,symbols  = self.give_circuit(indexed_circuit)[0:2]
+        qbatch=[]
+        qq=copy.deepcopy(self.qbatch)
+        for qc in qq:
+            qc.append(au_circuit)
+            qbatch.append(qc)
+        self.q_batch_size = len(qbatch)
+
+        if symbols_to_values == None:
+
+            model = QNN(symbols=symbols, observable=self.observable, batch_sizes=len(qbatch))
+        else:
+            model = QNN(symbols=list(symbols_to_values.keys()), observable=self.observable, batch_sizes=len(qbatch))
+
+        tfqcircuit=tfq.convert_to_tensor(qbatch)
+        model(tfqcircuit)
+        model.compile(optimizer=self.optimizer(lr=self.lr), loss=EnergyLoss())
+        #
+        # #in case we have already travelled the parameter space,
+        if symbols_to_values is not None:
+            model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32)))
+
+        if np.random.uniform() < parameter_perturbation_wall:
+            perturbation_strength = np.random.uniform(1e-1, np.pi*2)
+            model.trainable_variables[0].assign(model.trainable_variables[0] + tf.random.uniform(model.trainable_variables[0].shape.as_list())*perturbation_strength)
+
+        calls=[tf.keras.callbacks.EarlyStopping(monitor='energy', patience=self.patience, mode="min", min_delta=0),TimedStopping(seconds=self.max_time_training)]
+        #
+        if hasattr(self, "tensorboarddata"):
+            self.repe+=1
+            calls.append(tf.keras.callbacks.TensorBoard(log_dir=self.tensorboarddata+"/logs/{}".format(self.repe)))
+        #
+
+        training_history = model.fit(x=tfqcircuit, y=tf.zeros((self.q_batch_size,)),verbose=self.verbose, epochs=self.epochs, batch_size=self.q_batch_size, callbacks=calls)
+        #
+        antifidelity = ((1/self.nb)*model.cost_value.result())/len(self.qbatch) #equal priors.
+        final_params = model.trainable_variables[0].numpy()
+        resolver = {"th_"+str(ind):var  for ind,var in enumerate(final_params)}
+        return antifidelity, resolver, training_history
+        #
+
+    def test_circuit_qubits(self,circuit):
+        """
+        This function is only for testing. If there's not parametrized unitary on every qubit, raise error (otherwise TFQ runs into trouble).
+        """
+        if self.noise is True:
+            effective_qubits = list(circuit[0].all_qubits())
+            for k in self.qubits:
+                if k not in effective_qubits:
+                    raise Error("NOT ALL QUBITS AFFECTED")
+        else:
+            effective_qubits = list(circuit[0].all_qubits())
+            for k in self.qubits:
+                if k not in effective_qubits:
+                    raise Error("NOT ALL QUBITS AFFECTED")
