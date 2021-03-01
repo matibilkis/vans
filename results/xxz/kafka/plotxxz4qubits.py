@@ -6,9 +6,9 @@ import sys
 sys.path[0] = "/home/cooper-cooper/Desktop/vans/"
 
 from tqdm import tqdm
-# from utilities.evaluator import Evaluator
-# from utilities.variational import VQE
-# from utilities.misc import compute_ground_energy_1
+from utilities.evaluator import Evaluator
+from utilities.variational import VQE
+from utilities.misc import compute_ground_energy_1
 import os
 
 plt.style.use('results/plots/style.mplstyle')
@@ -42,9 +42,9 @@ path="../data-vans/"
 #         print(e)
 #         pass
 
-#
-# from utilities.misc import compute_ground_energy_1
-# from utilities.variational import VQE
+
+from utilities.misc import compute_ground_energy_1
+from utilities.variational import VQE
 
 # ans=[]
 # for j in tqdm(js):
@@ -61,10 +61,10 @@ converter = colors.ColorConverter()
 #
 
 
-longens=np.load("results/xxz/data/4qubits/bruteforce_xxz4.npy")
-ans = np.load("results/xxz/data/4qubits/ans4.npy")
-energies=np.load("results/xxz/data/4qubits/energies4xxz_lowest.npy")
-jss=np.load("results/xxz/data/4qubits/jsenergies4xxz_lowest.npy")
+longens=np.load("results/xxz/bruteforce_xxz4.npy")
+ans = np.load("results/xxz/ans4.npy")
+energies=np.load("results/xxz/energies4xxz_lowest.npy")
+jss=np.load("results/xxz/jsenergies4xxz_lowest.npy")
 
 
 
@@ -83,26 +83,25 @@ color3="#F13C20"
 color4="#5D001E"
 color5="#8E8D8A"
 
-plt.figure(figsize=(20,20))
+plt.figure(figsize=(30,20))
 ax2 = plt.subplot2grid((2,1),(1,0))
 ax1 = plt.subplot2grid((2,1),(0,0))
 
-plt.subplots_adjust(bottom=0.15,left=0.15)
-
+plt.subplots_adjust(bottom=0.15,left=0.1)
 plt.suptitle(r'$H = \sum_i \;\sigma_i^x \sigma^x_{i+1} + \sigma^{y}_i \sigma^y_{i+1} + \Delta \sigma^z_i \sigma^z_{i+1} + g \;\sum_i \sigma_i^{z}$',size=55)
 ax1.scatter(js,energies, marker="h",s=250, alpha=1, color="black", label="VAns")
 ax1.plot(np.linspace(0,2.25,100),np.array(longens), color=converter.to_rgb(color3),alpha=1, label="ground energy")
 
 ax2.set_xlabel(r'$\Delta$',size=70)
 ax1.set_yticks([np.round(k,0) for k in np.linspace(np.min(energies), np.max(energies), 4)])
-ax1.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5)
+ax1.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=40)
 energies=np.array(energies)
 ax2.plot(js,np.abs((energies-np.array(ans))/ans), color=converter.to_rgb(color5),alpha=0.84, label=r'$\frac{\Delta E}{E_{ground}}$')
 
 
 ax1.xaxis.set_visible(False)
 ax2.set_yticks([np.round(k,9) for k in np.linspace(0., np.max(np.abs((energies-np.array(ans))/ans)), 4)])
-ax2.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5)
+ax2.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=40)
 ax2.set_ylabel("Relative error",size=70)
 ax1.set_ylabel("Energy",size=70)
 #
@@ -111,5 +110,5 @@ lines, labels = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
 #
 ###incremento x ---> se va a la izquierda. Incremento y ---> se va para arriba
-ax1.legend(lines2+lines, labels2+labels, prop={"size":45}, loc=1, borderaxespad=0.1)
+ax1.legend(lines2+lines, labels2+labels, prop={"size":35}, loc=0, borderaxespad=0.)
 plt.savefig("results/xxz/xxz4qbits.pdf",format="pdf")

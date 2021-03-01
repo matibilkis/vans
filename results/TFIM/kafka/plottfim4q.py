@@ -3,21 +3,23 @@ import matplotlib.pyplot as plt
 import matplotlib
 import os
 import sys
-sys.path[0] = "../../"
-
 from tqdm import tqdm
-# from utilities.evaluator import Evaluator
-# from utilities.variational import VQE
-# from utilities.misc import compute_ground_energy_1
+from utilities.evaluator import Evaluator
+from utilities.variational import VQE
+from utilities.misc import compute_ground_energy_1
+sys.path[0] = "~/Destkop/vans/"
 import os
 
 plt.style.use('results/plots/style.mplstyle')
 
+# from utilities.evaluator import Evaluator
 matplotlib.rc("text",usetex=True)
 plt.rcParams["font.family"] = "Times New Roman"
 
 js = np.arange(0,2.2,.2)
+# jss=[]
 energies=[]
+# # path ="/data/uab-giq/scratch/matias/data-vans/"
 path="../data-vans/"
 longens=[]
 longranejs=np.linspace(0,2.2,100)
@@ -26,6 +28,7 @@ longranejs=np.linspace(0,2.2,100)
 
 
 
+#
 jass=[]
 energies=[]
 ans=[]
@@ -58,18 +61,18 @@ ans=[]
 # np.save("results/TFIM/bruteforce_TFIM4",longens)
 
 
-# from utilities.misc import compute_ground_energy_1
-# from utilities.variational import VQE
+from utilities.misc import compute_ground_energy_1
+from utilities.variational import VQE
 
 import matplotlib.colors as colors
 converter = colors.ColorConverter()
 #
 
 
-longens=np.load("results/TFIM/datos/4qubits/bruteforce_TFIM4.npy")
-energies=np.load("results/TFIM/datos/4qubits/energies4TFIM_lowest.npy")
-jss=np.load("results/TFIM/datos/4qubits/jsenergies4TFIM_lowest.npy")
-ans= np.load("results/TFIM/datos/4qubits/ans4TFIM.npy")
+longens=np.load("results/TFIM/bruteforce_TFIM4.npy")
+energies=np.load("results/TFIM/energies4TFIM_lowest.npy")
+jss=np.load("results/TFIM/jsenergies4TFIM_lowest.npy")
+ans= np.load("results/TFIM/ans4TFIM.npy")
 
 
 
@@ -96,7 +99,7 @@ ax1.plot(longranejs,np.array(longens), color=converter.to_rgb(color3),alpha=1, l
 
 ax2.set_xlabel(r'$J$',size=70)
 ax1.set_yticks([np.round(k,0) for k in np.linspace(np.min(energies), np.max(energies), 4)])
-ax1.tick_params(direction='out', length=12, width=4, colors='black', grid_alpha=0.5)
+ax1.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=40)
 energies=np.array(energies)
 ax2.plot(jss,np.abs((energies-np.array(ans))/ans), color=converter.to_rgb(color5),alpha=0.84, label=r'$\frac{\Delta E}{E_{ground}}$')
 
@@ -104,7 +107,7 @@ ax2.plot(jss,np.abs((energies-np.array(ans))/ans), color=converter.to_rgb(color5
 ax1.xaxis.set_visible(False)
 print(np.max(np.abs((energies-np.array(ans))/ans)))
 ax2.set_yticks([np.round(k,9) for k in np.linspace(0., np.max(np.abs((energies-np.array(ans))/ans)), 4)])
-ax2.tick_params(direction='out', length=12, width=4, colors='black', grid_alpha=0.5)
+ax2.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=40)
 ax2.set_ylabel("Relative error",size=70)
 ax1.set_ylabel("Energy",size=70)
 #
@@ -113,5 +116,5 @@ lines, labels = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
 #
 ###incremento x ---> se va a la izquierda. Incremento y ---> se va para arriba
-ax1.legend(lines2+lines, labels2+labels, prop={"size":50}, loc=0, borderaxespad=.2)
+ax1.legend(lines2+lines, labels2+labels, prop={"size":35}, loc=0, borderaxespad=.2)
 plt.savefig("results/TFIM/TFIM4qbits.pdf",format="pdf")
