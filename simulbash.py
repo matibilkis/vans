@@ -27,7 +27,7 @@ nrun=args.nrun
 if args.problem.upper() == "TFIM":
     problem_config = dict_to_json({"problem" : "TFIM", "g":1.0, "J": args.J});q=4
 elif args.problem.upper() == "XXZ":
-    problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": args.J});q=4
+    problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": args.J});q=8
 elif args.problem.upper() == "H4":
     bond=args.bonds
     problem_config = dict_to_json({"problem" : "H4", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., bond)), ('H', (0., 0., 2*bond)), ('H', (0., 0., 3*bond))], "multiplicity":1, "charge":0, "basis":"sto-3g"});q=8
@@ -35,9 +35,9 @@ else:
     raise NameError("Che, no pusiste el --problem correctly")
 ### POSSIBLE PATHS
 # path="/data/uab-giq/scratch/matias/data-vans-viernes/"
-path = "../data-vans-viernes/"
-#st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.001 --n_qubits {} --reps 1000 --qepochs 2000 --problem_config {} --show_tensorboarddata 0 --optimizer {} --training_patience 200 --rate_iids_per_step 1.0 --specific_name __{}__ --wait_to_get_back 25".format(path,q,problem_config, args.optimizer, args.optimizer)
+path = "../data-vans-martes/"
 
-st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.005 --n_qubits {} --reps 1000 --qepochs 2000 --problem_config {} --reduce_acceptance_percentage 0 --show_tensorboarddata 0 --optimizer {} --training_patience 200 --rate_iids_per_step 1.5 --wait_to_get_back 25".format(path,q,problem_config, args.optimizer, args.optimizer)
+st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.01 --n_qubits {} --reps 200 --qepochs 10000 --problem_config {} --reduce_acceptance_percentage 1 --optimizer adam --training_patience 1000 --rate_iids_per_step 1.5 --wait_to_get_back 20".format(path,q,problem_config, args.optimizer)
+
 
 os.system(st)

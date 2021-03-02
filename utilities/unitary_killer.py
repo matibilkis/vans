@@ -53,9 +53,9 @@ class UnitaryMurder(Basic):
         reduced = True
         count=0
         while reduced is True and count < max_its:
-            indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = self.kill_one_unitary(indexed_circuit, symbol_to_value, index_to_symbols)
             if count==0:
                 self.initial_energy = energy
+            indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = self.kill_one_unitary(indexed_circuit, symbol_to_value, index_to_symbols)
             count+=1
         return indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced
 

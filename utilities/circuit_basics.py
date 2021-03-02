@@ -306,7 +306,7 @@ class Basic:
 
     def compute_ground_energy(self):
         ground_energy = np.min(np.linalg.eigvals(sum(self.observable).matrix()))
-        return ground_energy
+        return np.real(ground_energy)
 
 class TimeoutError(Exception):
     pass

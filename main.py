@@ -44,11 +44,11 @@ if __name__ == "__main__":
     parser.add_argument("--show_tensorboarddata",type=int, default=0)
 
     ### VAns hyperparameters
-    parser.add_argument("--return_lower_bound", type=int, default=1) #whether to compute energy by diagonalizing the matrix (or FCI)...
+    parser.add_argument("--return_lower_bound", type=int, default=0) #whether to compute energy by diagonalizing the matrix (or FCI)...
     parser.add_argument("--initialization",type=str,default="hea")
     parser.add_argument("--acceptance_percentage", type=float, default=0.01)
     parser.add_argument("--reduce_acceptance_percentage",type=float,default=1.0)
-    parser.add_argument("--rate_iids_per_step",type=float,default=1)
+    parser.add_argument("--rate_iids_per_step",type=float,default=1.5)
     parser.add_argument("--selector_temperature",type=float,default=10.0)
     parser.add_argument("--wait_to_get_back",type=int,default=25) #notice there's some correspondence with the annealing in the perturbations_wall
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
         Sindices, Ssymbols_to_values, Sindex_to_symbols = Simp.reduce_circuit(M_indices, M_symbols_to_values, M_idx_to_symbols)
 
         ## compute the energy of the mutated-simplified circuit [Note 1]
-        MSenergy, MSsymbols_to_values, _ = vqe_handler.vqe(Sindices, symbols_to_values=Ssymbols_to_values, parameter_perturbation_wall=scheduler_parameter_perturbation_wall(its_without_improvig=evaluator.its_without_improvig, min_randomness=0.1, max_randomnes=0.75,decrase_to=np.max([1,int(0.75*evaluator.its_without_improvig)]))
+        MSenergy, MSsymbols_to_values, _ = vqe_handler.vqe(Sindices, symbols_to_values=Ssymbols_to_values, parameter_perturbation_wall=scheduler_parameter_perturbation_wall(its_without_improvig=evaluator.its_without_improvig, min_randomness=0.1, max_randomness=0.75,decrease_to=np.max([1,int(0.75*evaluator.its_without_improvig)])))
 
         if evaluator.accept_energy(MSenergy):
 
@@ -151,7 +151,7 @@ if __name__ == "__main__":
                 indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = killer.unitary_slaughter(indexed_circuit, symbol_to_value, index_to_symbols)
                 indexed_circuit, symbol_to_value, index_to_symbols = Simp.reduce_circuit(indexed_circuit, symbol_to_value, index_to_symbols)
                 cnt+=1
-            print("Accepted circuit! Actually I reduced it from {} to {}. With this, energy increased {}".format(len(Sindices), len(indexed_circuit), MSenergy-energy)
+            print("Accepted circuit! Actually I reduced it from {} to {}. With this, energy increased {}".format(len(Sindices), len(indexed_circuit), MSenergy-energy))
             relevant=True
         evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=relevant)
 
