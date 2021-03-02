@@ -6,12 +6,11 @@ import tensorflow as tf
 import time
 from utilities.chemical import ChemicalObservable
 from utilities.qmodels import *
-from utilities.misc import compute_ground_energy
 import copy
 
 class VQE(Basic):
     def __init__(self, n_qubits=3, lr=0.01, optimizer="sgd", epochs=1000, patience=200,
-                 verbose=0, noise_config={}, problem_config={}, return_lower_bound=True):
+                 verbose=0, noise_config={}, problem_config={}, return_lower_bound=True, max_vqe_time=120):
         """
         lr: learning_rate for each iteration of gradient descent
         optimizer: we give two choices, Adam and SGD. If SGD, we implement Algorithm 4 of qacq to adapt learning rate.
@@ -32,6 +31,8 @@ class VQE(Basic):
                                 problem_config["charge"] (optional)
                                 problem_config["multiplicity"] (optional)
                                 problem_config["basis"]  (optional)
+
+
         Notes:
                (2) Hamiltonians:
                (2.1) &&ising model&& H = - g \sum_i \Z_i - (J) *\sum_i X_i X_{i+1}
@@ -49,7 +50,7 @@ class VQE(Basic):
         self.epochs = epochs
         self.patience = patience
         self.verbose=verbose
-        self.max_time_training = 85 #we give 85 to train per circuit, could be more,but it's the limit we have for 2000 iterations in the barcelona cluster..
+        self.max_time_training = max_vqe_time #we give 85 to train per circuit, could be more,but it's the limit we have for 2000 iterations in the barcelona cluster..
         self.gpus=tf.config.list_physical_devices("GPU")
         self.optimizer = {"ADAM":tf.keras.optimizers.Adam,"ADAGRAD":tf.keras.optimizers.Adagrad,"SGD":tf.keras.optimizers.SGD}[optimizer.upper()]
         self.repe=0 #this is to have some control on the number of VQEs done (for tensorboard)
@@ -60,6 +61,10 @@ class VQE(Basic):
         self.problem_nature = "" #this is for accuracy issues, see main.py
         #### NOISE CONFIGURATION
         ### this is inherited from circuit_basics: self.noise, self.q_batch_size
+        if self.return_lower_bound is True:
+            self.lower_bound_energy = self.compute_ground_energy()
+        else:
+            self.lower_bound_energy = -np.inf
 
     def give_observable(self,problem_config):
         """
@@ -99,10 +104,6 @@ class VQE(Basic):
                 observable = [-float(problem_config["g"])*cirq.Z.on(q) for q in self.qubits]
                 for q in range(len(self.qubits)):
                     observable.append(-float(problem_config["J"])*cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
-                if self.return_lower_bound is True:
-                    self.lower_bound_energy = compute_ground_energy(observable,self.qubits)[0]
-                else:
-                    self.lower_bound_energy = -np.inf
                 return observable
             elif problem_config["problem"].upper()=="XXZ":
                 #H = \sum_i^{n} X_i X_{i+1} + Y_i Y_{i+1} + J Z_i Z_{i+1} + g \sum_i^{n} \sigma_i^{z}
@@ -111,10 +112,7 @@ class VQE(Basic):
                     observable.append(cirq.X.on(self.qubits[q])*cirq.X.on(self.qubits[(q+1)%len(self.qubits)]))
                     observable.append(cirq.Y.on(self.qubits[q])*cirq.Y.on(self.qubits[(q+1)%len(self.qubits)]))
                     observable.append(float(problem_config["J"])*cirq.Z.on(self.qubits[q])*cirq.Z.on(self.qubits[(q+1)%len(self.qubits)]))
-                if self.return_lower_bound is True:
-                    self.lower_bound_energy = compute_ground_energy(observable,self.qubits)[0]
-                else:
-                    self.lower_bound_energy = -np.inf
+
                 return observable
 
         elif problem_config["problem"].upper() in chemical_hams:
@@ -294,11 +292,14 @@ class Autoencoder(Basic):
         if symbols_to_values is not None:
             model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32)))
 
+        else:
+            model.trainable_variables[0].assign(tf.convert_to_tensor(np.pi*4*np.random.randn(len(symbols)).astype(np.float32)))
+
         if np.random.uniform() < parameter_perturbation_wall:
             perturbation_strength = np.random.uniform(1e-1, np.pi*2)
             model.trainable_variables[0].assign(model.trainable_variables[0] + tf.random.uniform(model.trainable_variables[0].shape.as_list())*perturbation_strength)
 
-        calls=[tf.keras.callbacks.EarlyStopping(monitor='energy', patience=self.patience, mode="min", min_delta=0),TimedStopping(seconds=self.max_time_training)]
+        calls=[tf.keras.callbacks.EarlyStopping(monitor='energy', patience=self.patience, mode="min", min_delta=0.0),TimedStopping(seconds=self.max_time_training)]
         #
         if hasattr(self, "tensorboarddata"):
             self.repe+=1
@@ -312,6 +313,8 @@ class Autoencoder(Basic):
         resolver = {"th_"+str(ind):var  for ind,var in enumerate(final_params)}
         return antifidelity, resolver, training_history
         #
+
+
 
     def test_circuit_qubits(self,circuit):
         """

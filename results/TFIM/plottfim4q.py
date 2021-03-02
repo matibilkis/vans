@@ -85,7 +85,7 @@ color3="#F13C20"
 color4="#5D001E"
 color5="#8E8D8A"
 
-plt.figure(figsize=(20,20))
+plt.figure(figsize=(20,30))
 ax2 = plt.subplot2grid((2,1),(1,0))
 ax1 = plt.subplot2grid((2,1),(0,0))
 
@@ -102,7 +102,6 @@ ax2.plot(jss,np.abs((energies-np.array(ans))/ans), color=converter.to_rgb(color3
 
 
 ax1.xaxis.set_visible(False)
-print(np.max(np.abs((energies-np.array(ans))/ans)))
 ax2.set_yticks([np.round(k,9) for k in np.linspace(0., np.max(np.abs((energies-np.array(ans))/ans)), 4)])
 ax2.tick_params(direction='out', length=12, width=4, colors='black', grid_alpha=0.5)
 ax2.set_ylabel("Relative error",size=70)
@@ -113,5 +112,5 @@ lines, labels = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
 #
 ###incremento x ---> se va a la izquierda. Incremento y ---> se va para arriba
-ax1.legend(lines2+lines, labels2+labels, prop={"size":50}, loc=0, borderaxespad=.2)
+ax1.legend(lines2+lines, labels2+labels, prop={"size":45}, loc=1, borderaxespad=.2)
 plt.savefig("results/TFIM/TFIM4qbits.pdf",format="pdf")

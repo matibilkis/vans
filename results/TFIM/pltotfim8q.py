@@ -83,7 +83,7 @@ color5="#8E8D8A"
 
 # print(np.max(np.abs((energies-np.array(ans))/ans)))
 # ax2.set_yticks([np.round(k,9) for k in np.linspace(0., np.max(np.abs((energies-np.array(ans))/ans)), 4)])
-plt.figure(figsize=(20,20))
+plt.figure(figsize=(20,30))
 ax2 = plt.subplot2grid((2,1),(1,0))
 ax1 = plt.subplot2grid((2,1),(0,0))
 

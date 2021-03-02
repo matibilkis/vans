@@ -60,8 +60,9 @@ class IdInserter(Basic):
         rzq2 = self.number_of_cnots +  q2
         rxq1 = self.number_of_cnots + self.n_qubits + q1
         rxq2 = self.number_of_cnots + self.n_qubits + q2
-        cnot = self.cnots_index[str([q1,q2])]
-        return [cnot, rzq1, rxq1, rzq1,  rzq2, rxq2, rzq2, cnot]
+        cnot = self.cnots_index[str([q1,q2])] #q1 control q2 target
+        return [cnot, rzq1, rxq1, rzq1, rxq2, rzq2, rxq2, cnot]
+
 
     def resolution_1qubit(self, q):
         """

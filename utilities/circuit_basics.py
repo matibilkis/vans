@@ -304,6 +304,10 @@ class Basic:
                 ngates[qind][0]+=1
         return ngates
 
+    def compute_ground_energy(self):
+        ground_energy = np.min(np.linalg.eigvals(sum(self.observable).matrix()))
+        return ground_energy
+
 class TimeoutError(Exception):
     pass
 

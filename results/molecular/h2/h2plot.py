@@ -94,7 +94,7 @@ for k in range(3):
         # ax.set_yticks([np.round(k,4) for k in np.linspace(0, 0.002, 4)])
         ax.set_yticks([0, 0.0016])
         # ax.set_yticklabels(["0.0",r'$1.6 \times \;10^{-4}$'])
-        ax.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5)
+        ax.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=80)
         # ax.yaxis.tick_right()
         ax.legend(prop={"size":35}, loc=1, borderaxespad=1.0)#,bbox_to_anchor=(.25, -.5))
 
@@ -115,6 +115,7 @@ for k in range(3):
 
         # ax.set_yticks([np.arange(1,101,25)])
         # ax.yaxis.tick_right()
+    ax.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=70)
 
 
     # ax.legend()

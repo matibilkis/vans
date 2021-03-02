@@ -18,6 +18,8 @@ class UnitaryMurder(Basic):
         super(UnitaryMurder, self).__init__(n_qubits=vqe_handler.n_qubits, testing=testing, noise_config=noise_config)
         self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
         self.observable = vqe_handler.observable
+        self.initial_energy = -np.inf #this is to compare with iniital_energy, at each round
+
 
     def give_energy(self, indexed_circuit, symbols_to_values):
         """
@@ -52,6 +54,8 @@ class UnitaryMurder(Basic):
         count=0
         while reduced is True and count < max_its:
             indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = self.kill_one_unitary(indexed_circuit, symbol_to_value, index_to_symbols)
+            if count==0:
+                self.initial_energy = energy
             count+=1
         return indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced
 
@@ -83,7 +87,7 @@ class UnitaryMurder(Basic):
                 if valid:
                     proposal_energy = self.give_energy(proposal_circuit, proposal_symbols_to_values)
 
-                    if self.accepting_criteria(proposal_energy, original_energy):
+                    if self.accepting_criteria(proposal_energy):
                         circuit_proposals.append([proposal_circuit, proposal_symbols_to_values,proposal_energy])
                         circuit_proposals_energies.append(proposal_energy)
 
@@ -97,12 +101,13 @@ class UnitaryMurder(Basic):
             return indexed_circuit, symbol_to_value, index_to_symbols, original_energy, False
 
 
-    def accepting_criteria(self, e_new, e_old,factor=100):
+    def accepting_criteria(self, e_new,factor=100):
         """
         if decreases energy, we accept it;
         otherwise exponentially decreasing probability of acceptance (the 100 is yet another a bit handcrafted)
         """
         #return  < 0.01
+        e_old = self.initial_energy
         if (e_new-e_old)/np.abs(e_old) <= 0:
             return True
         else:
