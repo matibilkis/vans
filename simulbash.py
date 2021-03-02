@@ -37,7 +37,7 @@ else:
 # path="/data/uab-giq/scratch/matias/data-vans-viernes/"
 path = "../data-vans-martes/"
 
-st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.01 --n_qubits {} --reps 200 --qepochs 100 --problem_config {} --reduce_acceptance_percentage 1 --optimizer adam --training_patience 1000 --rate_iids_per_step 1.5 --wait_to_get_back 20".format(path,q,problem_config, args.optimizer)
+st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.01 --n_qubits {} --reps 200 --qepochs 10000 --problem_config {} --reduce_acceptance_percentage 1 --optimizer adam --training_patience 1000 --rate_iids_per_step 1.5 --wait_to_get_back 20".format(path,q,problem_config, args.optimizer)
 
 
 os.system(st)
