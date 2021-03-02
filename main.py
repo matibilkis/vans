@@ -47,7 +47,7 @@ if __name__ == "__main__":
     parser.add_argument("--return_lower_bound", type=int, default=0) #whether to compute energy by diagonalizing the matrix (or FCI)...
     parser.add_argument("--initialization",type=str,default="hea")
     parser.add_argument("--acceptance_percentage", type=float, default=0.01)
-    parser.add_argument("--accept_remove_unitary_wall", type=float, default=1e-5)
+    parser.add_argument("--accept_remove_unitary_wall", type=float, default=1e5)
     parser.add_argument("--reduce_acceptance_percentage",type=float,default=1.0)
     parser.add_argument("--rate_iids_per_step",type=float,default=1.5)
     parser.add_argument("--selector_temperature",type=float,default=10.0)

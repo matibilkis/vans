@@ -113,6 +113,7 @@ class UnitaryMurder(Basic):
         if e_new <= e_old:
             return True
         else:
+            print(relative_error,np.exp(-np.abs(relative_error)*self.accept_wall))
             return np.random.random() < np.exp(-np.abs(relative_error)*self.accept_wall)
 
 
