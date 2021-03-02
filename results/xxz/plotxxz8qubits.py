@@ -90,8 +90,8 @@ color4="#5D001E"
 color5="#8E8D8A"
 
 plt.figure(figsize=(20,20))
-ax1 = plt.subplot2grid((2,1),(1,0))
-ax2 = plt.subplot2grid((2,1),(0,0))
+ax1 = plt.subplot2grid((2,1),(0,0))
+ax2 = plt.subplot2grid((2,1),(1,0))
 
 plt.subplots_adjust(bottom=0.15,left=0.15)
 plt.suptitle(r'$H = \sum_i \;\sigma_i^x \sigma^x_{i+1} + \sigma^{y}_i \sigma^y_{i+1} + \Delta \sigma^z_i \sigma^z_{i+1} + g \;\sum_i \sigma_i^{z}$',size=55)
@@ -125,12 +125,12 @@ mark_inset(ax1,axins,loc1=2, loc2=1,fc="none", lw=2, ec='r')
 # axins.scatter(js,relatives, s=300, color="green", alpha=0.7, label=r'$\frac{\Delta E}{E_{ground}}$')
 
 
-ax2.xaxis.set_visible(False)
+ax1.xaxis.set_visible(False)
 ax2.set_yticks([np.round(k,2) for k in np.linspace(0., np.max(np.abs((energies-np.array(ge))/ge)), 4)])
 ax2.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5)
 ax2.set_ylabel("Relative error",size=70)
 ax1.set_ylabel("Energy",size=70)
-ax1.set_xticks(np.round(np.arange(-3,6,1),2))
+ax2.set_xticks(np.round(np.arange(-3,6,1),2))
 #
 # axins.set_yticks([np.round(k,2) for k in np.linspace(np.min(relatives), np.max(relatives), 4)])
 # axins.yaxis.tick_right()

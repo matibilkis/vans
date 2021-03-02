@@ -85,20 +85,20 @@ color3="#F13C20"
 color4="#5D001E"
 color5="#8E8D8A"
 
-plt.figure(figsize=(30,20))
+plt.figure(figsize=(20,20))
 ax2 = plt.subplot2grid((2,1),(1,0))
 ax1 = plt.subplot2grid((2,1),(0,0))
 
-plt.subplots_adjust(bottom=0.15,left=0.1)
+plt.subplots_adjust(bottom=0.15,left=0.175)
 plt.suptitle(r'$H = -g \sum_j \sigma_j^{z} - J \sum_j \sigma_{j}^{x} \sigma_{j+1}^{x}$',size=60)
-ax1.scatter(jss,energies, marker="h",s=250, alpha=1, color="black", label="VAns")
-ax1.plot(longranejs,np.array(longens), color=converter.to_rgb(color3),alpha=1, label="ground energy")
+ax1.scatter(jss,energies,s=400, alpha=1, color=converter.to_rgb(color2), label="VAns")
+ax1.plot(longranejs,np.array(longens), color=converter.to_rgb(color1),alpha=.7, label="ground energy")
 
 ax2.set_xlabel(r'$J$',size=70)
 ax1.set_yticks([np.round(k,0) for k in np.linspace(np.min(energies), np.max(energies), 4)])
 ax1.tick_params(direction='out', length=12, width=4, colors='black', grid_alpha=0.5)
 energies=np.array(energies)
-ax2.plot(jss,np.abs((energies-np.array(ans))/ans), color=converter.to_rgb(color5),alpha=0.84, label=r'$\frac{\Delta E}{E_{ground}}$')
+ax2.plot(jss,np.abs((energies-np.array(ans))/ans), color=converter.to_rgb(color3),alpha=0.84, label=r'$\frac{\Delta E}{E_{ground}}$')
 
 
 ax1.xaxis.set_visible(False)
