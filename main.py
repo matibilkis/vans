@@ -119,7 +119,7 @@ if __name__ == "__main__":
     print("beggining to train. We aim to reach energy {}".format(np.round(vqe_handler.lower_bound_energy,5)))
 
     energy, symbol_to_value, training_evolution = vqe_handler.vqe(indexed_circuit)
-    to_print="\nIteration #{}\nTime since beggining:{}\ncurrent_energy {}\n lower_bound: {}".format(0, datetime.now()-start, np.round(energy,5), np.round(evaluator.accuracy_to_end,5))
+    to_print="\nIteration #{}\nTime since beggining:{}\ncurrent_energy {}\n lower_bound: {}\nNumber of parameters: {}\nNumber of CNOTS: {}\n".format(0, datetime.now()-start, np.round(energy,5), np.round(evaluator.accuracy_to_end,5), vqe_handler.count_params(indexed_circuit),vqe_handler.count_cnots(indexed_circuit))
 
     print(to_print)
     evaluator.displaying["information"]+=to_print
@@ -148,14 +148,14 @@ if __name__ == "__main__":
             reduced=True
             lmax=len(indexed_circuit)
             while reduced and cnt < lmax:
-                indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = killer.unitary_slaughter(indexed_circuit, symbol_to_value, index_to_symbols)
+                indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = killer.unitary_slaughter(indexed_circuit, symbol_to_value, index_to_symbols,MSenergy)
                 indexed_circuit, symbol_to_value, index_to_symbols = Simp.reduce_circuit(indexed_circuit, symbol_to_value, index_to_symbols)
                 cnt+=1
             print("Accepted circuit! Actually I reduced it from {} to {}. With this, energy increased {}".format(len(Sindices), len(indexed_circuit), MSenergy-energy))
             relevant=True
         evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=relevant)
 
-        to_print="\nIteration {}\nTime since beggining:{}\n best energy: {}\ncurrent energy: {}\n lower_bound: {}".format(iteration, datetime.now()-start, evaluator.lowest_energy,energy, evaluator.accuracy_to_end)
+        to_print="\nIteration {}\nTime since beggining:{}\n best energy: {}\ncurrent energy: {}\n lower_bound: {}\nNumber of paramters: {}\nNumber of CNOTS: {}".format(iteration, datetime.now()-start, evaluator.lowest_energy,energy, evaluator.accuracy_to_end, vqe_handler.count_params(indexed_circuit),vqe_handler.count_cnots(indexed_circuit))
         print(to_print)
         evaluator.displaying["information"]+=to_print
         evaluator.save_dicts_and_displaying()

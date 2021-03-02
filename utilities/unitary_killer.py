@@ -48,15 +48,16 @@ class UnitaryMurder(Basic):
 
 
 
-    def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols):
+    def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols,initial_energy):
         max_its = len(indexed_circuit)
         reduced = True
         count=0
         while reduced is True and count < max_its:
             if count==0:
-                self.initial_energy = energy
+                self.initial_energy = initial_energy
             indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = self.kill_one_unitary(indexed_circuit, symbol_to_value, index_to_symbols)
             count+=1
+            print("I killed {} unitaries".format(count))
         return indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced
 
     def kill_one_unitary(self, indexed_circuit, symbol_to_value, index_to_symbols):
