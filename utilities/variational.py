@@ -154,9 +154,11 @@ class VQE(Basic):
         #in case we have already travelled the parameter space,
         if symbols_to_values is not None:
             model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32)))
+        else:
+            model.trainable_variables[0].assign(tf.convert_to_tensor(np.pi*4*np.random.randn(len(symbols)).astype(np.float32)))
 
         if np.random.uniform() < parameter_perturbation_wall:
-            perturbation_strength = np.random.uniform(1e-1, np.pi*2)
+            perturbation_strength = np.random.uniform(1e-1, np.pi*4)
             model.trainable_variables[0].assign(model.trainable_variables[0] + tf.random.uniform(model.trainable_variables[0].shape.as_list())*perturbation_strength)
 
         calls=[tf.keras.callbacks.EarlyStopping(monitor='energy', patience=self.patience, mode="min", min_delta=0),TimedStopping(seconds=self.max_time_training)]

@@ -89,7 +89,7 @@ color3="#F13C20"
 color4="#5D001E"
 color5="#8E8D8A"
 
-plt.figure(figsize=(20,20))
+plt.figure(figsize=(20,30))
 ax1 = plt.subplot2grid((2,1),(0,0))
 ax2 = plt.subplot2grid((2,1),(1,0))
 
