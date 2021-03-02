@@ -2,7 +2,7 @@ from utilities.circuit_basics import Basic
 import numpy as np
 
 class IdInserter(Basic):
-    def __init__(self, n_qubits=3,epsilon=0.01, initialization="epsilon", selector_temperature=10):
+    def __init__(self, n_qubits=3,epsilon=0.0001, initialization="epsilon", selector_temperature=10):
         """
         epsilon: perturbation strength
         initialization: how parameters at ientity compilation are perturbated on single-qubit unitary.

@@ -6,7 +6,7 @@ import tensorflow_quantum as tfq
 import tensorflow as tf
 
 class UnitaryMurder(Basic):
-    def __init__(self, vqe_handler, noise_config,testing=False):
+    def __init__(self, vqe_handler, noise_config,testing=False, accept_wall=1e5):
         """
         Scans a circuit, evaluates mean value of observable and retrieves a shorter circuit if the energy is not increased too much.
 
@@ -19,7 +19,7 @@ class UnitaryMurder(Basic):
         self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
         self.observable = vqe_handler.observable
         self.initial_energy = -np.inf #this is to compare with iniital_energy, at each round
-
+        self.accept_wall=accept_wall
 
     def give_energy(self, indexed_circuit, symbols_to_values):
         """
@@ -48,16 +48,16 @@ class UnitaryMurder(Basic):
 
 
 
-    def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols,initial_energy):
+    def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols,reference_energy):
         max_its = len(indexed_circuit)
         reduced = True
         count=0
         while reduced is True and count < max_its:
             if count==0:
-                self.initial_energy = initial_energy
+                self.initial_energy = reference_energy
             indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = self.kill_one_unitary(indexed_circuit, symbol_to_value, index_to_symbols)
             count+=1
-            print("I killed {} unitaries".format(count))
+            print("I killed {} unitaries, Ef - Ei: {}".format(count, energy-self.initial_energy))
         return indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced
 
     def kill_one_unitary(self, indexed_circuit, symbol_to_value, index_to_symbols):
@@ -102,17 +102,18 @@ class UnitaryMurder(Basic):
             return indexed_circuit, symbol_to_value, index_to_symbols, original_energy, False
 
 
-    def accepting_criteria(self, e_new,factor=100):
+    def accepting_criteria(self, e_new):
         """
         if decreases energy, we accept it;
         otherwise exponentially decreasing probability of acceptance (the 100 is yet another a bit handcrafted)
         """
         #return  < 0.01
         e_old = self.initial_energy
-        if (e_new-e_old)/np.abs(e_old) <= 0:
+        relative_error = (e_new-e_old)/np.abs(e_old)
+        if e_new <= e_old:
             return True
         else:
-            return np.random.random() < np.exp(-(e_new-e_old)/np.abs(e_old)*factor)
+            return np.random.random() < np.exp(-np.abs(relative_error)*self.accept_wall)
 
 
     def create_proposal_without_gate(self, info_gate):

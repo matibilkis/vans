@@ -47,6 +47,7 @@ if __name__ == "__main__":
     parser.add_argument("--return_lower_bound", type=int, default=0) #whether to compute energy by diagonalizing the matrix (or FCI)...
     parser.add_argument("--initialization",type=str,default="hea")
     parser.add_argument("--acceptance_percentage", type=float, default=0.01)
+    parser.add_argument("--accept_remove_unitary_wall", type=float, default=1e-5)
     parser.add_argument("--reduce_acceptance_percentage",type=float,default=1.0)
     parser.add_argument("--rate_iids_per_step",type=float,default=1.5)
     parser.add_argument("--selector_temperature",type=float,default=10.0)
@@ -71,7 +72,8 @@ if __name__ == "__main__":
                         f"patience: {vqe_handler.patience}\n" \
                         f"genetic runs: {args.reps}\n" \
                         f"optimizer: {args.optimizer}\n" \
-                        f"acceptance_percentage runs: {args.acceptance_percentage}\n" \
+                        f"acceptance_percentage runs (if energy shift is..): {args.acceptance_percentage}\n" \
+                        f"accept remove unitary with wall...:  {args.accept_remove_unitary_wall}\n"\
                         f"reduce_acceptance_percentage: {reduce_acceptance_percentage}\n" \
                         f"temperature_iid_resolution_selector: {args.selector_temperature}\n" \
                         f"rate_iids_per_step: {args.rate_iids_per_step}\n" \
@@ -83,7 +85,7 @@ if __name__ == "__main__":
     if vqe_handler.problem_nature == "chemical":
         accuracy_to_end = vqe_handler.lower_bound_energy + 0.0016 #chemical accuracy
     else:
-        accuracy_to_end = vqe_handler.lower_bound_energy + 1e-4
+        accuracy_to_end = vqe_handler.lower_bound_energy + 1e-3
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
     evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptance_percentage=args.acceptance_percentage,
@@ -101,10 +103,10 @@ if __name__ == "__main__":
     Simp = Simplifier(n_qubits=len(vqe_handler.qubits))
 
     #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
-    killer = UnitaryMurder(vqe_handler, noise_config=args.noise_config)
+    killer = UnitaryMurder(vqe_handler, noise_config=args.noise_config, accept_wall=args.accept_remove_unitary_wall)
 
     if args.initialization == "hea":
-        indexed_circuit = vqe_handler.hea_ansatz_indexed_circuit(L=9)
+        indexed_circuit = vqe_handler.hea_ansatz_indexed_circuit(L=8)
         # indexed_circuit = vqe_handler.create_hea_w_cnots(nconts=60)
     elif args.initialization == "separable":
         indexed_circuit=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
@@ -148,7 +150,7 @@ if __name__ == "__main__":
             reduced=True
             lmax=len(indexed_circuit)
             while reduced and cnt < lmax:
-                indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = killer.unitary_slaughter(indexed_circuit, symbol_to_value, index_to_symbols,MSenergy)
+                indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = killer.unitary_slaughter(indexed_circuit, symbol_to_value, index_to_symbols, reference_energy = MSenergy)
                 indexed_circuit, symbol_to_value, index_to_symbols = Simp.reduce_circuit(indexed_circuit, symbol_to_value, index_to_symbols)
                 cnt+=1
             print("Accepted circuit! Actually I reduced it from {} to {}. With this, energy increased {}".format(len(Sindices), len(indexed_circuit), MSenergy-energy))
