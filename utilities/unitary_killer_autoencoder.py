@@ -8,7 +8,7 @@ from utilities.qmodels import QNN, EnergyLoss
 import copy
 class UnitaryMurder(Basic):
     def __init__(self, au_handler, many_indexed_circuits, many_symbols_to_values,
-        noise_config={},testing=False):
+        noise_config={},testing=False,accept_wall=1e5):
         """
         Scans a circuit, evaluates mean value of observable and retrieves a shorter circuit if the energy is not increased too much.
 
@@ -20,7 +20,8 @@ class UnitaryMurder(Basic):
         super(UnitaryMurder, self).__init__(n_qubits=au_handler.n_qubits, testing=testing, noise_config=noise_config)
         self.single_qubit_unitaries = {"rx":cirq.rx, "rz":cirq.rz}
         self.observable = au_handler.observable
-        self.nb = au_handler.nb
+        self.initial_energy = -np.inf #this is to compare with iniital_energy, at each round
+        self.accept_wall=accept_wall
         self.qbatch = self.give_batch_of_circuits(many_indexed_circuits, many_symbols_to_values)#mixed states
 
 
@@ -50,19 +51,23 @@ class UnitaryMurder(Basic):
         model = QNN(symbols=symbols, observable=self.observable, batch_sizes=len(qbatch))
         tfqcircuit=tfq.convert_to_tensor(qbatch)
         model(tfqcircuit)
-        model.compile(loss=EnergyLoss())
+        model.compile(loss=EnergyLoss(mode_var="autoencoder"))
         model.trainable_variables[0].assign(tf.convert_to_tensor(np.array(list(symbols_to_values.values())).astype(np.float32)))
         pred = model(tfqcircuit)
-        return (1/self.nb)*np.squeeze(model.compiled_loss(pred,pred))/len(self.qbatch) #los estados de la mezcla, sent with equal priors.
+        loss =model.compiled_loss(pred,pred)
+        return np.squeeze(loss) #(1/self.nb)*np.squeeze(model.compiled_loss(pred,pred))/len(self.qbatch) #los estados de la mezcla, sent with equal priors.
 
 
-    def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols):
+    def unitary_slaughter(self, indexed_circuit, symbol_to_value, index_to_symbols,reference_energy):
         max_its = len(indexed_circuit)
         reduced = True
         count=0
         while reduced is True and count < max_its:
+            if count==0:
+                self.initial_energy = np.squeeze(reference_energy)
             indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced = self.kill_one_unitary(indexed_circuit, symbol_to_value, index_to_symbols)
             count+=1
+            print("I killed {} unitaries, Ef - Ei: {}".format(count, energy-self.initial_energy))
         return indexed_circuit, symbol_to_value, index_to_symbols, energy, reduced
 
     def kill_one_unitary(self, indexed_circuit, symbol_to_value, index_to_symbols):
@@ -93,7 +98,7 @@ class UnitaryMurder(Basic):
                 if valid:
                     proposal_energy = self.give_energy(proposal_circuit, proposal_symbols_to_values)
 
-                    if self.accepting_criteria(proposal_energy, original_energy):
+                    if self.accepting_criteria(proposal_energy):
                         circuit_proposals.append([proposal_circuit, proposal_symbols_to_values,proposal_energy])
                         circuit_proposals_energies.append(proposal_energy)
 
@@ -107,17 +112,18 @@ class UnitaryMurder(Basic):
             return indexed_circuit, symbol_to_value, index_to_symbols, original_energy, False
 
 
-    def accepting_criteria(self, e_new, e_old,factor=100):
+    def accepting_criteria(self, e_new):
         """
         if decreases energy, we accept it;
         otherwise exponentially decreasing probability of acceptance (the 100 is yet another a bit handcrafted)
         """
         #return  < 0.01
-        # return False
-        if (e_new-e_old)/np.abs(e_old) <= 0:
+        e_old = self.initial_energy
+        relative_error = (e_new-e_old)/np.abs(e_old)
+        if e_new <= e_old:
             return True
         else:
-            return np.random.random() < np.exp(-(e_new-e_old)/np.abs(e_old)*factor)
+            return np.random.random() < np.exp(-np.abs(relative_error)*self.accept_wall)
 
 
     def create_proposal_without_gate(self, info_gate):

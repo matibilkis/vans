@@ -70,12 +70,23 @@ for index in range(len(list(evaluator.evolution.keys()))):
 plt.figure(figsize=(20,20))
 ax2 = plt.subplot2grid((2,1),(0,0))
 ax1 = plt.subplot2grid((2,1),(1,0))
-plt.subplots_adjust(bottom=0.15,left=0.17)
+plt.subplots_adjust(bottom=0.15,left=0.18)
 # plt.subplots_adjust(bottom=0.15,left=0.075)
+
+
+CNOTS2 = vqe_handler.count_cnots(vqe_handler.hea_ansatz_indexed_circuit(L=2))
+CNOTS5 = vqe_handler.count_cnots(vqe_handler.hea_ansatz_indexed_circuit(L=5))
+PARAMS2 = vqe_handler.count_params(vqe_handler.hea_ansatz_indexed_circuit(L=2))
+PARAMS5 = vqe_handler.count_params(vqe_handler.hea_ansatz_indexed_circuit(L=5))
+
+ax1.plot(np.ones(len(nparams))*CNOTS2, color="red",linewidth=5, alpha=0.8)
+ax1.plot(np.ones(len(nparams))*CNOTS5, color="green",linewidth=5, alpha=0.8)
+ax1.plot(np.ones(len(nparams))*PARAMS2, '--',color="red",linewidth=5, alpha=0.8)
+ax1.plot(np.ones(len(nparams))*PARAMS5, '--',color="green",linewidth=5, alpha=0.8)
+
 
 ax1.plot(cnots, label="CNots", color="blue",linewidth=5, alpha=0.5)
 ax1.plot(nparams, label="Trainable parameters", color="grey",linewidth=5, alpha=0.8)
-ax1.legend(prop={"size":30},loc=1)
 ax1.set_xlabel("Accepted modifications",size=70)
 ax1.set_ylabel("Circuit \nstructure",size=70)
 ax2.plot(energies, alpha=0.8,color=converter.to_rgb(color3), label="VAns")
@@ -91,12 +102,17 @@ ax2.plot(np.ones(len(energies))*(ground+marco_hea_5),
          color=converter.to_rgb(color1),alpha=0.75,   label="HEA 5 Layers")
 
 ax2.set_yticks(np.round(np.linspace(ground,-8,4),1))
-ax1.set_yticks(range(0,51,10))
+ax1.set_yticks(range(0,81,20))
 
 #ax1.set_xticks(range(0,len(energies)+1,100))
 
-ax2.legend(prop={"size":30},loc=1)
+ax2.legend(prop={"size":40},loc=1)
+ax1.legend(prop={"size":40},loc=0,borderpad=.4)
+
 ax2.xaxis.set_visible(False)
 ax2.set_ylabel("Energy",size=70)
+ax1.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=60)
+ax2.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=60)
+
 
 plt.savefig("results/hea/evolution/evolution_circuit_tfim{}.pdf".format(J),format="pdf")

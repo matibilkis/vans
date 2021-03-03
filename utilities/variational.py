@@ -250,7 +250,7 @@ class Autoencoder(Basic):
 
 
     def give_observable(self,mode="local"):
-        return [self.zero_proj(q) for q in self.qubits[:self.nb]]
+        return [float(1/self.nb)*self.zero_proj(q) for q in self.qubits[:self.nb]]
 
     def give_batch_of_circuits(self, listas, resolvers):
         """
@@ -278,14 +278,13 @@ class Autoencoder(Basic):
         self.q_batch_size = len(qbatch)
 
         if symbols_to_values == None:
-
             model = QNN(symbols=symbols, observable=self.observable, batch_sizes=len(qbatch))
         else:
             model = QNN(symbols=list(symbols_to_values.keys()), observable=self.observable, batch_sizes=len(qbatch))
 
         tfqcircuit=tfq.convert_to_tensor(qbatch)
         model(tfqcircuit)
-        model.compile(optimizer=self.optimizer(lr=self.lr), loss=EnergyLoss())
+        model.compile(optimizer=self.optimizer(lr=self.lr), loss=EnergyLoss(mode_var="autoencoder"))
         #
         # #in case we have already travelled the parameter space,
         if symbols_to_values is not None:
@@ -307,10 +306,11 @@ class Autoencoder(Basic):
 
         training_history = model.fit(x=tfqcircuit, y=tf.zeros((self.q_batch_size,)),verbose=self.verbose, epochs=self.epochs, batch_size=self.q_batch_size, callbacks=calls)
         #
-        antifidelity = ((1/self.nb)*model.cost_value.result())/len(self.qbatch) #equal priors.
+    #    antifidelity = 1-(((1/self.nb)*model.cost_value.result())/len(self.qbatch)) #equal priors.
+        final_cost = model.cost_value.result()
         final_params = model.trainable_variables[0].numpy()
         resolver = {"th_"+str(ind):var  for ind,var in enumerate(final_params)}
-        return antifidelity, resolver, training_history
+        return final_cost, resolver, training_history
         #
 
 

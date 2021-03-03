@@ -92,9 +92,15 @@ class EnergyLoss(tf.keras.losses.Loss):
     """
     this is a very simple loss that
     """
+    def __init__(self, mode_var="vqe"):
+        super(EnergyLoss,self).__init__()
+        self.mode_var = mode_var
     def call(self, y_true, y_pred):
-        #reduce_mean in case we have a batch of circuits (for the noise)
-        return tf.math.reduce_mean(y_pred,axis=-1)
+        #reduce_mean in case we have a batch of circuits (for the noise) otherwise it's
+        if self.mode_var == "autoencoder":
+            return 1-(tf.math.reduce_mean(y_pred,axis=-1))
+        else:
+            return tf.math.reduce_mean(y_pred,axis=-1)
 
 class Metrica(tf.keras.metrics.Metric):
     """
