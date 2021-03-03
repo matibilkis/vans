@@ -181,6 +181,17 @@ class Basic:
         circuit = cirq.Circuit(circuit)
         return circuit, symbols, index_to_symbols
 
+    def give_inverse(self, indexed_circuit, resolver):
+        """
+        computes inverse of circuit, just go reverse and put a minus on rotations ;)
+        """
+        res_in = {}
+        for sym_name, value in zip(list(resolver.keys()), list(resolver.values())[::-1]):
+            res_in[sym_name] = -value
+        unitary = cirq.resolve_parameters(self.give_circuit(indexed_circuit[::-1])[0], res_in)
+        return indexed_circuit[::-1], res_in, unitary
+
+
     def give_circuit_with_noise(self, lista):
         """
         noisy version of self.give_circuit(list).
