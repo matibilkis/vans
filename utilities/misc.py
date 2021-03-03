@@ -22,7 +22,7 @@ def scheduler_selector_temperature(energy, lowest_energy_found, when_on=10):
 
 def scheduler_parameter_perturbation_wall(its_without_improvig, max_randomness=.8, min_randomness=.1, decrease_to=20):
     slope = (max_randomness-min_randomness)/decrease_to
-    return np.max([max_randomness - slope*its_without_improvig, min_randomness])
+    return np.min([min_randomness + slope*its_without_improvig, max_randomness])
 
 
 
