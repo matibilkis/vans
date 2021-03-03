@@ -9,7 +9,8 @@ parser.add_argument("--ratesiid", type=float, default=1.)
 parser.add_argument("--nrun", type=float, default=1.)
 parser.add_argument("--J", type=float, default=2.)
 parser.add_argument("--optimizer", type=str, default="adam")
-parser.add_argument("--problem", type=str, default="TFIM")
+parser.add_argument("--problem", type=str, default="XXZ")
+parser.add_argument("--init_layers", type=int, default=2)
 
 args = parser.parse_args()
 bond=np.round(args.bonds,2)
@@ -34,10 +35,10 @@ elif args.problem.upper() == "H4":
 else:
     raise NameError("Che, no pusiste el --problem correctly")
 ### POSSIBLE PATHS
-# path="/data/uab-giq/scratch/matias/data-vans-viernes/"
-path = "../data-vans-martes/"
+path="/data/uab-giq/scratch/matias/data-vans/"
+# path = "../data-vans/"
 
-st = "python3 main.py --path_results \"{}\" --qlr 0.001 --acceptance_percentage 1e-4 --n_qubits {} --reps 50 --qepochs 10000 --problem_config {} --reduce_acceptance_percentage 0 --optimizer adam --training_patience 1000 --rate_iids_per_step 2.5 --wait_to_get_back 20".format(path,q,problem_config, args.optimizer)
+st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 1e-4 --n_qubits {} --reps 500 --qepochs 10000 --problem_config {} --reduce_acceptance_percentage 0 --optimizer adam --training_patience 1000 --rate_iids_per_step 2.0 --wait_to_get_back 20 --init_layers_hea {}".format(path,q,problem_config, args.init_layers)
 
 
 os.system(st)

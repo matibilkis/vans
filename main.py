@@ -52,6 +52,7 @@ if __name__ == "__main__":
     parser.add_argument("--rate_iids_per_step",type=float,default=1.5)
     parser.add_argument("--selector_temperature",type=float,default=10.0)
     parser.add_argument("--wait_to_get_back",type=int,default=25) #notice there's some correspondence with the annealing in the perturbations_wall
+    parser.add_argument("--init_layers_hea",type=int,default=1)
 
     args = parser.parse_args()
     reduce_acceptance_percentage=[False,True][int(args.reduce_acceptance_percentage)]
@@ -106,7 +107,7 @@ if __name__ == "__main__":
     killer = UnitaryMurder(vqe_handler, noise_config=args.noise_config, accept_wall=args.accept_remove_unitary_wall)
 
     if args.initialization == "hea":
-        indexed_circuit = vqe_handler.hea_ansatz_indexed_circuit(L=8)
+        indexed_circuit = vqe_handler.hea_ansatz_indexed_circuit(L=max(1,args.init_layers_hea))
         # indexed_circuit = vqe_handler.create_hea_w_cnots(nconts=60)
     elif args.initialization == "separable":
         indexed_circuit=[vqe_handler.number_of_cnots+k for k in range(vqe_handler.n_qubits,2*vqe_handler.n_qubits)]
@@ -159,7 +160,6 @@ if __name__ == "__main__":
 
         to_print="\nIteration {}\nTime since beggining:{}\n best energy: {}\ncurrent energy: {}\n lower_bound: {}\nNumber of paramters: {}\nNumber of CNOTS: {}".format(iteration, datetime.now()-start, evaluator.lowest_energy,energy, evaluator.accuracy_to_end, vqe_handler.count_params(indexed_circuit),vqe_handler.count_cnots(indexed_circuit))
         print(to_print)
-        print(vqe_handler.lower_bound_energy + 0.0016, evaluator.accuracy_to_end)
         evaluator.displaying["information"]+=to_print
         evaluator.save_dicts_and_displaying()
 

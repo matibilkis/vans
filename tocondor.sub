@@ -1,10 +1,11 @@
 executable = subash.sh
 optimizer=adam
-problem=H4
-args=$(Item) $(optimizer) $(problem)
-output = ../jobs/nn$(problem)_J$(Item).out
-error = ../jobs/nn$(problem)_$(Item).err
-log = ../jobs/nn$(problem)_J$(Item).log
+problem=XXZ
+initl=4
+args=$(Item) $(optimizer) $(problem) $(initl)
+output = ../jobs/$(problem)_J$(Item).out
+error = ../jobs/$(problem)_$(Item).err
+log = ../jobs/$(problem)_J$(Item).log
 request_memory = 12 GB
 request_cpus = 6
 requirements= Has_avx == true
