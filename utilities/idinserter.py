@@ -2,7 +2,7 @@ from utilities.circuit_basics import Basic
 import numpy as np
 
 class IdInserter(Basic):
-    def __init__(self, n_qubits=3,epsilon=0.01, initialization="epsilon", selector_temperature=10):
+    def __init__(self, n_qubits=3,epsilon=0.1, initialization="epsilon", selector_temperature=10):
         """
         epsilon: perturbation strength
         initialization: how parameters at ientity compilation are perturbated on single-qubit unitary.
@@ -123,11 +123,11 @@ class IdInserter(Basic):
             if ind == insertion_index:
                 if par%3==0:
                     #### PARAMETER INITIALIZATION
-                    if self.init_params == "PosNeg":
-                        rot = np.random.uniform(-np.pi,np.pi)
-                        new_values = [rot, np.random.choice([-1.,1.])*self.epsilon, -rot]
-                    else:
-                        new_values = [np.random.choice([-1.,1.])*self.epsilon for oo in range(3)]
+                    #if self.init_params == "PosNeg":
+                #        rot = np.random.uniform(-np.pi,np.pi)
+            #            new_values = [rot, np.random.choice([-1.,1.])*self.epsilon, -rot]
+            #        else:
+                    new_values = [np.random.choice([-1.,1.])*self.epsilon for oo in range(3)]
 
                 for gate in block_to_insert:
                     full_indices.append(gate)
