@@ -58,7 +58,6 @@ class VQE(Basic):
 
         ##### HAMILTONIAN CONFIGURATION
         self.observable = self.give_observable(problem_config)
-        self.problem_nature = "" #this is for accuracy issues, see main.py
         #### NOISE CONFIGURATION
         ### this is inherited from circuit_basics: self.noise, self.q_batch_size
         if self.return_lower_bound is True:

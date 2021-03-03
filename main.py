@@ -73,8 +73,8 @@ if __name__ == "__main__":
                         f"genetic runs: {args.reps}\n" \
                         f"optimizer: {args.optimizer}\n" \
                         f"acceptance_percentage runs (if energy shift is..): {args.acceptance_percentage}\n" \
-                        f"accept remove unitary with wall...:  {args.accept_remove_unitary_wall}\n"\
                         f"reduce_acceptance_percentage: {reduce_acceptance_percentage}\n" \
+                        f"accept remove unitary with wall...:  {args.accept_remove_unitary_wall}\n"\
                         f"temperature_iid_resolution_selector: {args.selector_temperature}\n" \
                         f"rate_iids_per_step: {args.rate_iids_per_step}\n" \
                         f"initialization: {args.initialization}\n" \
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     if vqe_handler.problem_nature == "chemical":
         accuracy_to_end = vqe_handler.lower_bound_energy + 0.0016 #chemical accuracy
     else:
-        accuracy_to_end = vqe_handler.lower_bound_energy + 1e-3
+        accuracy_to_end = vqe_handler.lower_bound_energy
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
     evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptance_percentage=args.acceptance_percentage,
@@ -118,10 +118,10 @@ if __name__ == "__main__":
     else:
         raise NameError("Please choose your initial ansatz!")
 
-    print("beggining to train. We aim to reach energy {}".format(np.round(vqe_handler.lower_bound_energy,5)))
+    print("beggining to train. We aim to reach energy {}".format(evaluator.accuracy_to_end))
 
     energy, symbol_to_value, training_evolution = vqe_handler.vqe(indexed_circuit)
-    to_print="\nIteration #{}\nTime since beggining:{}\ncurrent_energy {}\n lower_bound: {}\nNumber of parameters: {}\nNumber of CNOTS: {}\n".format(0, datetime.now()-start, np.round(energy,5), np.round(evaluator.accuracy_to_end,5), vqe_handler.count_params(indexed_circuit),vqe_handler.count_cnots(indexed_circuit))
+    to_print="\nIteration #{}\nTime since beggining:{}\ncurrent_energy {}\n lower_bound: {}\nNumber of parameters: {}\nNumber of CNOTS: {}\n".format(0, datetime.now()-start, np.round(energy,8), np.round(evaluator.accuracy_to_end,8), vqe_handler.count_params(indexed_circuit),vqe_handler.count_cnots(indexed_circuit))
 
     print(to_print)
     evaluator.displaying["information"]+=to_print
@@ -159,10 +159,11 @@ if __name__ == "__main__":
 
         to_print="\nIteration {}\nTime since beggining:{}\n best energy: {}\ncurrent energy: {}\n lower_bound: {}\nNumber of paramters: {}\nNumber of CNOTS: {}".format(iteration, datetime.now()-start, evaluator.lowest_energy,energy, evaluator.accuracy_to_end, vqe_handler.count_params(indexed_circuit),vqe_handler.count_cnots(indexed_circuit))
         print(to_print)
+        print(vqe_handler.lower_bound_energy + 0.0016, evaluator.accuracy_to_end)
         evaluator.displaying["information"]+=to_print
         evaluator.save_dicts_and_displaying()
 
-        if evaluator.if_finish_ok is True:
+        if evaluator.if_finish_ok == True:
             print("HOMEWORK DONE! \nBeers on me ;)")
             break
 

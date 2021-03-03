@@ -216,12 +216,12 @@ class Evaluator(Basic):
         indices = self.evolution[self.get_best_iteration()][2]
         return len(indices)-self.number_cnots_best()
 
-    def decrease_acceptance_range(self, energy):
+    def decrease_acceptance_range(self):
         """
         This function is to guarantee that you don't move so far away
         TODO: smarter scheduling, some meta-learning?
         """
-        if self.decrease_acceptance_range is True:
+        if self.decrease_acceptance_range == True:
             self.acceptance_percentage*=0.9
         return
 
@@ -239,12 +239,12 @@ class Evaluator(Basic):
         elif energy < self.lowest_energy:
             self.lowest_energy = energy
             self.its_without_improvig = 0
-            self.decrease_acceptance_range(energy)
+            self.decrease_acceptance_range()
 
         else:
             self.its_without_improvig+=1
 
-        if self.lowest_energy < self.accuracy_to_end:
+        if self.lowest_energy <= self.accuracy_to_end:
             self.if_finish_ok = True
 
         self.raw_history[len(list(self.raw_history.keys()))] = [self.give_unitary(indices, resolver), energy, indices, resolver, self.lowest_energy, self.accuracy_to_end]
