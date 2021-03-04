@@ -1,14 +1,15 @@
 import sys
 sys.path[0] = "/home/cooper-cooper/Desktop/vans/"
 
-# from utilities.evaluator import Evaluator
+from utilities.evaluator import Evaluator
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython import display
 from tqdm import tqdm
-# from utilities.variational import VQE
+from utilities.variational import VQE
 import matplotlib
 import matplotlib.colors as colors
+import os
 converter = colors.ColorConverter()
 
 
@@ -31,32 +32,32 @@ color5="#8E8D8A"
 # fcisn=[]
 # for bond in tqdm(jsn):
 #
-#     problem_config ={"problem" : "H2", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., bond))], "multiplicity":1, "charge":0, "basis":"sto-3g"}
-#     args={"n_qubits":8,"problem_config":problem_config, "load_displaying":False,"specific_folder_name":"4_bd_{}".format(bond)}
+#     problem_config ={"problem" : "H2", "geometry": str([('H', (0., 0., 0.)), ('H', (0., 0., bond))]).replace("\'",""), "multiplicity":1, "charge":0, "basis":"sto-3g"}
+#     args={"n_qubits":4,"problem_config":problem_config, "load_displaying":False}#,"specific_folder_name":"4_bd_{}".format(bond)}
 #     vqe_handler = VQE(n_qubits=4,noise_config={}, problem_config=problem_config,
 #                         return_lower_bound=True)
-#
+# #
 #     fcisn.append(vqe_handler.lower_bound_energy)
 #
 
-
+#
 # for bond in tqdm(js):
-#     problem_config ={"problem" : "H2", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., bond))], "multiplicity":1, "charge":0, "basis":"sto-3g"}
-#     args={"n_qubits":8,"problem_config":problem_config, "load_displaying":False,"specific_folder_name":"4_bd_{}".format(bond)}
+#     problem_config ={"problem" : "H2", "geometry":  str([('H', (0., 0., 0.)), ('H', (0., 0., bond))]).replace("\'",""), "multiplicity":1, "charge":0, "basis":"sto-3g"}
+#     args={"n_qubits":4,"problem_config":problem_config, "load_displaying":False}#,"specific_folder_name":"4_bd_{}".format(bond)}
 #     evaluator = Evaluator(args,loading=True, path="../data-vans/")
 #     energies.append(evaluator.raw_history[len(list(evaluator.raw_history.keys()))-1][-1])
 #     iterations.append(len(list(evaluator.raw_history.keys())))
 #         #VQE module, in charge of continuous optimization
 #     vqe_handler = VQE(n_qubits=4,noise_config={}, problem_config=problem_config,
 #                         return_lower_bound=True)
-#     fcis.append(vqe_handler.lower_bound_energy)
-#
-#
+# #     fcis.append(vqe_handler.lower_bound_energy)
+# #
+# #
 # os.makedirs("results/molecular/h2/data_plot",exist_ok=True)
 # np.save("results/molecular/h2/data_plot/vansenergies",energies)
-# np.save("results/molecular/h2/data_plot/fcis",fcis)
+# # np.save("results/molecular/h2/data_plot/fcis",fcis)
 # np.save("results/molecular/h2/data_plot/iterations",iterations)
-# np.save("results/molecular/h2/data_plot/fcisn",fcisn)
+# # np.save("results/molecular/h2/data_plot/fcisn",fcisn)
 # np.save("results/molecular/h2/data_plot/jsn",jsn)
 # #
 
@@ -92,7 +93,7 @@ for k in range(3):
         ax.plot(js,np.ones(len(js))*0.0016,'--',color="black",alpha=0.75,label="Chemical accuracy")
         ax.set_xticks([])
         # ax.set_yticks([np.round(k,4) for k in np.linspace(0, 0.002, 4)])
-        ax.set_yticks([0, 0.0016])
+        ax.set_yticks([0, 0.0016, 0.002])
         # ax.set_yticklabels(["0.0",r'$1.6 \times \;10^{-4}$'])
         ax.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=80)
         # ax.yaxis.tick_right()
