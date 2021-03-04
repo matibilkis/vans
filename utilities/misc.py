@@ -24,7 +24,15 @@ def scheduler_parameter_perturbation_wall(its_without_improvig, max_randomness=.
     slope = (max_randomness-min_randomness)/decrease_to
     return np.min([min_randomness + slope*its_without_improvig, max_randomness])
 
-
+def give_kronecker_of_list(lista):
+    #lista=[auto_handler.zero_proj(vqe_handler.qubits[k]).matrix() for k in range(3)]
+    m=[]
+    for ind,k in enumerate(lista):
+        if ind == 0:
+            m.append(k)
+        else:
+            m.append(np.kron(m[-1],k))
+    return m[-1]
 
 
 def give_kr_prod(matrices):

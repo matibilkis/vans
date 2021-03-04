@@ -104,7 +104,7 @@ if __name__ == "__main__":
     Simp = Simplifier(n_qubits=len(vqe_handler.qubits))
 
     #UnitaryMuerder is in charge of evaluating changes on the energy while setting apart one (or more) parametrized gates. If
-    killer = UnitaryMurder(vqe_handler, noise_config=args.noise_config, accept_wall=args.accept_remove_unitary_wall)
+    killer = UnitaryMurder(vqe_handler, noise_config=args.noise_config, accept_wall=2/evaluator.acceptance_percentage)
 
     if args.initialization == "hea":
         indexed_circuit = vqe_handler.hea_ansatz_indexed_circuit(L=max(1,args.init_layers_hea))
@@ -156,6 +156,7 @@ if __name__ == "__main__":
                 cnt+=1
             print("Accepted circuit! Actually I reduced it from {} to {}. With this, energy increased {}".format(len(Sindices), len(indexed_circuit), MSenergy-energy))
             relevant=True
+
         evaluator.add_step(indexed_circuit, symbol_to_value, energy, relevant=relevant)
 
         to_print="\nIteration {}\nTime since beggining:{}\n best energy: {}\ncurrent energy: {}\n lower_bound: {}\nNumber of paramters: {}\nNumber of CNOTS: {}".format(iteration, datetime.now()-start, evaluator.lowest_energy,energy, evaluator.accuracy_to_end, vqe_handler.count_params(indexed_circuit),vqe_handler.count_cnots(indexed_circuit))
@@ -172,7 +173,9 @@ if __name__ == "__main__":
             print("Getting back to favorite, it's been already {} iterations".format(args.wait_to_get_back))
             _, energy, indices, resolver, _, _ =  evaluator.evolution[evaluator.get_best_iteration()]
             evaluator.its_without_improvig = 0
-
+        else:
+            if evaluator.reduce_acceptance_percentage == True:
+                killer.acceptance_percentage=2/evaluator.acceptance_percentage
 
 
 ### [Note 1]: Even if the circuit gets simplified to the original one, it's harmless to compute the energy again since i) you give another try to the optimization, ii) we have the EarlyStopping and despite of the added noise, it's supossed the seeds are close to optima.

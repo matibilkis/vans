@@ -294,8 +294,8 @@ class Autoencoder(Basic):
             model.trainable_variables[0].assign(tf.convert_to_tensor(np.pi*4*np.random.randn(len(symbols)).astype(np.float32)))
 
         if np.random.uniform() < parameter_perturbation_wall:
-            perturbation_strength = np.random.uniform(1e-1, np.pi*2)
-            model.trainable_variables[0].assign(model.trainable_variables[0] + tf.random.uniform(model.trainable_variables[0].shape.as_list())*perturbation_strength)
+            perturbation_strength = np.random.uniform()
+            model.trainable_variables[0].assign(model.trainable_variables[0] + np.random.randn(len(symbols))*perturbation_strength)
 
         calls=[tf.keras.callbacks.EarlyStopping(monitor='energy', patience=self.patience, mode="min", min_delta=0.0),TimedStopping(seconds=self.max_time_training)]
         #
