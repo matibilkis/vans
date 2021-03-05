@@ -71,7 +71,7 @@ class Simplifier(Basic):
             max_its = l0
 
         if self.check_qubits_on(self.give_circuit(indexed_circuit)[0]) is False:
-            raise Error("Not all qubits being touched by a rotation! Please make your ansatz more complex.")
+            raise Error("Not all qubits being touched by a rotation! Please is at least that expressible.")
 
         for its in range(max_its):
             indexed_circuit, symbol_to_value,index_to_symbols = self.simplify_step(indexed_circuit, symbol_to_value,index_to_symbols)

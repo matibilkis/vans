@@ -41,24 +41,24 @@ color5="#8E8D8A"
 #
 
 #
-# for bond in tqdm(js):
-#     problem_config ={"problem" : "H2", "geometry":  str([('H', (0., 0., 0.)), ('H', (0., 0., bond))]).replace("\'",""), "multiplicity":1, "charge":0, "basis":"sto-3g"}
-#     args={"n_qubits":4,"problem_config":problem_config, "load_displaying":False}#,"specific_folder_name":"4_bd_{}".format(bond)}
-#     evaluator = Evaluator(args,loading=True, path="../data-vans/")
-#     energies.append(evaluator.raw_history[len(list(evaluator.raw_history.keys()))-1][-1])
-#     iterations.append(len(list(evaluator.raw_history.keys())))
-#         #VQE module, in charge of continuous optimization
-#     vqe_handler = VQE(n_qubits=4,noise_config={}, problem_config=problem_config,
-#                         return_lower_bound=True)
-# #     fcis.append(vqe_handler.lower_bound_energy)
+for bond in tqdm(js):
+    problem_config ={"problem" : "H2", "geometry":  str([('H', (0., 0., 0.)), ('H', (0., 0., bond))]).replace("\'",""), "multiplicity":1, "charge":0, "basis":"sto-3g"}
+    args={"n_qubits":4,"problem_config":problem_config, "load_displaying":False}#,"specific_folder_name":"4_bd_{}".format(bond)}
+    evaluator = Evaluator(args,loading=True, path="../data-vans/")
+    energies.append(evaluator.evolution[evaluator.get_best_iteration()][1])
+    iterations.append(len(list(evaluator.raw_history.keys())))
+        #VQE module, in charge of continuous optimization
+    vqe_handler = VQE(n_qubits=4,noise_config={}, problem_config=problem_config,
+                        return_lower_bound=True)
+np.save("results/molecular/h2/data_plot/vansenergies",energies)
+np.save("results/molecular/h2/data_plot/iterations",iterations)
+
+#
 # #
-# #
-# os.makedirs("results/molecular/h2/data_plot",exist_ok=True)
-# np.save("results/molecular/h2/data_plot/vansenergies",energies)
-# # np.save("results/molecular/h2/data_plot/fcis",fcis)
-# np.save("results/molecular/h2/data_plot/iterations",iterations)
-# # np.save("results/molecular/h2/data_plot/fcisn",fcisn)
-# np.save("results/molecular/h2/data_plot/jsn",jsn)
+# ##os.makedirs("results/molecular/h2/data_plot",exist_ok=True)
+## # np.save("results/molecular/h2/data_plot/fcis",fcis)
+# ## np.save("results/molecular/h2/data_plot/fcisn",fcisn)
+# ##np.save("results/molecular/h2/data_plot/jsn",jsn)
 # #
 
 energies=np.load("results/molecular/h2/data_plot/vansenergies.npy")
@@ -93,7 +93,7 @@ for k in range(3):
         ax.plot(js,np.ones(len(js))*0.0016,'--',color="black",alpha=0.75,label="Chemical accuracy")
         ax.set_xticks([])
         # ax.set_yticks([np.round(k,4) for k in np.linspace(0, 0.002, 4)])
-        ax.set_yticks([0, 0.0016, 0.002])
+        ax.set_yticks([0, 0.0016])
         # ax.set_yticklabels(["0.0",r'$1.6 \times \;10^{-4}$'])
         ax.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=80)
         # ax.yaxis.tick_right()
