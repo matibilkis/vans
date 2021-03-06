@@ -463,8 +463,8 @@ class Simplifier(Basic):
                 step = [q, path, ind,gate]
                 while (cnt_rule < 8) and (modified==False):
                     modified, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit = self.rule_handler(cnt_rule,  step ,connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit)
-                    if modified == True:
-                        print("cnt_rule",cnt_rule)
+                    # if modified == True:
+                    #     print("cnt_rule",cnt_rule)
                     cnt_rule+=1
                 #If no modifications, add that gate to the new_circuit_index and parameter (if any) to NRE, symbols_on
                 if (modified == False) and flags_indexed_circuit[places_gates[str(q)][ind]] != 1:

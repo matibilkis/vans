@@ -25,11 +25,12 @@ insts=[]
 
 # for J in np.arange(0,5.5,.5):
     # problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": J});q=8
-bonds = []
-bbs=[]
-for bond in np.linspace(.5,2.3,16):
-    if bond not in [.5,1.1]:
-        bbs.append(bond)
+# bonds = []
+# bbs=[]
+# for bond in np.linspace(.5,2.3,16):
+#     if bond not in [.5,1.1]:
+#         bbs.append(bond)
+bbs = np.linspace(.5,2.3,16)
 for bond in bbs:
 # for bond in []
 # for init_layers, bond in enumerate([1.5]*4):
