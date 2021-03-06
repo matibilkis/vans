@@ -26,7 +26,7 @@ nrun=args.nrun
 #problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": args.J});q=12
             ##### tfim #######
 if args.problem.upper() == "TFIM":
-    problem_config = dict_to_json({"problem" : "TFIM", "g":1.0, "J": args.J});q=4
+    problem_config = dict_to_json({"problem" : "TFIM", "g":1.0, "J": args.J});q=8
 elif args.problem.upper() == "XXZ":
     problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": args.J});q=8
 elif args.problem.upper() == "H4":
@@ -37,8 +37,6 @@ else:
 ### POSSIBLE PATHS
 path="/data/uab-giq/scratch/matias/data-vans/"
 # path = "../data-vans/"
-
-st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 1e-4 --n_qubits {} --reps 500 --qepochs 10000 --problem_config {} --reduce_acceptance_percentage 0 --optimizer adam --training_patience 1000 --rate_iids_per_step 2.0 --wait_to_get_back 20 --init_layers_hea {}".format(path,q,problem_config, args.init_layers)
-
+st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 1e-2 --n_qubits {} --reps 300 --qepochs 10000 --problem_config {} --optimizer adam --training_patience 1000 --rate_iids_per_step 2.0 --wait_to_get_back 10".format(path,q,problem_config)
 
 os.system(st)
