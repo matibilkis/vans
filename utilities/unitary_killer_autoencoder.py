@@ -43,7 +43,8 @@ class UnitaryMurder(Basic):
         """
         au_circuit,symbols  = self.give_circuit(indexed_circuit)[0:2]
         qbatch=[]
-        qq = copy.deepcopy(self.qbatch)
+        # qq = copy.deepcopy(self.qbatch)
+        qq=copy.deepcopy(self.qbatch)
         for qc in qq:
             qc.append(au_circuit)
             qbatch.append(qc)

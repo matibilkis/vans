@@ -20,8 +20,11 @@ class Simplifier(Basic):
                 3. Rotation around z axis of |0> only adds phase hence leaves invariant <H>. It kills it.
                 4. two equal rotations: add the values.
                 5. Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
-                6. Rz(control) and CNOT(control, target) Rz(control) --> Rz(control) CNOT
-                7. Rx(target) and CNOT(control, target) Rx(target) --> Rx(target) CNOT
+                6. Scan qubits and abosrb rotations  (play with control-qubit of CNOT and rz)
+                7. Scan qubits and absorb rotations if possible (play with target-qubit of CNOT and rx)
+                8. Rz(control) and CNOT(control, target) Rz(control) --> Rz(control) CNOT
+                9. Rx(target) and CNOT(control, target) Rx(target) --> Rx(target) CNOT
+
 
         Finally, if the circuit becomes too short, for example, there're no gates at a given qubit, an Rx(0) is placed.
         """
@@ -198,7 +201,6 @@ class Simplifier(Basic):
             modification = True
             if self.testing:
                 print("3")
-
         return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit
 
 
@@ -421,6 +423,141 @@ class Simplifier(Basic):
                         symbols_on[str(q)].append(sname)
         return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit
 
+
+    def rule_8(self, step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit):
+        """
+        move CNOTs to the left: X -> target-CNOT
+        """
+
+        modification = False
+        q, path, ind,gate = step
+        c0 = flags_indexed_circuit[places_gates[str(q)][ind]] != 1
+        c1 = (gate == "rx")
+        c2 = (ind< len(path)-1)
+
+        if (c0 and c1 and c2) ==True:
+            original_symbol = self.index_to_symbols[places_gates[str(q)][ind]]
+            original_value = self.symbol_to_value[original_symbol]
+            # this means that the gates have not been flaged for erasure (THE CNOT)
+            c3 = flags_indexed_circuit[places_gates[str(q)][ind+1]] != 1
+            #if path[ind+1] is a CNOT and that CNOT is not marked to be removed.
+            if c3 and (path[ind+1] not in ["rx", "rz"]):
+                control, target = self.indexed_cnots[str(path[ind+1])]
+                the_other = [control,target]
+                the_other.remove(int(q))
+                the_other = the_other[0]
+                if (int(q) == target): #'cause rx commutes with CNOT, we'll move it to the left
+
+                    rotpos = places_gates[str(q)][ind]
+                    cnotpos = places_gates[str(q)][ind+1]
+                    #from here it is clear that rotpos < cnotpos. But we can't just swap them, right ?
+                    #For instance, suppose there's a gate that doesn't commute with the CNOT, on the other qubit..
+
+
+                    ## gates in between
+                    swap = True
+                    for intergate in new_indexed_circuit[rotpos:cnotpos+1]:
+                        if intergate == -1:### this is not a big problem, since otherwise we can do this simplifiaciton step later
+                            swap = False
+                            break
+                        else:
+                            if intergate < self.number_of_cnots:
+                                if q in self.indexed_cnots[str(intergate)]:
+                                    swap = False
+                                    break
+                            if (intergate-self.number_of_cnots)%self.n_qubits == the_other:
+                                if (intergate - self.number_of_cnots) >= self.n_qubits: #this means you are an Rx, so you won't commute with the control.
+                                    swap = False
+                                    break
+
+                    if swap == True:
+                        modification = True
+                        if self.testing:
+                            print("8")
+                        sname="th_"+str(len(list(NRE.keys()))) ## this is safe, since we are looping on the indices first, and the resolver dict is ordered
+                        NRE[sname] = original_value
+                        symbols_on[str(q)].append(sname)
+
+                        original_position_rotation = new_indexed_circuit[places_gates[str(q)][ind]]
+                        original_position_cnot = new_indexed_circuit[places_gates[str(q)][ind+1]]
+                        new_indexed_circuit[places_gates[str(q)][ind+1]] = original_position_rotation
+                        new_indexed_circuit[places_gates[str(q)][ind]] = original_position_cnot
+
+                        flags_indexed_circuit[places_gates[str(q)][ind]] = 1
+                        flags_indexed_circuit[places_gates[str(q)][ind+1]] = 1
+
+
+        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit
+
+
+
+    def rule_9(self, step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit):
+        """
+        move CNOTs to the left: X -> target-CNOT
+        """
+
+        modification = False
+        q, path, ind,gate = step
+        c0 = flags_indexed_circuit[places_gates[str(q)][ind]] != 1
+        c1 = (gate == "rz")
+        c2 = (ind< len(path)-1)
+
+        if (c0 and c1 and c2) ==True:
+            original_symbol = self.index_to_symbols[places_gates[str(q)][ind]]
+            original_value = self.symbol_to_value[original_symbol]
+            # this means that the gates have not been flaged for erasure (THE CNOT)
+            c3 = flags_indexed_circuit[places_gates[str(q)][ind+1]] != 1
+            #if path[ind+1] is a CNOT and that CNOT is not marked to be removed.
+            if c3 and (path[ind+1] not in ["rx", "rz"]):
+                control, target = self.indexed_cnots[str(path[ind+1])]
+                the_other = [control,target]
+                the_other.remove(int(q))
+                the_other = the_other[0]
+                if (int(q) == control): #'cause rx commutes with CNOT, we'll move it to the left
+
+                    rotpos = places_gates[str(q)][ind]
+                    cnotpos = places_gates[str(q)][ind+1]
+                    #from here it is clear that rotpos < cnotpos. But we can't just swap them, right ?
+                    #For instance, suppose there's a gate that doesn't commute with the CNOT, on the other qubit..
+
+
+                    ## gates in between
+                    swap = True
+                    for intergate in new_indexed_circuit[rotpos:cnotpos+1]:
+                        if intergate == -1:### this is not a big problem, since otherwise we can do this simplifiaciton step later
+                            swap = False
+                            break
+                        else:
+                            if intergate < self.number_of_cnots and intergate:
+                                if q in self.indexed_cnots[str(intergate)]:
+                                    swap = False
+                                    break
+                            if (intergate-self.number_of_cnots)%self.n_qubits == the_other:
+                                if (intergate - self.number_of_cnots) < self.n_qubits: #this means you are an Rz, so you won't commute with the control.
+                                    swap = False
+                                    break
+
+                    if swap == True:
+                        modification = True
+                        if self.testing:
+                            print("9")
+                        sname="th_"+str(len(list(NRE.keys()))) ## this is safe, since we are looping on the indices first, and the resolver dict is ordered
+                        NRE[sname] = original_value
+                        symbols_on[str(q)].append(sname)
+
+                        original_position_rotation = new_indexed_circuit[places_gates[str(q)][ind]]
+                        original_position_cnot = new_indexed_circuit[places_gates[str(q)][ind+1]]
+                        new_indexed_circuit[places_gates[str(q)][ind+1]] = original_position_rotation
+                        new_indexed_circuit[places_gates[str(q)][ind]] = original_position_cnot
+
+                        flags_indexed_circuit[places_gates[str(q)][ind]] = 1
+                        flags_indexed_circuit[places_gates[str(q)][ind+1]] = 1
+
+
+        return modification, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit
+
+
+
     def rule_handler(self, cnt_rule,  step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit):
         if cnt_rule == 1:
             return self.rule_1(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit)
@@ -436,6 +573,10 @@ class Simplifier(Basic):
             return self.rule_6(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit)
         elif cnt_rule == 7:
             return self.rule_7(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit)
+        elif cnt_rule == 8:
+            return self.rule_8(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit)
+        elif cnt_rule == 9:
+            return self.rule_9(step, connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit)
         else:
             print("cnt_rule wrong! not so many rules..", cnt_rule)
 
@@ -448,8 +589,10 @@ class Simplifier(Basic):
                 3. Rotation around z axis of |0> only adds phase hence leaves invariant <H>. Two options: kill it or replace it by Rx (to avoid having no gates)
                 4. two equal rotations: add the values.
                 5. Scan for U_3 = Rz Rx Rz, or Rx Rz Rx; if found, abosrb consecutive rz/rx (until a CNOT is found)
-                6. Rz(control) and CNOT(control, target) Rz(control) --> Rz(control) CNOT
-                7. Rx(target) and CNOT(control, target) Rx(target) --> Rx(target) CNOT
+                6. Scan a line (a qubit), find Rz and if control of CNOT next, try to absorb potential other Z-rotations coming next
+                7. Scan a line (a qubit), find Rx and if target of CNOT next, try to absorb potential other X-rotations coming next
+                8. Rz(control) and CNOT(control, target) Rz(control) --> Rz(control) CNOT
+                9. Rx(target) and CNOT(control, target) Rx(target) --> Rx(target) CNOT
         """
         flags_indexed_circuit = np.zeros(len(self.indexed_circuit)) #intermediate list of gates, the deleted ones are set to -1
         new_indexed_circuit = copy.deepcopy(self.indexed_circuit) #intermediate list of gates, the deleted ones are set to -1
@@ -461,7 +604,7 @@ class Simplifier(Basic):
                 modified = False
                 cnt_rule = 1
                 step = [q, path, ind,gate]
-                while (cnt_rule < 8) and (modified==False):
+                while (cnt_rule < 10) and (modified==False):
                     modified, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit = self.rule_handler(cnt_rule,  step ,connections, places_gates, new_indexed_circuit, symbols_to_delete, symbols_on, NRE,flags_indexed_circuit)
                     # if modified == True:
                     #     print("cnt_rule",cnt_rule)
@@ -495,6 +638,11 @@ class Simplifier(Basic):
 
         index_gate=0
 
+        # print(symbols_on)
+        # print("\n")
+        # print(new_indexed_circuit)
+        # print("\n")
+        # print(NRE)
 
         for gmarked in new_indexed_circuit:
             if not gmarked == -1:
