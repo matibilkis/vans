@@ -6,5 +6,5 @@ problem=$3
 cd ~/vans
 . ~/qenv_bilkis/bin/activate
 #python3 simulate_bash.py --ratesiid $rates
-python3 simulbash.py --bonds $iid --optimizer $optimizer --problem $problem
+python3 simulbash.py --itvar $iid --optimizer $optimizer --problem $problem
 deactivate

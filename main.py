@@ -86,7 +86,7 @@ if __name__ == "__main__":
     if vqe_handler.problem_nature == "chemical":
         accuracy_to_end = vqe_handler.lower_bound_energy + 0.0016 #chemical accuracy
     else:
-        accuracy_to_end = vqe_handler.lower_bound_energy + len(vqe_handler.qubits)*1e-3
+        accuracy_to_end = vqe_handler.lower_bound_energy + args.acceptance_percentage
 
     #Evaluator keeps a record of the circuit and accepts or not certain configuration
     evaluator = Evaluator(vars(args), info=info, path=args.path_results, acceptance_percentage=args.acceptance_percentage,
