@@ -11,6 +11,7 @@ converter = colors.ColorConverter()
 import os
 import sys
 from tqdm import tqdm
+os.chdir("/home/cooper-cooper/Desktop/vans/")
 sys.path[0] = "/home/cooper-cooper/Desktop/vans/"
 plt.style.use('results/plots/style.mplstyle')
 matplotlib.rc("text",usetex=True)
@@ -32,23 +33,41 @@ converter = colors.ColorConverter()
 #
 # eigens={}
 # energies = []
-js = np.arange(0,2,0.1)
-# js = np.arange(-3,5.1,0.1)
-ge =  []
-energies=[]
-for j in tqdm(js):
-    args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "load_displaying":False}
-    evaluator = Evaluator(args,loading=True, path="../data-vans/")
-    energies.append(evaluator.evolution[evaluator.get_best_iteration()][1])
+# ge =  []
 #
-    vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=args["problem_config"])
-    ge.append(vqe_handler.lower_bound_energy)
-#     eigs = compute_ground_energy_1(obs, vqe_handler.qubits)
-#     eigens[j] = eigs[:3]
+# jsold = np.arange(-3,0,0.1)
+# for j in tqdm(jsold):
+#     args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "load_displaying":False,"specific_folder_name":"8Q - J {} g 1.0".format(np.round(j,2))}
+#     evaluator = Evaluator(args,loading=True, path="../data-vans/")
+#     energies.append(evaluator.raw_history[len(list(evaluator.raw_history.keys()))-1][4])
+#     vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=args["problem_config"])
+#     ge.append(vqe_handler.lower_bound_energy)
+#
+#
+# js = np.arange(0,2,0.1)
+# for j in tqdm(js):
+#     args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "load_displaying":False}
+#     evaluator = Evaluator(args,loading=True, path="../data-vans/")
+#     energies.append(evaluator.evolution[evaluator.get_best_iteration()][1])
+# #
+#     vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=args["problem_config"])
+#     ge.append(vqe_handler.lower_bound_energy)
+# #     eigs = compute_ground_energy_1(obs, vqe_handler.qubits)
+# #     eigens[j] = eigs[:3]
+#
+# js =np.array( list(jsold) + list(js))
+#
+# np.save("results/xxz/data/vanseners9mar",energies)
+# np.save("results/xxz/data/grounds9mar",ge)
+# np.save("results/xxz/data/jotas",js)
 
 
-converter = colors.ColorConverter()
+js = np.load("results/xxz/data/jotas.npy")
+ge = np.load("results/xxz/data/grounds9mar.npy")
+energies = np.load("results/xxz/data/vanseners9mar.npy")
 
+
+print(len(js),len(energies))
 ####### SINGLE AXIS ####
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 
@@ -94,7 +113,8 @@ ax2.set_yticks([np.round(k,2) for k in np.linspace(0., np.max(np.abs((energies-n
 ax2.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5)
 ax2.set_ylabel("Relative error",size=70)
 ax1.set_ylabel("Energy",size=70)
-ax2.set_xticks(np.round(js[0::4],2))
+ax1.set_xlabel(r'$\Delta$',size=70)
+ax2.set_xticks(np.round(js[0::8],2))
 #
 # axins.set_yticks([np.round(k,2) for k in np.linspace(np.min(relatives), np.max(relatives), 4)])
 # axins.yaxis.tick_right()

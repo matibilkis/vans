@@ -31,18 +31,24 @@ marco_hea_2=0.6549782647945612
 marco_hea_5=0.42458460441807233
 
 energies = []
-J=1.5
+J=5.0
 #args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": J}, "load_displaying":False, "specific_folder_name":"8Q - J {} g 1.0".format(J)}
 #args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": J}, "load_displaying":False, "specific_folder_name":"8Q - J {} g 1.0".format(J)}
+bond=1.46
+problem_config_load={"problem" : "H2", "geometry": str([('H', (0., 0., 0.)), ('H', (0., 0., bond))]).replace("\'",""), "multiplicity":1, "charge":0, "basis":"sto-3g"}
+problem_config={"problem" : "H2", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., bond))], "multiplicity":1, "charge":0, "basis":"sto-3g"}
+
+indi=15
+J=np.round(np.loadtxt("results/hea/evolution/TFIM8.csv", delimiter=",")[:,0][indi],3)
+ground = np.loadtxt("results/hea/evolution/TFIM8.csv", delimiter=",")[:,1][indi]
 
 problem_config={"problem" : "TFIM", "g":1.0, "J": J}
 #args={"n_qubits":4,"problem_config":problem_config_load, "load_displaying":False, "specific_folder_name":"4_bd_0.98"}
 args ={"n_qubits":8,"problem_config":problem_config}
 vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=problem_config)
-ground = vqe_handler.lower_bound_energy
 
 
-evaluator = Evaluator(args,loading=True, path="../data-vans/",nrun_load=1)
+evaluator = Evaluator(args,loading=True, path="../data-vans/")
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
@@ -55,7 +61,7 @@ color5="#8E8D8A"
 nparams=[]
 cnots=[]
 energies=[]
-for index in range(len(list(evaluator.evolution.keys())[:25])):
+for index in range(len(list(evaluator.evolution.keys()))):
     index_circuit=evaluator.evolution[index][2]
     cnots.append(vqe_handler.count_cnots(index_circuit))
     nparams.append(vqe_handler.count_params(index_circuit))
@@ -72,7 +78,6 @@ CNOTS2 = vqe_handler.count_cnots(vqe_handler.hea_ansatz_indexed_circuit(L=2))
 CNOTS5 = vqe_handler.count_cnots(vqe_handler.hea_ansatz_indexed_circuit(L=5))
 PARAMS2 = vqe_handler.count_params(vqe_handler.hea_ansatz_indexed_circuit(L=2))
 PARAMS5 = vqe_handler.count_params(vqe_handler.hea_ansatz_indexed_circuit(L=5))
-
 
 ax1.plot(np.ones(len(nparams))*CNOTS2, color="red",linewidth=5, alpha=0.8)
 ax1.plot(np.ones(len(nparams))*CNOTS5, color="green",linewidth=5, alpha=0.8)
@@ -98,7 +103,6 @@ ax2.plot(np.ones(len(energies))*(ground+marco_hea_5),
 
 ax2.set_yticks(np.round(np.linspace(ground,-8,4),1))
 ax1.set_yticks(range(0,81,20))
-ax1.set_xticks(range(0,30,5))
 
 #ax1.set_xticks(range(0,len(energies)+1,100))
 
@@ -111,4 +115,4 @@ ax1.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0
 ax2.tick_params(direction='out', length=6, width=2, colors='black', grid_alpha=0.5,labelsize=60)
 
 
-plt.savefig("results/hea/evolution/evolution_circuit_tfim{}_.pdf".format(J),format="pdf")
+plt.savefig("results/hea/evolution/evolution_circuit_tfim{}.pdf".format(J),format="pdf")

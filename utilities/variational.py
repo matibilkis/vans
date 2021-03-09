@@ -263,7 +263,7 @@ class Autoencoder(Basic):
             qbatch.append(preparation_circuit)
         return qbatch
 
-    def autoencoder(self, indexed_circuit, symbols_to_values=None, parameter_perturbation_wall=0.5):
+    def autoencoder(self, indexed_circuit, symbols_to_values=None, parameter_perturbation_wall=0.05):
         """
         blablabla
         """

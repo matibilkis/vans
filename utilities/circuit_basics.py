@@ -231,7 +231,7 @@ class Basic:
             return [(ind-self.number_of_cnots)%self.n_qubits]
 
 
-    def hea_layer(self,full=False, x=True):
+    def hea_layer(self,full=False, x=True,count=0):
         layer = []
         for ind in range(0,self.n_qubits):
             if x == True:
@@ -244,14 +244,18 @@ class Basic:
                     layer.append(self.number_of_cnots + ind+ (self.n_qubits))
                 else:
                     layer.append(self.number_of_cnots + ind+ (2*self.n_qubits))
-        for ind in range(0,self.n_qubits-1):
-            layer.append(self.cnots_index[str([ind, (ind+1)%self.n_qubits])])
+        if count%2==0:
+            for ind in range(0,self.n_qubits-1,2):
+                layer.append(self.cnots_index[str([ind, (ind+1)%self.n_qubits])])
+        else:
+            for ind in range(1,self.n_qubits,2):
+                layer.append(self.cnots_index[str([ind, (ind+1)%self.n_qubits])])
         return layer
 
     def hea_ansatz_indexed_circuit(self, L=2, full=False):
         indexed_circuit=[]
         for l in range(L):
-            indexed_circuit+=self.hea_layer(full=full)
+            indexed_circuit+=self.hea_layer(full=full, count=l)
         return indexed_circuit
 
     def count_cnots(self, indexed_circuit):
