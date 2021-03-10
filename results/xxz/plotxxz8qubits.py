@@ -32,34 +32,42 @@ converter = colors.ColorConverter()
 ###### GET ENERGIES ! ####
 #
 # eigens={}
-# energies = []
-# ge =  []
-#
-# jsold = np.arange(-3,0,0.1)
-# for j in tqdm(jsold):
-#     args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "load_displaying":False,"specific_folder_name":"8Q - J {} g 1.0".format(np.round(j,2))}
-#     evaluator = Evaluator(args,loading=True, path="../data-vans/")
-#     energies.append(evaluator.raw_history[len(list(evaluator.raw_history.keys()))-1][4])
-#     vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=args["problem_config"])
-#     ge.append(vqe_handler.lower_bound_energy)
-#
-#
-# js = np.arange(0,2,0.1)
-# for j in tqdm(js):
-#     args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "load_displaying":False}
-#     evaluator = Evaluator(args,loading=True, path="../data-vans/")
-#     energies.append(evaluator.evolution[evaluator.get_best_iteration()][1])
-# #
-#     vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=args["problem_config"])
-#     ge.append(vqe_handler.lower_bound_energy)
-# #     eigs = compute_ground_energy_1(obs, vqe_handler.qubits)
-# #     eigens[j] = eigs[:3]
-#
-# js =np.array( list(jsold) + list(js))
-#
-# np.save("results/xxz/data/vanseners9mar",energies)
-# np.save("results/xxz/data/grounds9mar",ge)
-# np.save("results/xxz/data/jotas",js)
+energies = []
+ge =  []
+
+js1= np.arange(-3,-0.5,0.1)
+for j in tqdm(js1):
+    args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "load_displaying":False,"specific_folder_name":"8Q - J {} g 1.0".format(np.round(j,2))}
+    evaluator = Evaluator(args,loading=True, path="../data-vans/")
+    energies.append(evaluator.raw_history[len(list(evaluator.raw_history.keys()))-1][4])
+    vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=args["problem_config"])
+    ge.append(vqe_handler.lower_bound_energy)
+
+js2 = np.arange(-0.5,0.1,0.1)
+for j in tqdm(js2):
+    args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "load_displaying":False}
+    evaluator = Evaluator(args,loading=True, path="../data-vans/")
+    energies.append(evaluator.raw_history[len(list(evaluator.raw_history.keys()))-1][4])
+    vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=args["problem_config"])
+    ge.append(vqe_handler.lower_bound_energy)
+
+js3 = np.arange(0,2,0.1)
+
+for j in tqdm(js3):
+    if j==0:
+        pass
+    else:
+        args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "load_displaying":False}
+        evaluator = Evaluator(args,loading=True, path="../data-vans/")
+        energies.append(evaluator.evolution[evaluator.get_best_iteration()][1])
+        vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=args["problem_config"])
+        ge.append(vqe_handler.lower_bound_energy)
+
+js =np.array( list(js1) + list(js2)+list(js3[1:]))
+
+np.save("results/xxz/data/vanseners9mar",energies)
+np.save("results/xxz/data/grounds9mar",ge)
+np.save("results/xxz/data/jotas",js)
 
 
 js = np.load("results/xxz/data/jotas.npy")
@@ -67,7 +75,6 @@ ge = np.load("results/xxz/data/grounds9mar.npy")
 energies = np.load("results/xxz/data/vanseners9mar.npy")
 
 
-print(len(js),len(energies))
 ####### SINGLE AXIS ####
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 
@@ -81,6 +88,7 @@ color5="#8E8D8A"
 plt.figure(figsize=(20,30))
 ax1 = plt.subplot2grid((2,1),(0,0))
 ax2 = plt.subplot2grid((2,1),(1,0))
+
 
 plt.subplots_adjust(bottom=0.15,left=0.15)
 plt.suptitle(r'$H = \sum_i \;\sigma_i^x \sigma^x_{i+1} + \sigma^{y}_i \sigma^y_{i+1} + \Delta \sigma^z_i \sigma^z_{i+1} + g \;\sum_i \sigma_i^{z}$',size=55)
