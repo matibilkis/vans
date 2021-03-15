@@ -30,12 +30,14 @@ path = "../data-vans/"
 # js = np.arange(-4,4.2,.2)
 insts=[]
 # js = np.arange(2.0,5.0,0.1)
-js = np.arange(-.5,.1,.1)
-for J in js:
+# js = np.arange(-.4,.1,.1)[::-1]
 
-    problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": J});q=8
+js = [2.25]*4
+for bond in js:
+    problem_config=dict_to_json({"problem" : "H4", "geometry": [('H', (0., 0., 0.)), ('H', (0., 0., bond)), ('H', (0., 0., 2*bond)), ('H', (0., 0., 3*bond))], "multiplicity":1, "charge":0, "basis":"sto-3g"});q=8
+    # problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": J});q=8
 
-    instruction = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.01 --n_qubits {} --reps 100 --qepochs 10000 --problem_config {} --optimizer adam --training_patience 1000 --rate_iids_per_step 3.0 --wait_to_get_back 5 --initialization hea --init_layers_hea 1 --reduce_acceptance_percentage 0".format(path,q,problem_config)
+    instruction = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.001 --n_qubits {} --reps 100 --qepochs 10000 --problem_config {} --optimizer adam --training_patience 1000 --rate_iids_per_step 3.0 --wait_to_get_back 5 --initialization hea --init_layers_hea 10 --reduce_acceptance_percentage 1".format(path,q,problem_config)
     insts.append(instruction)
 
 def execute_instruction(inst):

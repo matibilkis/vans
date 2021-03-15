@@ -14,7 +14,7 @@ from tqdm import tqdm
 os.chdir("/home/cooper-cooper/Desktop/vans/")
 sys.path[0] = "/home/cooper-cooper/Desktop/vans/"
 plt.style.use('results/plots/style.mplstyle')
-matplotlib.rc("text",usetex=True)
+# matplotlib.rc("text",usetex=True)
 plt.rcParams["font.family"] = "Times New Roman"
 # from utilities.evaluator import Evaluator
 import numpy as np
@@ -31,7 +31,6 @@ converter = colors.ColorConverter()
 
 ###### GET ENERGIES ! ####
 #
-# eigens={}
 # energies = []
 # ge =  []
 #
@@ -44,17 +43,17 @@ converter = colors.ColorConverter()
 #     ge.append(vqe_handler.lower_bound_energy)
 #
 #
-# js = np.arange(0,2,0.1)
-# for j in tqdm(js):
-#     args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "load_displaying":False}
-#     evaluator = Evaluator(args,loading=True, path="../data-vans/")
-#     energies.append(evaluator.evolution[evaluator.get_best_iteration()][1])
-# #
-#     vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=args["problem_config"])
-#     ge.append(vqe_handler.lower_bound_energy)
-# #     eigs = compute_ground_energy_1(obs, vqe_handler.qubits)
-# #     eigens[j] = eigs[:3]
-#
+energies, ge = [] , []
+js = np.arange(-0.5,0.1,0.1)
+for j in tqdm(js):
+    args={"n_qubits":8,"problem_config":{"problem" : "XXZ", "g":1.0, "J": j}, "load_displaying":False}
+    evaluator = Evaluator(args,loading=True, path="../data-vans/")
+    energies.append(evaluator.evolution[evaluator.get_best_iteration()][1])
+    vqe_handler = VQE(n_qubits=args["n_qubits"],problem_config=args["problem_config"])
+    ge.append(vqe_handler.lower_bound_energy)
+#     eigs = compute_ground_energy_1(obs, vqe_handler.qubits)
+#     eigens[j] = eigs[:3]
+
 # js =np.array( list(jsold) + list(js))
 #
 # np.save("results/xxz/data/vanseners9mar",energies)
@@ -62,10 +61,10 @@ converter = colors.ColorConverter()
 # np.save("results/xxz/data/jotas",js)
 
 
-js = np.load("results/xxz/data/jotas.npy")
-ge = np.load("results/xxz/data/grounds9mar.npy")
-energies = np.load("results/xxz/data/vanseners9mar.npy")
-
+# js = np.load("results/xxz/data/jotas.npy")
+# ge = np.load("results/xxz/data/grounds9mar.npy")
+# energies = np.load("results/xxz/data/vanseners9mar.npy")
+#
 
 print(len(js),len(energies))
 ####### SINGLE AXIS ####
@@ -82,9 +81,11 @@ plt.figure(figsize=(20,30))
 ax1 = plt.subplot2grid((2,1),(0,0))
 ax2 = plt.subplot2grid((2,1),(1,0))
 
+
+print(js, energies)
 plt.subplots_adjust(bottom=0.15,left=0.15)
 plt.suptitle(r'$H = \sum_i \;\sigma_i^x \sigma^x_{i+1} + \sigma^{y}_i \sigma^y_{i+1} + \Delta \sigma^z_i \sigma^z_{i+1} + g \;\sum_i \sigma_i^{z}$',size=55)
-ax1.scatter(js,energies, marker="h",s=250, alpha=1, color="black", label="VAns")
+ax1.scatter(js,np.squeeze(energies), marker="h",s=250, alpha=1, color="black", label="VAns")
 ax1.plot(js,np.array(ge), color=converter.to_rgb(color3),alpha=1, label="ground energy")
 
 ax1.set_xlabel(r'$\Delta$',size=70)
@@ -128,7 +129,7 @@ lines2, labels2 = ax2.get_legend_handles_labels()
 ###incremento x ---> se va a la izquierda. Incremento y ---> se va para arriba  bbox_to_anchor=(.05, .9)
 ax2.legend(lines2+lines, labels2+labels, prop={"size":35}, loc=2, borderaxespad=.1)
 plt.savefig("results/xxz/xxz8qbits_.pdf",format="pdf")
-
+# plt.show()
 
 
 
