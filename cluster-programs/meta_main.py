@@ -14,12 +14,9 @@ from utilities.misc import dict_to_json
 # for bond in [1.5]*4:
     # problem_config = dict_to_json({"problem" : "XXZ", "g":1.0, "J": J});q=8
 
-
 ### POSSIBLE PATHS
 # path="/data/uab-giq/scratch/matias/data-vans/"
 path = "../data-vans/"
-
-
 
 #st = "python3 main.py --path_results \"{}\" --qlr 0.01 --acceptance_percentage 0.001 --n_qubits {} --reps 1000 --qepochs 2000 --problem_config {} --show_tensorboarddata 0 --optimizer {} --training_patience 200 --rate_iids_per_step 1.0 --specific_name __{}__ --wait_to_get_back 25".format(path,q,problem_config, args.optimizer, args.optimizer)
 # for init_layers, bond in enumerate([1.5]*4):
@@ -42,5 +39,5 @@ for bond in js:
 def execute_instruction(inst):
     os.system(inst)
 
-with mp.Pool(2) as p:
+with mp.Pool(1) as p:
     p.map(execute_instruction,insts)
